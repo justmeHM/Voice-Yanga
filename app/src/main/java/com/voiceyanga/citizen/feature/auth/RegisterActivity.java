@@ -15,49 +15,69 @@ import com.voiceyanga.citizen.feature.home.HomeActivity;
 import dagger.hilt.android.AndroidEntryPoint;
 
 @AndroidEntryPoint
-public class LoginActivity extends AppCompatActivity {
+public class RegisterActivity extends AppCompatActivity {
 
     private AuthViewModel viewModel;
-    private TextInputEditText etEmail, etPassword;
-    private MaterialButton btnLogin;
+    private TextInputEditText etFirstName, etLastName, etPhone, etEmail, etPassword;
+    private MaterialButton btnRegister;
     private ProgressBar pbLoading;
+    private TextView tvLogin;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
+        setContentView(R.layout.activity_register);
 
         viewModel = new ViewModelProvider(this).get(AuthViewModel.class);
 
+        etFirstName = findViewById(R.id.etFirstName);
+        etLastName = findViewById(R.id.etLastName);
+        etPhone = findViewById(R.id.etPhone);
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
-        btnLogin = findViewById(R.id.btnLogin);
+        btnRegister = findViewById(R.id.btnRegister);
         pbLoading = findViewById(R.id.pbLoading);
-        TextView tvRegister = findViewById(R.id.tvRegister);
+        tvLogin = findViewById(R.id.tvLogin);
 
-        btnLogin.setOnClickListener(v -> {
+        btnRegister.setOnClickListener(v -> {
+            String fName = etFirstName.getText() != null ? etFirstName.getText().toString().trim() : "";
+            String lName = etLastName.getText() != null ? etLastName.getText().toString().trim() : "";
+            String phone = etPhone.getText() != null ? etPhone.getText().toString().trim() : "";
             String email = etEmail.getText() != null ? etEmail.getText().toString().trim() : "";
             String password = etPassword.getText() != null ? etPassword.getText().toString().trim() : "";
 
-            if (validate(email, password)) {
-                viewModel.login(email, password);
+            if (validate(fName, lName, phone, email, password)) {
+                viewModel.register(fName, lName, phone, email, password);
             }
         });
 
-        tvRegister.setOnClickListener(v -> {
-            startActivity(new Intent(this, RegisterActivity.class));
+        tvLogin.setOnClickListener(v -> {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
         });
 
         observeViewModel();
     }
 
-    private boolean validate(String email, String password) {
+    private boolean validate(String fName, String lName, String phone, String email, String password) {
+        if (fName.isEmpty()) {
+            etFirstName.setError(getString(R.string.error_invalid_first_name));
+            return false;
+        }
+        if (lName.isEmpty()) {
+            etLastName.setError(getString(R.string.error_invalid_last_name));
+            return false;
+        }
+        if (phone.isEmpty()) {
+            etPhone.setError(getString(R.string.error_invalid_phone));
+            return false;
+        }
         if (email.isEmpty()) {
             etEmail.setError(getString(R.string.error_invalid_email));
             return false;
         }
-        if (password.isEmpty()) {
-            etPassword.setError(getString(R.string.error_empty_password));
+        if (password.length() < 8) {
+            etPassword.setError(getString(R.string.error_invalid_password));
             return false;
         }
         return true;
@@ -66,7 +86,7 @@ public class LoginActivity extends AppCompatActivity {
     private void observeViewModel() {
         viewModel.getIsLoading().observe(this, isLoading -> {
             pbLoading.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-            btnLogin.setEnabled(!isLoading);
+            btnRegister.setEnabled(!isLoading);
         });
 
         viewModel.getErrorMessage().observe(this, error -> {
@@ -78,6 +98,7 @@ public class LoginActivity extends AppCompatActivity {
         viewModel.getLoginSuccess().observe(this, success -> {
             if (success) {
                 Intent intent = new Intent(this, HomeActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
                 finish();
             }

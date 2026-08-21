@@ -37,6 +37,23 @@ public class AuthViewModel extends ViewModel {
         });
     }
 
+    public void register(String firstName, String lastName, String phone, String email, String password) {
+        isLoading.setValue(true);
+        authRepository.register(firstName, lastName, phone, email, password, new AuthRepository.LoginCallback() {
+            @Override
+            public void onSuccess() {
+                isLoading.setValue(false);
+                loginSuccess.setValue(true);
+            }
+
+            @Override
+            public void onError(String message) {
+                isLoading.setValue(false);
+                errorMessage.setValue(message);
+            }
+        });
+    }
+
     public LiveData<Boolean> getIsLoading() {
         return isLoading;
     }

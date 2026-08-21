@@ -27,13 +27,33 @@
             android:exported="false" />
 
         <activity
+            android:name=".feature.auth.RegisterActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".feature.home.HomeActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".feature.complaints.CreateComplaintActivity"
+            android:exported="false"
+            android:theme="@style/Theme.VoiceYanga" />
 
         <activity
             android:name=".MainActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
     </application>
 

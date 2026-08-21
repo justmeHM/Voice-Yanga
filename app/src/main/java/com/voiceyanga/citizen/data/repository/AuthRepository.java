@@ -30,6 +30,15 @@ public class AuthRepository {
         }, 2000);
     }
 
+    public void register(String firstName, String lastName, String phone, String email, String password, LoginCallback callback) {
+        // Simulate network delay for registration
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            // Mock registration success
+            sessionManager.saveToken("mock_registered_token_67890");
+            callback.onSuccess();
+        }, 2000);
+    }
+
     public interface LoginCallback {
         void onSuccess();
         void onError(String message);

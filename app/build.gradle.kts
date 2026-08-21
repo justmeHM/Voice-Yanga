@@ -30,6 +30,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    buildFeatures {
+        viewBinding = true
+    }
 }
 
 dependencies {
@@ -60,4 +64,9 @@ dependencies {
     // Hilt (Dependency Injection)
     implementation(libs.hilt.android)
     annotationProcessor(libs.hilt.compiler)
+
+    // WorkManager
+    implementation(libs.work.runtime)
+    implementation(libs.hilt.work)
+    annotationProcessor(libs.hilt.work.compiler)
 }
