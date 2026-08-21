@@ -1,3 +1,15 @@
 <resources>
     <string name="app_name">Voice Yanga</string>
+    <string name="login_title">Welcome Back</string>
+    <string name="login_subtitle">Sign in to continue reporting issues in your community.</string>
+    <string name="email_label">Email Address</string>
+    <string name="password_label">Password</string>
+    <string name="login_button">Sign In</string>
+    <string name="no_account">Don\'t have an account? Register</string>
+    <string name="error_invalid_email">Please enter a valid email.</string>
+    <string name="error_empty_password">Password cannot be empty.</string>
+    <string name="login_loading">Signing in…</string>
+    <string name="welcome_message">Welcome to Voice Yanga</string>
+    <string name="feed_placeholder">Your feed of community issues will appear here soon.</string>
+    <string name="report_problem_desc">Report Problem</string>
 </resources>

@@ -1,14 +1,11 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.hilt)
 }
 
 android {
     namespace = "com.voiceyanga.citizen"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.voiceyanga.citizen"
@@ -22,9 +19,11 @@ android {
 
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
     compileOptions {
@@ -57,4 +56,8 @@ dependencies {
 
     // RecyclerView (for complaint lists, later)
     implementation(libs.recyclerview)
+
+    // Hilt (Dependency Injection)
+    implementation(libs.hilt.android)
+    annotationProcessor(libs.hilt.compiler)
 }
