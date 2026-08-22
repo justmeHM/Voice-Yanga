@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".VoiceYangaApplication"
@@ -41,6 +42,16 @@
             android:exported="false" />
 
         <activity
+            android:name=".feature.home.MyComplaintsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.VoiceYanga" />
+
+        <activity
+            android:name=".feature.notifications.NotificationCenterActivity"
+            android:exported="false"
+            android:theme="@style/Theme.VoiceYanga" />
+
+        <activity
             android:name=".feature.complaints.CreateComplaintActivity"
             android:exported="false"
             android:theme="@style/Theme.VoiceYanga" />
@@ -54,6 +65,21 @@
             android:name=".MainActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+
+        <service
+            android:name=".core.notifications.VoiceYangaMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification_bell_vector" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/primary_green" />
 
         <provider
             android:name="androidx.startup.InitializationProvider"

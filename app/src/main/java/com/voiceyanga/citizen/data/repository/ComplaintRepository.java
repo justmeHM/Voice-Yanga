@@ -6,6 +6,7 @@ import androidx.work.Constraints;
 import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
+import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.data.local.dao.ComplaintDao;
 import com.voiceyanga.citizen.data.local.entity.Comment;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
@@ -23,12 +24,14 @@ import dagger.hilt.android.qualifiers.ApplicationContext;
 public class ComplaintRepository {
 
     private final ComplaintDao complaintDao;
+    private final SessionManager sessionManager;
     private final ExecutorService executorService;
     private final WorkManager workManager;
 
     @Inject
-    public ComplaintRepository(ComplaintDao complaintDao, @ApplicationContext Context context) {
+    public ComplaintRepository(ComplaintDao complaintDao, SessionManager sessionManager, @ApplicationContext Context context) {
         this.complaintDao = complaintDao;
+        this.sessionManager = sessionManager;
         this.executorService = Executors.newSingleThreadExecutor();
         this.workManager = WorkManager.getInstance(context);
     }
@@ -37,12 +40,20 @@ public class ComplaintRepository {
         return complaintDao.getAllComplaints();
     }
 
+    public LiveData<List<Complaint>> getMyComplaints(String email) {
+        return complaintDao.getMyComplaints(email);
+    }
+
     public LiveData<Complaint> getComplaint(String uuid) {
         return complaintDao.getComplaintByUuidLiveData(uuid);
     }
 
     public LiveData<List<Comment>> getComments(String complaintUuid) {
         return complaintDao.getCommentsForComplaint(complaintUuid);
+    }
+
+    public LiveData<List<ComplaintPhoto>> getPhotos(String complaintUuid) {
+        return complaintDao.getPhotosForComplaint(complaintUuid);
     }
 
     public void supportComplaint(String uuid) {
@@ -54,6 +65,7 @@ public class ComplaintRepository {
 
     public void saveComplaint(Complaint complaint, List<String> photoUris) {
         executorService.execute(() -> {
+            complaint.setAuthorEmail(sessionManager.getUserEmail());
             complaintDao.insert(complaint);
             
             if (photoUris != null) {

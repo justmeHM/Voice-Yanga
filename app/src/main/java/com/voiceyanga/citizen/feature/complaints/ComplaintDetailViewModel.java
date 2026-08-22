@@ -27,6 +27,10 @@ public class ComplaintDetailViewModel extends ViewModel {
         return repository.getComments(uuid);
     }
 
+    public LiveData<List<com.voiceyanga.citizen.data.local.entity.ComplaintPhoto>> getPhotos(String uuid) {
+        return repository.getPhotos(uuid);
+    }
+
     public void supportComplaint(String uuid) {
         repository.supportComplaint(uuid);
     }

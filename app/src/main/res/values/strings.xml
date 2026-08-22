@@ -62,6 +62,7 @@
     <string name="complaint_submitted_success">Report submitted successfully!</string>
     <string name="section_description">DESCRIPTION</string>
     <string name="section_timeline">STATUS TIMELINE</string>
+    <string name="section_comments">OFFICIAL UPDATES &amp; COMMENTS</string>
     <string name="support_button_label">Support this issue</string>
     <string name="support_count_format">%d people support this</string>
     <string name="status_submitted">Submitted</string>
@@ -70,10 +71,16 @@
     <string name="status_in_progress">In Progress</string>
     <string name="status_resolved">Resolved</string>
     <string name="status_rejected">Rejected</string>
+    <string name="badge_official">OFFICIAL</string>
+    <string name="notifications_title">Notifications</string>
+    <string name="mark_all_read">Mark all as read</string>
+    <string name="empty_notifications_title">No notifications yet</string>
+    <string name="empty_notifications_subtitle">We\'ll notify you when your reports are updated or someone comments.</string>
     <string name="priority_format">%1$s PRIORITY</string>
     <string name="empty_reports_title">No reports yet</string>
     <string name="empty_reports_subtitle">When you report a community problem,\nyou\'ll see it here.</string>
     <string name="menu_profile">Profile</string>
+    <string name="menu_my_complaints">My Complaints</string>
     <string name="menu_help">Support</string>
     <string name="menu_about">About Voice Yanga</string>
     <string name="menu_privacy">Privacy &amp; Policy</string>

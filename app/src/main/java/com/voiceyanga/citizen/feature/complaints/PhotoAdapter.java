@@ -1,6 +1,7 @@
 package com.voiceyanga.citizen.feature.complaints;
 
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -56,6 +57,7 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
                     .centerCrop()
                     .into(binding.ivPhoto);
 
+            binding.btnRemove.setVisibility(listener != null ? View.VISIBLE : View.GONE);
             binding.btnRemove.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onRemove(uri);

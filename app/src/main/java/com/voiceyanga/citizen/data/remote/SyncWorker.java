@@ -5,6 +5,7 @@ import androidx.annotation.NonNull;
 import androidx.hilt.work.HiltWorker;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
+import com.voiceyanga.citizen.core.notifications.NotificationHelper;
 import com.voiceyanga.citizen.data.local.dao.ComplaintDao;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
@@ -23,14 +24,17 @@ public class SyncWorker extends Worker {
 
     private static final String TAG = "SyncWorker";
     private final ComplaintDao complaintDao;
+    private final NotificationHelper notificationHelper;
 
     @AssistedInject
     public SyncWorker(
             @Assisted @NonNull Context context,
             @Assisted @NonNull WorkerParameters params,
-            ComplaintDao complaintDao) {
+            ComplaintDao complaintDao,
+            NotificationHelper notificationHelper) {
         super(context, params);
         this.complaintDao = complaintDao;
+        this.notificationHelper = notificationHelper;
     }
 
     @NonNull
@@ -66,6 +70,14 @@ public class SyncWorker extends Worker {
                 
                 complaintDao.update(complaint);
                 Log.d(TAG, "Sync successful for complaint: " + complaint.getReferenceCode());
+                
+                // Mock Notification
+                notificationHelper.showNotification(
+                        "Report Submitted",
+                        "Your report " + complaint.getReferenceCode() + " has been successfully submitted.",
+                        complaint.getClientUuid(),
+                        "STATUS_CHANGE"
+                );
             } catch (InterruptedException e) {
                 return Result.retry();
             } catch (Exception e) {

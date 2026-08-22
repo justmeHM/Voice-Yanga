@@ -19,10 +19,17 @@ public class SplashActivity extends AppCompatActivity {
         SplashViewModel viewModel = new ViewModelProvider(this).get(SplashViewModel.class);
 
         viewModel.getIsLoggedIn().observe(this, loggedIn -> {
-            Intent intent = loggedIn
-                    ? new Intent(SplashActivity.this, HomeActivity.class)
-                    : new Intent(SplashActivity.this, LoginActivity.class);
-            startActivity(intent);
+            Intent nextIntent;
+            if (loggedIn) {
+                nextIntent = new Intent(SplashActivity.this, HomeActivity.class);
+                // Propagate deep link extras
+                if (getIntent().getExtras() != null) {
+                    nextIntent.putExtras(getIntent().getExtras());
+                }
+            } else {
+                nextIntent = new Intent(SplashActivity.this, LoginActivity.class);
+            }
+            startActivity(nextIntent);
             finish();
         });
 

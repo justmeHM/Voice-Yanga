@@ -6,6 +6,10 @@
             android:icon="@drawable/profile"
             android:title="@string/menu_profile" />
         <item
+            android:id="@+id/nav_my_complaints"
+            android:icon="@drawable/road"
+            android:title="@string/menu_my_complaints" />
+        <item
             android:id="@+id/nav_help"
             android:icon="@drawable/support"
             android:title="@string/menu_help" />

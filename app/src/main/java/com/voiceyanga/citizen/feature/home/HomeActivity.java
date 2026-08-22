@@ -15,6 +15,7 @@ import com.voiceyanga.citizen.feature.auth.LoginActivity;
 import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.feature.complaints.ComplaintDetailActivity;
 import com.voiceyanga.citizen.feature.complaints.CreateComplaintActivity;
+import com.voiceyanga.citizen.feature.notifications.NotificationCenterActivity;
 import com.voiceyanga.citizen.feature.profile.ProfileActivity;
 import java.util.Locale;
 import javax.inject.Inject;
@@ -45,6 +46,16 @@ public class HomeActivity extends AppCompatActivity {
         setupRecyclerView();
         setupObservers();
         setupListeners();
+        handleDeepLink();
+    }
+
+    private void handleDeepLink() {
+        if (getIntent().hasExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID)) {
+            String uuid = getIntent().getStringExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID);
+            Intent intent = new Intent(this, ComplaintDetailActivity.class);
+            intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, uuid);
+            startActivity(intent);
+        }
     }
 
     private void setupHeader() {
@@ -91,6 +102,8 @@ public class HomeActivity extends AppCompatActivity {
                 logout();
             } else if (id == R.id.nav_profile) {
                 startActivity(new Intent(this, ProfileActivity.class));
+            } else if (id == R.id.nav_my_complaints) {
+                startActivity(new Intent(this, MyComplaintsActivity.class));
             } else if (id == R.id.nav_help || id == R.id.nav_about || id == R.id.nav_privacy) {
                 Toast.makeText(this, item.getTitle() + " coming soon", Toast.LENGTH_SHORT).show();
             }
@@ -110,7 +123,7 @@ public class HomeActivity extends AppCompatActivity {
         binding.cardReport.setOnClickListener(reportListener);
 
         binding.btnNotifications.setOnClickListener(v -> 
-            Toast.makeText(this, "Notifications coming soon", Toast.LENGTH_SHORT).show());
+            startActivity(new Intent(this, NotificationCenterActivity.class)));
     }
 
     private void logout() {

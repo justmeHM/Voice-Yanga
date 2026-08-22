@@ -73,4 +73,5 @@ dependencies {
     implementation(libs.glide)
     annotationProcessor(libs.glide) // Glide annotation processor is optional for simple use but good to have
     implementation(libs.play.services.location)
+    implementation(libs.firebase.messaging)
 }

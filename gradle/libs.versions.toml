@@ -19,6 +19,7 @@ hiltWork = "1.2.0"
 kotlin = "1.9.24"
 glide = "4.16.0"
 playServicesLocation = "21.3.0"
+firebaseMessaging = "24.1.0"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -44,6 +45,7 @@ hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltWo
 hilt-work-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltWork" }
 glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging", version.ref = "firebaseMessaging" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

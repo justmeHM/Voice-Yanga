@@ -1,18 +1,21 @@
 package com.voiceyanga.citizen.feature.complaints;
 
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
+import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
 import com.voiceyanga.citizen.databinding.ActivityComplaintDetailBinding;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 import dagger.hilt.android.AndroidEntryPoint;
 
 @AndroidEntryPoint
@@ -23,6 +26,8 @@ public class ComplaintDetailActivity extends AppCompatActivity {
     private ActivityComplaintDetailBinding binding;
     private ComplaintDetailViewModel viewModel;
     private String complaintUuid;
+    private PhotoAdapter photoAdapter;
+    private CommentAdapter commentAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +45,8 @@ public class ComplaintDetailActivity extends AppCompatActivity {
 
         setupToolbar();
         setupTimeline();
+        setupPhotoList();
+        setupCommentList();
         observeViewModel();
         setupListeners();
     }
@@ -52,10 +59,40 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         binding.rvTimeline.setLayoutManager(new LinearLayoutManager(this));
     }
 
+    private void setupPhotoList() {
+        photoAdapter = new PhotoAdapter(null); // No removal in detail
+        binding.rvPhotos.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        binding.rvPhotos.setAdapter(photoAdapter);
+    }
+
+    private void setupCommentList() {
+        commentAdapter = new CommentAdapter();
+        binding.rvComments.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvComments.setAdapter(commentAdapter);
+    }
+
     private void observeViewModel() {
         viewModel.getComplaint(complaintUuid).observe(this, complaint -> {
             if (complaint != null) {
                 displayComplaint(complaint);
+            }
+        });
+
+        viewModel.getPhotos(complaintUuid).observe(this, photos -> {
+            if (photos != null && !photos.isEmpty()) {
+                binding.rvPhotos.setVisibility(View.VISIBLE);
+                List<String> uris = photos.stream()
+                        .map(ComplaintPhoto::getPhotoUri)
+                        .collect(Collectors.toList());
+                photoAdapter.setPhotos(uris);
+            } else {
+                binding.rvPhotos.setVisibility(View.GONE);
+            }
+        });
+
+        viewModel.getComments(complaintUuid).observe(this, comments -> {
+            if (comments != null) {
+                commentAdapter.setComments(comments);
             }
         });
     }

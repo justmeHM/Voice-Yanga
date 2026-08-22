@@ -21,6 +21,7 @@ public class Complaint {
     private String status;
     private int supportCount;
     private String syncStatus; // PENDING, SYNCING, SYNCED, FAILED
+    private String authorEmail;
     private long createdAt;
     private long updatedAt;
 
@@ -71,6 +72,9 @@ public class Complaint {
 
     public String getSyncStatus() { return syncStatus; }
     public void setSyncStatus(String syncStatus) { this.syncStatus = syncStatus; }
+
+    public String getAuthorEmail() { return authorEmail; }
+    public void setAuthorEmail(String authorEmail) { this.authorEmail = authorEmail; }
 
     public long getCreatedAt() { return createdAt; }
     public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }

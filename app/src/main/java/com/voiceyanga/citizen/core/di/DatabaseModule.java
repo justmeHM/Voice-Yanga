@@ -3,6 +3,7 @@ package com.voiceyanga.citizen.core.di;
 import android.content.Context;
 import androidx.room.Room;
 import com.voiceyanga.citizen.data.local.dao.ComplaintDao;
+import com.voiceyanga.citizen.data.local.dao.NotificationDao;
 import com.voiceyanga.citizen.data.local.database.AppDatabase;
 import javax.inject.Singleton;
 import dagger.Module;
@@ -26,5 +27,10 @@ public class DatabaseModule {
     @Provides
     public ComplaintDao provideComplaintDao(AppDatabase database) {
         return database.complaintDao();
+    }
+
+    @Provides
+    public NotificationDao provideNotificationDao(AppDatabase database) {
+        return database.notificationDao();
     }
 }
