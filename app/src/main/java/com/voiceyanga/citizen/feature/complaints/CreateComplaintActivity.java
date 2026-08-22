@@ -130,7 +130,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
             String title = binding.etTitle.getText().toString().trim();
             String description = binding.etDescription.getText().toString().trim();
             String category = selectedCategory;
-            String location = detectedLocation != null ? detectedLocation : "Matero, Lusaka";
+            String location = detectedLocation != null ? detectedLocation : getString(R.string.location_placeholder);
 
             viewModel.submitComplaint(title, description, category, location);
         });
@@ -159,7 +159,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
             if (location != null) {
                 updateLocationUI(location);
             } else {
-                Toast.makeText(this, "Unable to detect location", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.error_location_not_found, Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -200,11 +200,11 @@ public class CreateComplaintActivity extends AppCompatActivity {
         
         card.setStrokeColor(ContextCompat.getColor(this, R.color.primary_green));
         card.setStrokeWidth(6);
-        card.setCardBackgroundColor(Color.parseColor("#F0FDF4")); // Very light green
+        card.setCardBackgroundColor(ContextCompat.getColor(this, R.color.primary_green_light));
     }
 
     private void resetCard(MaterialCardView card) {
-        card.setStrokeColor(Color.parseColor("#E5E7EB"));
+        card.setStrokeColor(ContextCompat.getColor(this, R.color.neutral_200));
         card.setStrokeWidth(2);
         card.setCardBackgroundColor(Color.WHITE);
     }

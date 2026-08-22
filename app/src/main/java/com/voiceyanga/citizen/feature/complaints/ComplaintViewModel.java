@@ -2,17 +2,19 @@ package com.voiceyanga.citizen.feature.complaints;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
+import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.data.repository.ComplaintRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import javax.inject.Inject;
+import android.app.Application;
+import androidx.annotation.NonNull;
 import dagger.hilt.android.lifecycle.HiltViewModel;
 
 @HiltViewModel
-public class ComplaintViewModel extends ViewModel {
+public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
 
     private final ComplaintRepository repository;
     private final MutableLiveData<Boolean> _submissionSuccess = new MutableLiveData<>();
@@ -28,13 +30,14 @@ public class ComplaintViewModel extends ViewModel {
     public LiveData<List<String>> getSelectedPhotos() { return _selectedPhotos; }
 
     @Inject
-    public ComplaintViewModel(ComplaintRepository repository) {
+    public ComplaintViewModel(@NonNull Application application, ComplaintRepository repository) {
+        super(application);
         this.repository = repository;
     }
 
     public void submitComplaint(String title, String description, String category, String location) {
         if (title.isEmpty() || description.isEmpty() || category == null) {
-            _error.setValue("Please fill all required fields");
+            _error.setValue(getApplication().getString(R.string.error_fill_fields));
             return;
         }
 
@@ -65,7 +68,7 @@ public class ComplaintViewModel extends ViewModel {
             current.add(uri);
             _selectedPhotos.setValue(current);
         } else {
-            _error.setValue("Maximum 5 photos allowed");
+            _error.setValue(getApplication().getString(R.string.error_max_photos));
         }
     }
 

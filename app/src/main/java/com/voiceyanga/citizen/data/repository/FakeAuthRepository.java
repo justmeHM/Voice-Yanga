@@ -1,28 +1,35 @@
 package com.voiceyanga.citizen.data.repository;
 
+import android.content.Context;
+import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.data.local.SessionManager;
+import com.voiceyanga.citizen.domain.repository.AuthRepository;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import dagger.hilt.android.qualifiers.ApplicationContext;
 
 /**
- * Repository for handling authentication logic.
- * [FR-AUTH-01] Login implementation.
- * [FR-AUTH-02] Registration implementation.
+ * Fake implementation of AuthRepository for development and pilot demonstration.
+ * [Rule 55] Mock implementation clearly separated from production potential.
  */
 @Singleton
-public class AuthRepository {
+public class FakeAuthRepository implements AuthRepository {
 
     private final SessionManager sessionManager;
+    private final Context context;
 
     @Inject
-    public AuthRepository(SessionManager sessionManager) {
+    public FakeAuthRepository(SessionManager sessionManager, @ApplicationContext Context context) {
         this.sessionManager = sessionManager;
+        this.context = context;
     }
 
+    @Override
     public boolean isUserLoggedIn() {
         return sessionManager.isLoggedIn();
     }
 
+    @Override
     public void login(String email, String password, LoginCallback callback) {
         // Simulate network delay
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
@@ -31,23 +38,18 @@ public class AuthRepository {
                 sessionManager.saveUser("John Doe", email, "+260 971 123456");
                 callback.onSuccess();
             } else {
-                callback.onError("Invalid credentials");
+                callback.onError(context.getString(R.string.error_invalid_credentials));
             }
-        }, 2000);
+        }, 1500);
     }
 
+    @Override
     public void register(String firstName, String lastName, String phone, String email, String password, LoginCallback callback) {
         // Simulate network delay for registration
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-            // Mock registration success
             sessionManager.saveToken("mock_registered_token_67890");
             sessionManager.saveUser(firstName + " " + lastName, email, phone);
             callback.onSuccess();
-        }, 2000);
-    }
-
-    public interface LoginCallback {
-        void onSuccess();
-        void onError(String message);
+        }, 1500);
     }
 }

@@ -113,13 +113,14 @@ public class ComplaintDetailActivity extends AppCompatActivity {
     private void updateTimeline(Complaint complaint) {
         List<TimelineAdapter.StatusPoint> points = new ArrayList<>();
         String dateStr = new SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()).format(new Date(complaint.getCreatedAt()));
+        String pending = getString(R.string.status_pending);
 
         // In a real app, these dates would come from the server history
         points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_submitted), dateStr, true));
-        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_reviewed), "Pending", isAtLeast(complaint.getStatus(), "REVIEWED")));
-        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_assigned), "Pending", isAtLeast(complaint.getStatus(), "ASSIGNED")));
-        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_in_progress), "Pending", isAtLeast(complaint.getStatus(), "IN_PROGRESS")));
-        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_resolved), "Pending", isAtLeast(complaint.getStatus(), "RESOLVED")));
+        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_reviewed), pending, isAtLeast(complaint.getStatus(), "REVIEWED")));
+        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_assigned), pending, isAtLeast(complaint.getStatus(), "ASSIGNED")));
+        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_in_progress), pending, isAtLeast(complaint.getStatus(), "IN_PROGRESS")));
+        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_resolved), pending, isAtLeast(complaint.getStatus(), "RESOLVED")));
 
         binding.rvTimeline.setAdapter(new TimelineAdapter(points));
     }
@@ -134,7 +135,8 @@ public class ComplaintDetailActivity extends AppCompatActivity {
     private void setupListeners() {
         binding.btnSupport.setOnClickListener(v -> {
             viewModel.supportComplaint(complaintUuid);
-            Toast.makeText(this, "Thank you for your support!", Toast.LENGTH_SHORT).show();
+            viewModel.simulateProgress(complaintUuid); // Mock update for UI verification
+            Toast.makeText(this, R.string.support_thanks, Toast.LENGTH_SHORT).show();
         });
     }
 }

@@ -34,4 +34,8 @@ public class ComplaintDetailViewModel extends ViewModel {
     public void supportComplaint(String uuid) {
         repository.supportComplaint(uuid);
     }
+
+    public void simulateProgress(String uuid) {
+        repository.simulateProgress(uuid);
+    }
 }

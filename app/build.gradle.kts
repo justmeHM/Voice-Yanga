@@ -42,6 +42,8 @@ dependencies {
     implementation(libs.constraintlayout)
     implementation(libs.material)
     testImplementation(libs.junit)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.arch.core.testing)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
 
@@ -74,4 +76,5 @@ dependencies {
     annotationProcessor(libs.glide) // Glide annotation processor is optional for simple use but good to have
     implementation(libs.play.services.location)
     implementation(libs.firebase.messaging)
+    implementation(libs.security.crypto)
 }

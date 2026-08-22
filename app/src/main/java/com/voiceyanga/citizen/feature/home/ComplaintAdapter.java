@@ -3,12 +3,18 @@ package com.voiceyanga.citizen.feature.home;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
+import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.databinding.ItemComplaintBinding;
 
+/**
+ * Adapter for the main complaint feed.
+ * [Rule 24] Visual representation of sync states.
+ */
 public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.ViewHolder> {
 
     private final OnComplaintClickListener listener;
@@ -64,11 +70,24 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
             binding.tvLocation.setText(complaint.getLocation());
             binding.tvStatus.setText(complaint.getStatus());
             
-            String syncInfo = complaint.getSyncStatus();
-            if ("SYNCED".equals(syncInfo) && complaint.getReferenceCode() != null) {
-                syncInfo = complaint.getReferenceCode();
+            String syncStatus = complaint.getSyncStatus();
+            int color;
+
+            if ("SYNCED".equals(syncStatus)) {
+                binding.tvSyncStatus.setText(complaint.getReferenceCode());
+                color = ContextCompat.getColor(itemView.getContext(), R.color.neutral_500);
+            } else if ("FAILED".equals(syncStatus)) {
+                binding.tvSyncStatus.setText(R.string.sync_failed_hint);
+                color = ContextCompat.getColor(itemView.getContext(), R.color.primary_red);
+            } else if ("SYNCING".equals(syncStatus)) {
+                binding.tvSyncStatus.setText(R.string.syncing_hint);
+                color = ContextCompat.getColor(itemView.getContext(), R.color.primary_green);
+            } else {
+                binding.tvSyncStatus.setText(R.string.pending_sync_hint);
+                color = ContextCompat.getColor(itemView.getContext(), R.color.neutral_400);
             }
-            binding.tvSyncStatus.setText(syncInfo);
+            
+            binding.tvSyncStatus.setTextColor(color);
 
             binding.getRoot().setOnClickListener(v -> {
                 if (listener != null) {

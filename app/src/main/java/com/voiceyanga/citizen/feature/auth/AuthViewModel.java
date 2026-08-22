@@ -3,7 +3,7 @@ package com.voiceyanga.citizen.feature.auth;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-import com.voiceyanga.citizen.data.repository.AuthRepository;
+import com.voiceyanga.citizen.domain.repository.AuthRepository;
 import javax.inject.Inject;
 import dagger.hilt.android.lifecycle.HiltViewModel;
 

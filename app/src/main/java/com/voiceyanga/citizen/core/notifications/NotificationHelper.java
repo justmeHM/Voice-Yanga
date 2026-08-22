@@ -19,12 +19,14 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import dagger.hilt.android.qualifiers.ApplicationContext;
 
+/**
+ * Helper to manage system notifications and persistent notification storage.
+ * [Rule 57] Uses string resources for channel metadata.
+ */
 @Singleton
 public class NotificationHelper {
 
     public static final String CHANNEL_ID = "voice_yanga_alerts";
-    private static final String CHANNEL_NAME = "Voice Yanga Alerts";
-    private static final String CHANNEL_DESC = "Notifications for complaint status changes and updates.";
 
     private final Context context;
     private final NotificationDao notificationDao;
@@ -42,9 +44,9 @@ public class NotificationHelper {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
-                    CHANNEL_NAME,
+                    context.getString(R.string.notification_channel_name),
                     NotificationManager.IMPORTANCE_DEFAULT);
-            channel.setDescription(CHANNEL_DESC);
+            channel.setDescription(context.getString(R.string.notification_channel_desc));
             
             NotificationManager manager = context.getSystemService(NotificationManager.class);
             if (manager != null) {

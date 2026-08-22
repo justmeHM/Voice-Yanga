@@ -20,6 +20,9 @@ kotlin = "1.9.24"
 glide = "4.16.0"
 playServicesLocation = "21.3.0"
 firebaseMessaging = "24.1.0"
+securityCrypto = "1.1.0"
+mockito = "5.11.0"
+archCore = "2.2.0"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -46,6 +49,9 @@ hilt-work-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.
 glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging", version.ref = "firebaseMessaging" }
+security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
+arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "archCore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

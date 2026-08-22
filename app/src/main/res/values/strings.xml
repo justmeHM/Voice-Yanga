@@ -90,4 +90,19 @@
     <string name="remove_photo_desc">Remove this photo</string>
     <string name="location_not_detected">Location detected: %1$s</string>
     <string name="error_permission_denied">Permission denied. Please enable location in settings.</string>
+    <string name="coming_soon_format">%1$s coming soon</string>
+    <string name="notification_channel_name">Voice Yanga Alerts</string>
+    <string name="notification_channel_desc">Notifications for complaint status changes and updates.</string>
+    <string name="sync_notification_title">Report Submitted</string>
+    <string name="sync_notification_message">Your report %1$s has been successfully submitted.</string>
+    <string name="status_pending">Pending</string>
+    <string name="notification_date_format">dd MMM, HH:mm</string>
+    <string name="error_location_not_found">Unable to detect location</string>
+    <string name="error_fill_fields">Please fill all required fields</string>
+    <string name="error_max_photos">Maximum 5 photos allowed</string>
+    <string name="error_invalid_credentials">Invalid credentials</string>
+    <string name="support_thanks">Thank you for your support!</string>
+    <string name="sync_failed_hint">Sync Failed</string>
+    <string name="syncing_hint">Syncing…</string>
+    <string name="pending_sync_hint">Pending Sync</string>
 </resources>

@@ -4,6 +4,7 @@ import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.databinding.ItemNotificationBinding;
 import com.voiceyanga.citizen.data.local.entity.Notification;
 import java.text.SimpleDateFormat;
@@ -12,6 +13,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Adapter for the notification list.
+ * [Rule 57] Uses string resources for date formatting.
+ */
 public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapter.ViewHolder> {
 
     private List<Notification> notifications = new ArrayList<>();
@@ -50,11 +55,15 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
 
     class ViewHolder extends RecyclerView.ViewHolder {
         private final ItemNotificationBinding binding;
-        private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault());
+        private final SimpleDateFormat dateFormat;
 
         ViewHolder(ItemNotificationBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
+            this.dateFormat = new SimpleDateFormat(
+                    binding.getRoot().getContext().getString(R.string.notification_date_format), 
+                    Locale.getDefault()
+            );
         }
 
         void bind(Notification notification) {

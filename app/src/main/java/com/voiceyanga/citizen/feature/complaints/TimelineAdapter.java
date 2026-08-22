@@ -1,15 +1,21 @@
 package com.voiceyanga.citizen.feature.complaints;
 
+import android.content.Context;
 import android.content.res.ColorStateList;
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
+import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.databinding.ItemTimelineBinding;
 import java.util.List;
 
+/**
+ * Adapter for the complaint status timeline.
+ * [Rule 10] Uses semantic colors for status points.
+ */
 public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHolder> {
 
     private final List<StatusPoint> points;
@@ -28,7 +34,8 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(points.get(position), position == 0, position == getItemCount() - 1);
+        boolean nextCompleted = (position + 1 < points.size()) && points.get(position + 1).isCompleted;
+        holder.bind(points.get(position), position == 0, position == getItemCount() - 1, nextCompleted);
     }
 
     @Override
@@ -44,20 +51,31 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
             this.binding = binding;
         }
 
-        void bind(StatusPoint point, boolean isFirst, boolean isLast) {
+        void bind(StatusPoint point, boolean isFirst, boolean isLast, boolean isNextCompleted) {
             binding.tvStatusName.setText(point.label);
             binding.tvStatusDate.setText(point.date);
             
             binding.vLineTop.setVisibility(isFirst ? View.INVISIBLE : View.VISIBLE);
             binding.vLineBottom.setVisibility(isLast ? View.INVISIBLE : View.VISIBLE);
 
+            Context context = binding.getRoot().getContext();
+            int green = ContextCompat.getColor(context, R.color.primary_green);
+            int neutral = ContextCompat.getColor(context, R.color.neutral_200);
+
             if (point.isCompleted) {
-                binding.ivDot.setImageTintList(ColorStateList.valueOf(Color.parseColor("#16834B")));
+                binding.ivDot.setImageTintList(ColorStateList.valueOf(green));
+                binding.tvStatusName.setTextColor(ContextCompat.getColor(context, R.color.neutral_900));
                 binding.tvStatusName.setAlpha(1.0f);
+                binding.vLineTop.setBackgroundColor(green);
             } else {
-                binding.ivDot.setImageTintList(ColorStateList.valueOf(Color.parseColor("#E5E7EB")));
-                binding.tvStatusName.setAlpha(0.5f);
+                binding.ivDot.setImageTintList(ColorStateList.valueOf(neutral));
+                binding.tvStatusName.setTextColor(ContextCompat.getColor(context, R.color.neutral_500));
+                binding.tvStatusName.setAlpha(0.6f);
+                binding.vLineTop.setBackgroundColor(neutral);
             }
+
+            // The line leading to the NEXT point is green only if the NEXT point is completed
+            binding.vLineBottom.setBackgroundColor(isNextCompleted ? green : neutral);
         }
     }
 

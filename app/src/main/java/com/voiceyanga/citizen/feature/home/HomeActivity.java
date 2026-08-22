@@ -105,7 +105,8 @@ public class HomeActivity extends AppCompatActivity {
             } else if (id == R.id.nav_my_complaints) {
                 startActivity(new Intent(this, MyComplaintsActivity.class));
             } else if (id == R.id.nav_help || id == R.id.nav_about || id == R.id.nav_privacy) {
-                Toast.makeText(this, item.getTitle() + " coming soon", Toast.LENGTH_SHORT).show();
+                String message = String.format(getString(R.string.coming_soon_format), item.getTitle());
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
             }
             binding.drawerLayout.closeDrawer(GravityCompat.START);
             return true;

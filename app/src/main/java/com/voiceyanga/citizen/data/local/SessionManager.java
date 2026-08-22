@@ -2,24 +2,48 @@ package com.voiceyanga.citizen.data.local;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import androidx.security.crypto.EncryptedSharedPreferences;
+import androidx.security.crypto.MasterKey;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import dagger.hilt.android.qualifiers.ApplicationContext;
 
+/**
+ * Manages user session and authentication tokens securely.
+ * [Rule 28] Uses EncryptedSharedPreferences for token security.
+ */
 @Singleton
 public class SessionManager {
 
-    private static final String PREF_NAME = "voice_yanga_session";
+    private static final String PREF_NAME = "voice_yanga_secure_session";
     private static final String KEY_TOKEN = "auth_token";
     private static final String KEY_USER_NAME = "user_name";
     private static final String KEY_USER_EMAIL = "user_email";
     private static final String KEY_USER_PHONE = "user_phone";
 
-    private final SharedPreferences prefs;
+    private SharedPreferences prefs;
 
     @Inject
     public SessionManager(@ApplicationContext Context context) {
-        prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        try {
+            MasterKey masterKey = new MasterKey.Builder(context)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build();
+
+            prefs = EncryptedSharedPreferences.create(
+                    context,
+                    PREF_NAME,
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            );
+        } catch (GeneralSecurityException | IOException e) {
+            // Fallback to standard SharedPreferences if encryption fails (e.g., unsupported hardware)
+            // In a production app, this should be logged to a crash reporting tool.
+            prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        }
     }
 
     public void saveToken(String token) {

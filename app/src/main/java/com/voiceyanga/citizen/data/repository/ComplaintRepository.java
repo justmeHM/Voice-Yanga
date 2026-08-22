@@ -1,8 +1,9 @@
 package com.voiceyanga.citizen.data.repository;
 
-import android.content.Context;
 import androidx.lifecycle.LiveData;
+import androidx.work.BackoffPolicy;
 import androidx.work.Constraints;
+import androidx.work.ExistingWorkPolicy;
 import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
@@ -16,9 +17,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import dagger.hilt.android.qualifiers.ApplicationContext;
 
 @Singleton
 public class ComplaintRepository {
@@ -29,11 +30,11 @@ public class ComplaintRepository {
     private final WorkManager workManager;
 
     @Inject
-    public ComplaintRepository(ComplaintDao complaintDao, SessionManager sessionManager, @ApplicationContext Context context) {
+    public ComplaintRepository(ComplaintDao complaintDao, SessionManager sessionManager, WorkManager workManager) {
         this.complaintDao = complaintDao;
         this.sessionManager = sessionManager;
         this.executorService = Executors.newSingleThreadExecutor();
-        this.workManager = WorkManager.getInstance(context);
+        this.workManager = workManager;
     }
 
     public LiveData<List<Complaint>> getAllComplaints() {
@@ -54,6 +55,56 @@ public class ComplaintRepository {
 
     public LiveData<List<ComplaintPhoto>> getPhotos(String complaintUuid) {
         return complaintDao.getPhotosForComplaint(complaintUuid);
+    }
+
+    /**
+     * Simulates backend progress by updating a complaint's status and adding mock comments.
+     * [Rule 73] This supports the "Mobile First, API Second" strategy with realistic mock data.
+     */
+    public void simulateProgress(String uuid) {
+        executorService.execute(() -> {
+            Complaint complaint = complaintDao.getComplaintByUuid(uuid);
+            if (complaint == null || !"SYNCED".equals(complaint.getSyncStatus())) return;
+
+            String currentStatus = complaint.getStatus();
+            String nextStatus;
+            String commentMsg;
+
+            switch (currentStatus) {
+                case "SUBMITTED":
+                    nextStatus = "REVIEWED";
+                    commentMsg = "Your report has been reviewed by our triage team.";
+                    break;
+                case "REVIEWED":
+                    nextStatus = "ASSIGNED";
+                    commentMsg = "A technician from the Matero Water and Sewerage department has been assigned.";
+                    break;
+                case "ASSIGNED":
+                    nextStatus = "IN_PROGRESS";
+                    commentMsg = "The technician is on-site investigating the issue.";
+                    break;
+                case "IN_PROGRESS":
+                    nextStatus = "RESOLVED";
+                    commentMsg = "The issue has been fixed and verified. Thank you for reporting!";
+                    break;
+                default:
+                    return;
+            }
+
+            complaint.setStatus(nextStatus);
+            complaint.setUpdatedAt(System.currentTimeMillis());
+            complaintDao.update(complaint);
+
+            Comment comment = new Comment(
+                    UUID.randomUUID().toString(),
+                    uuid,
+                    "Official Admin",
+                    commentMsg,
+                    true,
+                    System.currentTimeMillis()
+            );
+            complaintDao.insertComment(comment);
+        });
     }
 
     public void supportComplaint(String uuid) {
@@ -99,6 +150,10 @@ public class ComplaintRepository {
         });
     }
 
+    /**
+     * Schedules a background synchronization task with exponential backoff.
+     * [Rule 26] Implements exponential backoff policy for retries.
+     */
     public void scheduleSync() {
         Constraints constraints = new Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -106,9 +161,19 @@ public class ComplaintRepository {
 
         OneTimeWorkRequest syncRequest = new OneTimeWorkRequest.Builder(SyncWorker.class)
                 .setConstraints(constraints)
+                .setBackoffCriteria(
+                        BackoffPolicy.EXPONENTIAL,
+                        OneTimeWorkRequest.MIN_BACKOFF_MILLIS,
+                        TimeUnit.MILLISECONDS)
+                .addTag("complaint_sync")
                 .build();
 
-        workManager.enqueue(syncRequest);
+        // Use UNIQUE work to avoid overlapping sync sessions
+        workManager.enqueueUniqueWork(
+                "complaint_sync_unique",
+                ExistingWorkPolicy.KEEP,
+                syncRequest
+        );
     }
 
     public List<Complaint> getPendingComplaints() {
