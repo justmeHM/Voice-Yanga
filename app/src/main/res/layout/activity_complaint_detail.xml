@@ -4,7 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white"
     tools:context=".feature.complaints.ComplaintDetailActivity">
 
     <com.google.android.material.appbar.AppBarLayout
@@ -17,12 +16,13 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@drawable/ic_back_small"
+            app:title="@string/complaint_details_title"
             app:titleTextColor="#17211B" />
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="#E5E7EB" />
+            android:background="@color/neutral_200" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
@@ -40,7 +40,7 @@
                 android:id="@+id/tvRefCode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="#66736B"
+                android:textColor="?android:attr/textColorSecondary"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.1" />
@@ -50,7 +50,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:textColor="#17211B"
+                android:textColor="?android:attr/textColorPrimary"
                 android:textSize="24sp"
                 android:textStyle="bold" />
 
@@ -83,28 +83,42 @@
 
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/tvLocation"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:textColor="#66736B"
-                android:textSize="16sp"
-                app:drawableStartCompat="@drawable/ic_location"
-                android:drawablePadding="8dp" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_location_vector"
+                    app:tint="?android:attr/textColorSecondary" />
+
+                <TextView
+                    android:id="@+id/tvLocation"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="16sp" />
+
+            </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:layout_marginTop="24dp"
-                android:background="#E5E7EB" />
+                android:background="@color/neutral_200" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:text="@string/section_description"
-                android:textColor="#66736B"
+                android:textColor="?android:attr/textColorSecondary"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.1" />
@@ -114,7 +128,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:textColor="#17211B"
+                android:textColor="?android:attr/textColorPrimary"
                 android:textSize="16sp"
                 android:lineSpacingExtra="4dp" />
 
@@ -122,14 +136,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:layout_marginTop="24dp"
-                android:background="#E5E7EB" />
+                android:background="@color/neutral_200" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:text="@string/section_timeline"
-                android:textColor="#66736B"
+                android:textColor="?android:attr/textColorSecondary"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.1" />

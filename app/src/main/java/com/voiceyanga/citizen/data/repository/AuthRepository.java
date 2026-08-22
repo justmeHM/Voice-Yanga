@@ -4,6 +4,11 @@ import com.voiceyanga.citizen.data.local.SessionManager;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+/**
+ * Repository for handling authentication logic.
+ * [FR-AUTH-01] Login implementation.
+ * [FR-AUTH-02] Registration implementation.
+ */
 @Singleton
 public class AuthRepository {
 

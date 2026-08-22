@@ -2,8 +2,26 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Voice Yanga Semantic Palette -->
     <color name="primary_green">#16834B</color>
     <color name="primary_red">#D64545</color>
+    <color name="primary_green_light">#F0FDF4</color>
+    <color name="primary_red_light">#FEE2E2</color>
+
+    <!-- Neutral Palette -->
+    <color name="neutral_50">#F9FAFB</color>
+    <color name="neutral_100">#F3F4F6</color>
+    <color name="neutral_200">#E5E7EB</color>
+    <color name="neutral_300">#D1D5DB</color>
+    <color name="neutral_400">#9CA3AF</color>
+    <color name="neutral_500">#6B7280</color>
+    <color name="neutral_600">#4B5563</color>
+    <color name="neutral_700">#374151</color>
+    <color name="neutral_800">#1F2937</color>
+    <color name="neutral_900">#111827</color>
+
+    <!-- Legacy Mappings for compatibility -->
     <color name="text_primary">#17211B</color>
     <color name="text_secondary">#66736B</color>
     <color name="background_white">#FFFFFF</color>

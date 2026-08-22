@@ -8,6 +8,10 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+/**
+ * Main entry point for the application.
+ * [FR-AUTH-01] Citizen Login support.
+ */
 public class MainActivity extends AppCompatActivity {
 
     @Override

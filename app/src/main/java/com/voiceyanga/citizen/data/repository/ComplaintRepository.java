@@ -9,6 +9,7 @@ import androidx.work.WorkManager;
 import com.voiceyanga.citizen.data.local.dao.ComplaintDao;
 import com.voiceyanga.citizen.data.local.entity.Comment;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
+import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
 import com.voiceyanga.citizen.data.remote.SyncWorker;
 import java.util.List;
 import java.util.UUID;
@@ -51,9 +52,16 @@ public class ComplaintRepository {
         });
     }
 
-    public void saveComplaint(Complaint complaint) {
+    public void saveComplaint(Complaint complaint, List<String> photoUris) {
         executorService.execute(() -> {
             complaintDao.insert(complaint);
+            
+            if (photoUris != null) {
+                for (String uri : photoUris) {
+                    complaintDao.insertPhoto(new ComplaintPhoto(complaint.getClientUuid(), uri));
+                }
+            }
+            
             scheduleSync();
             addMockOfficialComment(complaint.getClientUuid());
         });

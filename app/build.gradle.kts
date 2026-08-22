@@ -70,4 +70,7 @@ dependencies {
     implementation(libs.work.runtime)
     implementation(libs.hilt.work)
     annotationProcessor(libs.hilt.work.compiler)
+    implementation(libs.glide)
+    annotationProcessor(libs.glide) // Glide annotation processor is optional for simple use but good to have
+    implementation(libs.play.services.location)
 }

@@ -7,13 +7,21 @@ import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 import com.voiceyanga.citizen.data.local.dao.ComplaintDao;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
+import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
 import java.util.List;
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedInject;
+import android.util.Log;
 
+/**
+ * Worker for synchronizing complaints to the backend.
+ * [FR-COMP-02] Background synchronization.
+ * [FR-COMP-03] Photo synchronization support.
+ */
 @HiltWorker
 public class SyncWorker extends Worker {
 
+    private static final String TAG = "SyncWorker";
     private final ComplaintDao complaintDao;
 
     @AssistedInject
@@ -40,8 +48,16 @@ public class SyncWorker extends Worker {
                 complaint.setSyncStatus("SYNCING");
                 complaintDao.update(complaint);
 
+                // Fetch photos for this complaint
+                List<ComplaintPhoto> photos = complaintDao.getPhotosForComplaintSync(complaint.getClientUuid());
+                if (!photos.isEmpty()) {
+                    Log.d(TAG, "Uploading " + photos.size() + " photos for complaint: " + complaint.getClientUuid());
+                    // Simulate photo upload delay
+                    Thread.sleep(1000 * photos.size());
+                }
+
                 // Simulate network latency for each complaint
-                Thread.sleep(2000);
+                Thread.sleep(1000);
 
                 // Mock server response (Success)
                 complaint.setSyncStatus("SYNCED");
@@ -49,9 +65,11 @@ public class SyncWorker extends Worker {
                 complaint.setReferenceCode("VY-" + (100000 + (int)(Math.random() * 900000)));
                 
                 complaintDao.update(complaint);
+                Log.d(TAG, "Sync successful for complaint: " + complaint.getReferenceCode());
             } catch (InterruptedException e) {
                 return Result.retry();
             } catch (Exception e) {
+                Log.e(TAG, "Sync failed for complaint: " + complaint.getClientUuid(), e);
                 complaint.setSyncStatus("FAILED");
                 complaintDao.update(complaint);
                 return Result.failure();

@@ -1,23 +1,50 @@
 package com.voiceyanga.citizen.feature.complaints;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.material.card.MaterialCardView;
 import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.databinding.ActivityCreateComplaintBinding;
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
 import dagger.hilt.android.AndroidEntryPoint;
 
+/**
+ * Screen for creating a new citizen complaint.
+ * [FR-COMP-01] Complaint creation.
+ * [FR-COMP-03] Photo attachments.
+ * [FR-COMP-04] GPS location integration.
+ */
 @AndroidEntryPoint
 public class CreateComplaintActivity extends AppCompatActivity {
 
     private ActivityCreateComplaintBinding binding;
     private ComplaintViewModel viewModel;
+    private PhotoAdapter photoAdapter;
     private String selectedCategory = null;
+    private String detectedLocation = null;
+
+    private FusedLocationProviderClient fusedLocationClient;
+    private ActivityResultLauncher<String[]> locationPermissionLauncher;
+    private ActivityResultLauncher<String> galleryLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,15 +53,50 @@ public class CreateComplaintActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         viewModel = new ViewModelProvider(this).get(ComplaintViewModel.class);
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
+        setupPermissionLaunchers();
         setupToolbar();
+        setupRecyclerView();
         setupObservers();
         setupListeners();
         setupCategorySelection();
     }
 
+    private void setupPermissionLaunchers() {
+        locationPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestMultiplePermissions(),
+                result -> {
+                    Boolean fineLocationGranted = result.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false);
+                    Boolean coarseLocationGranted = result.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false);
+                    if (fineLocationGranted != null && fineLocationGranted) {
+                        getLastLocation();
+                    } else if (coarseLocationGranted != null && coarseLocationGranted) {
+                        getLastLocation();
+                    } else {
+                        Toast.makeText(this, R.string.error_permission_denied, Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
+
+        galleryLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                uri -> {
+                    if (uri != null) {
+                        viewModel.addPhoto(uri.toString());
+                    }
+                }
+        );
+    }
+
     private void setupToolbar() {
         binding.btnBack.setOnClickListener(v -> finish());
+    }
+
+    private void setupRecyclerView() {
+        photoAdapter = new PhotoAdapter(uri -> viewModel.removePhoto(uri));
+        binding.rvPhotos.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        binding.rvPhotos.setAdapter(photoAdapter);
     }
 
     private void setupObservers() {
@@ -57,6 +119,10 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 binding.btnSubmit.setEnabled(!isLoading);
             }
         });
+
+        viewModel.getSelectedPhotos().observe(this, photos -> {
+            photoAdapter.setPhotos(photos);
+        });
     }
 
     private void setupListeners() {
@@ -64,18 +130,55 @@ public class CreateComplaintActivity extends AppCompatActivity {
             String title = binding.etTitle.getText().toString().trim();
             String description = binding.etDescription.getText().toString().trim();
             String category = selectedCategory;
-            String location = "Matero, Lusaka"; // Placeholder for now
+            String location = detectedLocation != null ? detectedLocation : "Matero, Lusaka";
 
             viewModel.submitComplaint(title, description, category, location);
         });
 
-        binding.btnLocation.setOnClickListener(v -> {
-            Toast.makeText(this, "Location detected: Matero, Lusaka", Toast.LENGTH_SHORT).show();
-        });
+        binding.btnLocation.setOnClickListener(v -> requestLocationPermissions());
 
-        binding.btnAddPhotos.setOnClickListener(v -> {
-            Toast.makeText(this, "Photo selection coming soon", Toast.LENGTH_SHORT).show();
+        binding.btnAddPhotos.setOnClickListener(v -> galleryLauncher.launch("image/*"));
+    }
+
+    private void requestLocationPermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            getLastLocation();
+        } else {
+            locationPermissionLauncher.launch(new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+            });
+        }
+    }
+
+    private void getLastLocation() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
+            if (location != null) {
+                updateLocationUI(location);
+            } else {
+                Toast.makeText(this, "Unable to detect location", Toast.LENGTH_SHORT).show();
+            }
         });
+    }
+
+    private void updateLocationUI(Location location) {
+        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+        try {
+            List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+            if (addresses != null && !addresses.isEmpty()) {
+                Address address = addresses.get(0);
+                detectedLocation = address.getAddressLine(0);
+                binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), detectedLocation));
+                binding.tvDetectedLocation.setVisibility(View.VISIBLE);
+            }
+        } catch (IOException e) {
+            detectedLocation = location.getLatitude() + ", " + location.getLongitude();
+            binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), detectedLocation));
+            binding.tvDetectedLocation.setVisibility(View.VISIBLE);
+        }
     }
 
     private void setupCategorySelection() {

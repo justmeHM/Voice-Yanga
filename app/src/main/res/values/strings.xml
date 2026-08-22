@@ -50,6 +50,7 @@
     <string name="photos_label">Photos (Up to 5)</string>
     <string name="add_photos_button">+ Add Photos</string>
     <string name="submit_complaint_button">Submit Report</string>
+    <string name="complaint_details_title">Complaint Details</string>
     <string name="category_water">Water</string>
     <string name="category_sanitation">Sanitation</string>
     <string name="category_roads">Roads</string>
@@ -79,4 +80,7 @@
     <string name="menu_account_actions">Account Actions</string>
     <string name="menu_logout">Logout</string>
     <string name="back_button_desc">Go back</string>
+    <string name="remove_photo_desc">Remove this photo</string>
+    <string name="location_not_detected">Location detected: %1$s</string>
+    <string name="error_permission_denied">Permission denied. Please enable location in settings.</string>
 </resources>

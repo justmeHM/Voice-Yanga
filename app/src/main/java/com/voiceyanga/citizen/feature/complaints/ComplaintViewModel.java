@@ -5,6 +5,8 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.data.repository.ComplaintRepository;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import javax.inject.Inject;
 import dagger.hilt.android.lifecycle.HiltViewModel;
@@ -21,6 +23,9 @@ public class ComplaintViewModel extends ViewModel {
 
     private final MutableLiveData<Boolean> _loading = new MutableLiveData<>();
     public LiveData<Boolean> getLoading() { return _loading; }
+
+    private final MutableLiveData<List<String>> _selectedPhotos = new MutableLiveData<>(new ArrayList<>());
+    public LiveData<List<String>> getSelectedPhotos() { return _selectedPhotos; }
 
     @Inject
     public ComplaintViewModel(ComplaintRepository repository) {
@@ -45,12 +50,30 @@ public class ComplaintViewModel extends ViewModel {
                 System.currentTimeMillis()
         );
 
-        repository.saveComplaint(complaint);
+        repository.saveComplaint(complaint, _selectedPhotos.getValue());
         
         // Simulate a slight delay for UI feedback
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
             _loading.setValue(false);
             _submissionSuccess.setValue(true);
         }, 800);
+    }
+
+    public void addPhoto(String uri) {
+        List<String> current = _selectedPhotos.getValue();
+        if (current != null && current.size() < 5) {
+            current.add(uri);
+            _selectedPhotos.setValue(current);
+        } else {
+            _error.setValue("Maximum 5 photos allowed");
+        }
+    }
+
+    public void removePhoto(String uri) {
+        List<String> current = _selectedPhotos.getValue();
+        if (current != null) {
+            current.remove(uri);
+            _selectedPhotos.setValue(current);
+        }
     }
 }

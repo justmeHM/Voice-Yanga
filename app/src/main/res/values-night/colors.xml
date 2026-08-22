@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Voice Yanga Dark Palette -->
+    <color name="primary_green">#22C55E</color>
+    <color name="primary_red">#EF4444</color>
+    <color name="primary_green_light">#064E3B</color>
+    <color name="primary_red_light">#7F1D1D</color>
+
+    <!-- Legacy Mappings for Dark Mode -->
+    <color name="text_primary">#F9FAFB</color>
+    <color name="text_secondary">#9CA3AF</color>
+    <color name="background_white">#111827</color>
+    <color name="neutral_200">#374151</color>
+</resources>

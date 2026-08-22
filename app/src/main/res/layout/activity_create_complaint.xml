@@ -4,13 +4,11 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white"
     tools:context=".feature.complaints.CreateComplaintActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@android:color/white">
+        android:layout_height="wrap_content">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
@@ -32,14 +30,15 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/back_button_desc"
                     android:scaleType="centerInside"
-                    android:src="@drawable/ic_back_small" />
+                    android:src="@drawable/ic_cancel_back"
+                    app:tint="@color/text_primary" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
                     android:text="@string/create_complaint_title"
-                    android:textColor="#17211B"
+                    android:textColor="?android:attr/textColorPrimary"
                     android:textSize="18sp"
                     android:textStyle="bold" />
 
@@ -50,7 +49,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="#E5E7EB" />
+            android:background="@color/neutral_200" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
@@ -68,7 +67,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/section_what_happened"
-                android:textColor="#66736B"
+                android:textColor="?android:attr/textColorSecondary"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.1" />
@@ -111,7 +110,7 @@
                 android:layout_marginTop="32dp"
                 android:letterSpacing="0.1"
                 android:text="@string/section_category"
-                android:textColor="#66736B"
+                android:textColor="?android:attr/textColorSecondary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -137,10 +136,9 @@
                         android:layout_margin="6dp"
                         android:clickable="true"
                         android:focusable="true"
-                        app:cardBackgroundColor="@android:color/white"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="2dp"
-                        app:strokeColor="#E5E7EB"
+                        app:strokeColor="@color/neutral_200"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -155,14 +153,14 @@
                                 android:layout_height="wrap_content"
                                 android:fontFamily="sans-serif-medium"
                                 android:text="@string/category_water"
-                                android:textColor="#17211B"
+                                android:textColor="?android:attr/textColorPrimary"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <ImageView
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
-                                android:layout_marginTop="12dp"
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="8dp"
                                 android:src="@drawable/water"
                                 android:contentDescription="@string/category_water" />
                         </LinearLayout>
@@ -176,10 +174,9 @@
                         android:layout_margin="6dp"
                         android:clickable="true"
                         android:focusable="true"
-                        app:cardBackgroundColor="@android:color/white"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="2dp"
-                        app:strokeColor="#E5E7EB"
+                        app:strokeColor="@color/neutral_200"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -194,14 +191,14 @@
                                 android:layout_height="wrap_content"
                                 android:fontFamily="sans-serif-medium"
                                 android:text="@string/category_sanitation"
-                                android:textColor="#17211B"
+                                android:textColor="?android:attr/textColorPrimary"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <ImageView
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
-                                android:layout_marginTop="12dp"
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="8dp"
                                 android:src="@drawable/sanitary"
                                 android:contentDescription="@string/category_sanitation" />
                         </LinearLayout>
@@ -215,10 +212,9 @@
                         android:layout_margin="6dp"
                         android:clickable="true"
                         android:focusable="true"
-                        app:cardBackgroundColor="@android:color/white"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="2dp"
-                        app:strokeColor="#E5E7EB"
+                        app:strokeColor="@color/neutral_200"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -233,14 +229,14 @@
                                 android:layout_height="wrap_content"
                                 android:fontFamily="sans-serif-medium"
                                 android:text="@string/category_roads"
-                                android:textColor="#17211B"
+                                android:textColor="?android:attr/textColorPrimary"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <ImageView
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
-                                android:layout_marginTop="12dp"
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="8dp"
                                 android:src="@drawable/road"
                                 android:contentDescription="@string/category_roads" />
                         </LinearLayout>
@@ -254,10 +250,9 @@
                         android:layout_margin="6dp"
                         android:clickable="true"
                         android:focusable="true"
-                        app:cardBackgroundColor="@android:color/white"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="2dp"
-                        app:strokeColor="#E5E7EB"
+                        app:strokeColor="@color/neutral_200"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -272,14 +267,14 @@
                                 android:layout_height="wrap_content"
                                 android:fontFamily="sans-serif-medium"
                                 android:text="@string/category_electricity"
-                                android:textColor="#17211B"
+                                android:textColor="?android:attr/textColorPrimary"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <ImageView
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
-                                android:layout_marginTop="12dp"
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="8dp"
                                 android:src="@drawable/electricity"
                                 android:contentDescription="@string/category_electricity" />
                         </LinearLayout>
@@ -293,10 +288,9 @@
                         android:layout_margin="6dp"
                         android:clickable="true"
                         android:focusable="true"
-                        app:cardBackgroundColor="@android:color/white"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="2dp"
-                        app:strokeColor="#E5E7EB"
+                        app:strokeColor="@color/neutral_200"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -311,14 +305,14 @@
                                 android:layout_height="wrap_content"
                                 android:fontFamily="sans-serif-medium"
                                 android:text="@string/category_security"
-                                android:textColor="#17211B"
+                                android:textColor="?android:attr/textColorPrimary"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <ImageView
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
-                                android:layout_marginTop="12dp"
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="8dp"
                                 android:src="@drawable/security"
                                 android:contentDescription="@string/category_security" />
                         </LinearLayout>
@@ -332,7 +326,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
                 android:text="@string/section_where"
-                android:textColor="#66736B"
+                android:textColor="?android:attr/textColorSecondary"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.1" />
@@ -345,14 +339,24 @@
                 android:layout_marginTop="12dp"
                 android:text="@string/use_current_location"
                 android:textAlignment="viewStart"
-                app:icon="@drawable/ic_location" />
+                app:icon="@drawable/ic_location_vector" />
+
+            <TextView
+                android:id="@+id/tvDetectedLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/location_not_detected"
+                android:textColor="@color/primary_green"
+                android:textSize="14sp"
+                android:visibility="gone" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
                 android:text="@string/section_photos"
-                android:textColor="#66736B"
+                android:textColor="?android:attr/textColorSecondary"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.1" />
@@ -366,6 +370,15 @@
                 android:text="@string/add_photos_button"
                 app:icon="@drawable/ic_photos" />
 
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvPhotos"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                tools:listitem="@layout/item_photo" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSubmit"
                 android:layout_width="match_parent"
@@ -374,7 +387,7 @@
                 android:layout_marginBottom="32dp"
                 android:text="@string/submit_complaint_button"
                 android:textSize="16sp"
-                app:backgroundTint="#16834B"
+                app:backgroundTint="@color/primary_green"
                 app:cornerRadius="12dp" />
 
         </LinearLayout>

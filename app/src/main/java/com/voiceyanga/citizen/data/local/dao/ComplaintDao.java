@@ -9,6 +9,7 @@ import androidx.room.Transaction;
 import androidx.room.Update;
 import com.voiceyanga.citizen.data.local.entity.Comment;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
+import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
 import java.util.List;
 
 @Dao
@@ -40,4 +41,13 @@ public interface ComplaintDao {
 
     @Query("SELECT * FROM comments WHERE complaintUuid = :complaintUuid ORDER BY createdAt ASC")
     LiveData<List<Comment>> getCommentsForComplaint(String complaintUuid);
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insertPhoto(ComplaintPhoto photo);
+
+    @Query("SELECT * FROM complaint_photos WHERE complaintUuid = :complaintUuid")
+    LiveData<List<ComplaintPhoto>> getPhotosForComplaint(String complaintUuid);
+
+    @Query("SELECT * FROM complaint_photos WHERE complaintUuid = :complaintUuid")
+    List<ComplaintPhoto> getPhotosForComplaintSync(String complaintUuid);
 }
