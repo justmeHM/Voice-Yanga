@@ -60,6 +60,7 @@ dependencies {
 
     // RecyclerView (for complaint lists, later)
     implementation(libs.recyclerview)
+    implementation(libs.swiperefreshlayout)
 
     // Hilt (Dependency Injection)
     implementation(libs.hilt.android)

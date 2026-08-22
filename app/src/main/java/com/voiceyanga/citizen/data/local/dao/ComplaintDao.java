@@ -5,7 +5,9 @@ import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.Transaction;
 import androidx.room.Update;
+import com.voiceyanga.citizen.data.local.entity.Comment;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import java.util.List;
 
@@ -26,4 +28,16 @@ public interface ComplaintDao {
 
     @Query("SELECT * FROM complaints WHERE clientUuid = :uuid")
     Complaint getComplaintByUuid(String uuid);
+
+    @Query("SELECT * FROM complaints WHERE clientUuid = :uuid")
+    LiveData<Complaint> getComplaintByUuidLiveData(String uuid);
+
+    @Query("UPDATE complaints SET supportCount = supportCount + 1 WHERE clientUuid = :uuid")
+    void incrementSupportCount(String uuid);
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insertComment(Comment comment);
+
+    @Query("SELECT * FROM comments WHERE complaintUuid = :complaintUuid ORDER BY createdAt ASC")
+    LiveData<List<Comment>> getCommentsForComplaint(String complaintUuid);
 }

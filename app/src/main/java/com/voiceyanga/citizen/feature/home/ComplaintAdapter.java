@@ -11,7 +11,13 @@ import com.voiceyanga.citizen.databinding.ItemComplaintBinding;
 
 public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.ViewHolder> {
 
-    public ComplaintAdapter() {
+    private final OnComplaintClickListener listener;
+
+    public interface OnComplaintClickListener {
+        void onComplaintClick(Complaint complaint);
+    }
+
+    public ComplaintAdapter(OnComplaintClickListener listener) {
         super(new DiffUtil.ItemCallback<Complaint>() {
             @Override
             public boolean areItemsTheSame(@NonNull Complaint oldItem, @NonNull Complaint newItem) {
@@ -22,9 +28,11 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
             public boolean areContentsTheSame(@NonNull Complaint oldItem, @NonNull Complaint newItem) {
                 return oldItem.getSyncStatus().equals(newItem.getSyncStatus()) &&
                         oldItem.getStatus().equals(newItem.getStatus()) &&
-                        oldItem.getTitle().equals(newItem.getTitle());
+                        oldItem.getTitle().equals(newItem.getTitle()) &&
+                        oldItem.getSupportCount() == newItem.getSupportCount();
             }
         });
+        this.listener = listener;
     }
 
     @NonNull
@@ -32,7 +40,7 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         ItemComplaintBinding binding = ItemComplaintBinding.inflate(
                 LayoutInflater.from(parent.getContext()), parent, false);
-        return new ViewHolder(binding);
+        return new ViewHolder(binding, listener);
     }
 
     @Override
@@ -42,10 +50,12 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         private final ItemComplaintBinding binding;
+        private final OnComplaintClickListener listener;
 
-        ViewHolder(ItemComplaintBinding binding) {
+        ViewHolder(ItemComplaintBinding binding, OnComplaintClickListener listener) {
             super(binding.getRoot());
             this.binding = binding;
+            this.listener = listener;
         }
 
         void bind(Complaint complaint) {
@@ -59,6 +69,12 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
                 syncInfo = complaint.getReferenceCode();
             }
             binding.tvSyncStatus.setText(syncInfo);
+
+            binding.getRoot().setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onComplaintClick(complaint);
+                }
+            });
         }
     }
 }

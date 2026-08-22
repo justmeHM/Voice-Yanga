@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <View
+            android:id="@+id/vLineTop"
+            android:layout_width="2dp"
+            android:layout_height="16dp"
+            android:background="#E5E7EB" />
+
+        <ImageView
+            android:id="@+id/ivDot"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:src="@android:drawable/presence_online" />
+
+        <View
+            android:id="@+id/vLineBottom"
+            android:layout_width="2dp"
+            android:layout_height="match_parent"
+            android:minHeight="24dp"
+            android:background="#E5E7EB" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="16dp"
+        android:orientation="vertical"
+        android:paddingBottom="24dp">
+
+        <TextView
+            android:id="@+id/tvStatusName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#17211B"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvStatusDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="#66736B"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+</LinearLayout>

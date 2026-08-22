@@ -40,6 +40,11 @@
             android:theme="@style/Theme.VoiceYanga" />
 
         <activity
+            android:name=".feature.complaints.ComplaintDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.VoiceYanga" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />

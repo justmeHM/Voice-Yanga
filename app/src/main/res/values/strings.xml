@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">Voice Yanga</string>
+    <string name="app_name_voice">Voice</string>
+    <string name="app_name_yanga">Yanga</string>
     <string name="login_title">Welcome Back</string>
     <string name="login_subtitle">Sign in to continue reporting issues in your community.</string>
     <string name="email_label">Email Address</string>
@@ -14,6 +16,9 @@
     <string name="first_name_label">First Name</string>
     <string name="last_name_label">Last Name</string>
     <string name="phone_label">Phone Number</string>
+    <string name="notifications_desc">Notifications</string>
+    <string name="profile_desc">Profile</string>
+    <string name="menu_desc">Navigation Menu</string>
     <string name="register_button">Create Account</string>
     <string name="already_have_account">Already have an account? Sign In</string>
     <string name="error_invalid_first_name">Enter first name</string>
@@ -22,6 +27,12 @@
     <string name="error_invalid_password">Password must be 8+ chars with a number</string>
     <string name="register_loading">Creating account…</string>
     <string name="welcome_message">Welcome to Voice Yanga</string>
+    <string name="greeting_format">Good morning, %1$s</string>
+    <string name="location_placeholder">Matero, Lusaka</string>
+    <string name="report_card_title">Report a community problem</string>
+    <string name="report_card_subtitle">Help your community get issues noticed and resolved fast.</string>
+    <string name="nearby_issues_title">Nearby Issues</string>
+    <string name="critical_issues_badge">%d Critical</string>
     <string name="feed_placeholder">Your feed of community issues will appear here soon.</string>
     <string name="report_problem_desc">Report Problem</string>
     <string name="create_complaint_title">Report a Problem</string>
@@ -48,4 +59,24 @@
     <string name="error_empty_desc">Description is required</string>
     <string name="error_no_category">Please select a category</string>
     <string name="complaint_submitted_success">Report submitted successfully!</string>
+    <string name="section_description">DESCRIPTION</string>
+    <string name="section_timeline">STATUS TIMELINE</string>
+    <string name="support_button_label">Support this issue</string>
+    <string name="support_count_format">%d people support this</string>
+    <string name="status_submitted">Submitted</string>
+    <string name="status_reviewed">Reviewed</string>
+    <string name="status_assigned">Assigned</string>
+    <string name="status_in_progress">In Progress</string>
+    <string name="status_resolved">Resolved</string>
+    <string name="status_rejected">Rejected</string>
+    <string name="priority_format">%1$s PRIORITY</string>
+    <string name="empty_reports_title">No reports yet</string>
+    <string name="empty_reports_subtitle">When you report a community problem,\nyou\'ll see it here.</string>
+    <string name="menu_profile">Profile</string>
+    <string name="menu_help">Support</string>
+    <string name="menu_about">About Voice Yanga</string>
+    <string name="menu_privacy">Privacy &amp; Policy</string>
+    <string name="menu_account_actions">Account Actions</string>
+    <string name="menu_logout">Logout</string>
+    <string name="back_button_desc">Go back</string>
 </resources>

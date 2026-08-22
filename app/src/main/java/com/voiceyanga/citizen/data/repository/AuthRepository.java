@@ -23,6 +23,7 @@ public class AuthRepository {
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
             if ("test@citizen.com".equals(email) && "password123".equals(password)) {
                 sessionManager.saveToken("mock_token_12345");
+                sessionManager.saveUser("John Doe", email, "+260 971 123456");
                 callback.onSuccess();
             } else {
                 callback.onError("Invalid credentials");
@@ -35,6 +36,7 @@ public class AuthRepository {
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
             // Mock registration success
             sessionManager.saveToken("mock_registered_token_67890");
+            sessionManager.saveUser(firstName + " " + lastName, email, phone);
             callback.onSuccess();
         }, 2000);
     }
