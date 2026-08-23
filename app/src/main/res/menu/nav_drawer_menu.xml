@@ -7,7 +7,7 @@
             android:title="@string/menu_profile" />
         <item
             android:id="@+id/nav_my_complaints"
-            android:icon="@drawable/road"
+            android:icon="@drawable/my_complaints"
             android:title="@string/menu_my_complaints" />
         <item
             android:id="@+id/nav_help"

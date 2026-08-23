@@ -27,6 +27,9 @@ public interface ComplaintDao {
     @Query("SELECT * FROM complaints WHERE authorEmail = :email ORDER BY createdAt DESC")
     LiveData<List<Complaint>> getMyComplaints(String email);
 
+    @Query("SELECT * FROM complaints WHERE authorEmail != :email ORDER BY createdAt DESC")
+    LiveData<List<Complaint>> getCommunityComplaints(String email);
+
     @Query("SELECT * FROM complaints WHERE syncStatus = 'PENDING'")
     List<Complaint> getPendingComplaints();
 

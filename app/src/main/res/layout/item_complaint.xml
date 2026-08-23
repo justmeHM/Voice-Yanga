@@ -73,6 +73,21 @@
 
         </LinearLayout>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSupport"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/support_button_label"
+            android:textSize="13sp"
+            app:icon="@drawable/people_support_icon"
+            app:iconSize="18dp"
+            app:backgroundTint="@color/primary_green"
+            android:textColor="@android:color/white"
+            app:iconTint="@android:color/white"
+            android:paddingVertical="4dp"
+            app:cornerRadius="8dp" />
+
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

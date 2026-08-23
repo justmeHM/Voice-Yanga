@@ -81,7 +81,7 @@ The application follows the **MVVM (Model-View-ViewModel)** pattern combined wit
     {
       "token": "jwt_access_token_string",
       "user": {
-        "name": "John Doe",
+        "name": "Harrison Mwewa",
         "email": "john.doe@example.com",
         "phone": "+260971123456"
       }
@@ -105,10 +105,28 @@ The application follows the **MVVM (Model-View-ViewModel)** pattern combined wit
     {
       "token": "jwt_access_token_string",
       "user": {
-        "name": "John Doe",
+        "name": "Harrison Mwewa",
         "email": "john.doe@example.com",
         "phone": "+260971123456"
       }
+    }
+    ```
+
+### Password Reset
+- **Endpoint**: `/auth/forgot-password`
+- **HTTP Method**: `POST`
+- **Purpose**: Initiate password recovery.
+- **Authentication Required**: No
+- **Request Body**:
+    ```json
+    {
+      "email": "john.doe@example.com"
+    }
+    ```
+- **Expected Response (200 OK)**:
+    ```json
+    {
+      "message": "Reset instructions sent to your email"
     }
     ```
 
@@ -124,7 +142,7 @@ The application follows the **MVVM (Model-View-ViewModel)** pattern combined wit
     ```json
     {
       "id": "user_id_uuid",
-      "name": "John Doe",
+      "name": "Harrison Mwewa",
       "email": "john.doe@example.com",
       "phone": "+260971123456",
       "role": "CITIZEN",

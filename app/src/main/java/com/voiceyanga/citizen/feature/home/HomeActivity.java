@@ -10,13 +10,17 @@ import androidx.core.view.GravityCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.voiceyanga.citizen.R;
+import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.databinding.ActivityHomeBinding;
 import com.voiceyanga.citizen.feature.auth.LoginActivity;
 import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.feature.complaints.ComplaintDetailActivity;
 import com.voiceyanga.citizen.feature.complaints.CreateComplaintActivity;
+import com.voiceyanga.citizen.feature.complaints.NearbyIssuesActivity;
 import com.voiceyanga.citizen.feature.notifications.NotificationCenterActivity;
 import com.voiceyanga.citizen.feature.profile.ProfileActivity;
+import com.voiceyanga.citizen.ui.common.AboutActivity;
+import com.voiceyanga.citizen.ui.common.SupportActivity;
 import java.util.Locale;
 import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
@@ -27,6 +31,7 @@ public class HomeActivity extends AppCompatActivity {
     private ActivityHomeBinding binding;
     private HomeViewModel viewModel;
     private ComplaintAdapter adapter;
+    private boolean isFabExpanded = false;
 
     @Inject
     SessionManager sessionManager;
@@ -75,10 +80,19 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
-        adapter = new ComplaintAdapter(complaint -> {
-            Intent intent = new Intent(this, ComplaintDetailActivity.class);
-            intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaint.getClientUuid());
-            startActivity(intent);
+        adapter = new ComplaintAdapter(new ComplaintAdapter.OnComplaintClickListener() {
+            @Override
+            public void onComplaintClick(Complaint complaint) {
+                Intent intent = new Intent(HomeActivity.this, ComplaintDetailActivity.class);
+                intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaint.getClientUuid());
+                startActivity(intent);
+            }
+
+            @Override
+            public void onSupportClick(Complaint complaint) {
+                viewModel.supportComplaint(complaint.getClientUuid());
+                Toast.makeText(HomeActivity.this, R.string.support_thanks, Toast.LENGTH_SHORT).show();
+            }
         });
         binding.rvComplaints.setLayoutManager(new LinearLayoutManager(this));
         binding.rvComplaints.setAdapter(adapter);
@@ -104,7 +118,11 @@ public class HomeActivity extends AppCompatActivity {
                 startActivity(new Intent(this, ProfileActivity.class));
             } else if (id == R.id.nav_my_complaints) {
                 startActivity(new Intent(this, MyComplaintsActivity.class));
-            } else if (id == R.id.nav_help || id == R.id.nav_about || id == R.id.nav_privacy) {
+            } else if (id == R.id.nav_help) {
+                startActivity(new Intent(this, SupportActivity.class));
+            } else if (id == R.id.nav_about) {
+                startActivity(new Intent(this, AboutActivity.class));
+            } else if (id == R.id.nav_privacy) {
                 String message = String.format(getString(R.string.coming_soon_format), item.getTitle());
                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
             }
@@ -114,17 +132,39 @@ public class HomeActivity extends AppCompatActivity {
 
         binding.swipeRefresh.setOnRefreshListener(() -> viewModel.retrySync());
         
-        View.OnClickListener reportListener = v -> {
-            Intent intent = new Intent(this, CreateComplaintActivity.class);
-            startActivity(intent);
-        };
+        binding.fabReport.setOnClickListener(v -> toggleFabMenu());
 
-        binding.fabReport.setOnClickListener(reportListener);
-        binding.btnReportNow.setOnClickListener(reportListener);
-        binding.cardReport.setOnClickListener(reportListener);
+        binding.fabReportProblem.setOnClickListener(v -> {
+            toggleFabMenu();
+            startActivity(new Intent(this, CreateComplaintActivity.class));
+        });
+
+        binding.fabNearbyIssues.setOnClickListener(v -> {
+            toggleFabMenu();
+            startActivity(new Intent(this, NearbyIssuesActivity.class));
+        });
+
+        binding.btnReportNow.setOnClickListener(v -> 
+            startActivity(new Intent(this, CreateComplaintActivity.class)));
+        
+        binding.cardReport.setOnClickListener(v -> 
+            startActivity(new Intent(this, CreateComplaintActivity.class)));
 
         binding.btnNotifications.setOnClickListener(v -> 
             startActivity(new Intent(this, NotificationCenterActivity.class)));
+    }
+
+    private void toggleFabMenu() {
+        isFabExpanded = !isFabExpanded;
+        if (isFabExpanded) {
+            binding.fabReportProblem.show();
+            binding.fabNearbyIssues.show();
+            binding.fabReport.animate().rotation(45f).setDuration(200).start();
+        } else {
+            binding.fabReportProblem.hide();
+            binding.fabNearbyIssues.hide();
+            binding.fabReport.animate().rotation(0f).setDuration(200).start();
+        }
     }
 
     private void logout() {

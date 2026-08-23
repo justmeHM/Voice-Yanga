@@ -16,6 +16,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
+import androidx.core.content.ContextCompat;
 import dagger.hilt.android.AndroidEntryPoint;
 
 @AndroidEntryPoint
@@ -136,6 +139,14 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         binding.btnSupport.setOnClickListener(v -> {
             viewModel.supportComplaint(complaintUuid);
             viewModel.simulateProgress(complaintUuid); // Mock update for UI verification
+            
+            // Change button state to "Supported" (Red & Disabled)
+            binding.btnSupport.setEnabled(false);
+            binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
+                    ContextCompat.getColor(this, R.color.primary_red)));
+            binding.btnSupport.setTextColor(Color.WHITE);
+            binding.btnSupport.setIconTintResource(android.R.color.white);
+            
             Toast.makeText(this, R.string.support_thanks, Toast.LENGTH_SHORT).show();
         });
     }

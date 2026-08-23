@@ -190,13 +190,15 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSupport"
-                style="@style/Widget.Material3.Button.TonalButton"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:layout_marginTop="32dp"
                 android:layout_marginBottom="48dp"
                 android:text="@string/support_button_label"
-                app:icon="@drawable/vote_icon" />
+                android:textColor="@android:color/white"
+                app:backgroundTint="@color/primary_green"
+                app:icon="@drawable/people_support_icon"
+                app:iconTint="@android:color/white" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

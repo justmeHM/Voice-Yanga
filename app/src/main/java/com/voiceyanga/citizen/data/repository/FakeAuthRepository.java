@@ -35,7 +35,7 @@ public class FakeAuthRepository implements AuthRepository {
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
             if ("test@citizen.com".equals(email) && "password123".equals(password)) {
                 sessionManager.saveToken("mock_token_12345");
-                sessionManager.saveUser("John Doe", email, "+260 971 123456");
+                sessionManager.saveUser("Harrison Mwewa", email, "+260 971 123456");
                 callback.onSuccess();
             } else {
                 callback.onError(context.getString(R.string.error_invalid_credentials));

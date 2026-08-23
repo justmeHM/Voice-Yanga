@@ -27,4 +27,8 @@ public class HomeViewModel extends ViewModel {
     public void retrySync() {
         repository.scheduleSync();
     }
+
+    public void supportComplaint(String uuid) {
+        repository.supportComplaint(uuid);
+    }
 }

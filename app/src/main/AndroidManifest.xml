@@ -38,6 +38,11 @@
             android:exported="false" />
 
         <activity
+            android:name=".feature.auth.ForgotPasswordActivity"
+            android:exported="false"
+            android:theme="@style/Theme.VoiceYanga" />
+
+        <activity
             android:name=".feature.home.HomeActivity"
             android:exported="false" />
 
@@ -62,9 +67,27 @@
             android:theme="@style/Theme.VoiceYanga" />
 
         <activity
+            android:name=".feature.profile.ProfileActivity"
+            android:exported="false"
+            android:theme="@style/Theme.VoiceYanga" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".ui.common.SupportActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.common.AboutActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".feature.complaints.NearbyIssuesActivity"
+            android:exported="false"
+            android:theme="@style/Theme.VoiceYanga" />
 
         <service
             android:name=".core.notifications.VoiceYangaMessagingService"

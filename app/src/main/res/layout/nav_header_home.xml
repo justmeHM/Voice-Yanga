@@ -38,7 +38,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:fontFamily="sans-serif-black"
-            android:text="John Doe"
+            android:text="@string/mock_user_name"
             android:textColor="@android:color/white"
             android:textSize="18sp"
             android:textStyle="bold"

@@ -4,12 +4,17 @@ import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.databinding.ItemComplaintBinding;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Adapter for the main complaint feed.
@@ -18,9 +23,11 @@ import com.voiceyanga.citizen.databinding.ItemComplaintBinding;
 public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.ViewHolder> {
 
     private final OnComplaintClickListener listener;
+    private final Set<String> supportedUuids = new HashSet<>();
 
     public interface OnComplaintClickListener {
         void onComplaintClick(Complaint complaint);
+        default void onSupportClick(Complaint complaint) {}
     }
 
     public ComplaintAdapter(OnComplaintClickListener listener) {
@@ -54,7 +61,7 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
         holder.bind(getItem(position));
     }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
+    class ViewHolder extends RecyclerView.ViewHolder {
         private final ItemComplaintBinding binding;
         private final OnComplaintClickListener listener;
 
@@ -88,6 +95,33 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
             }
             
             binding.tvSyncStatus.setTextColor(color);
+
+            // Support button logic
+            boolean isSupported = supportedUuids.contains(complaint.getClientUuid());
+            if (isSupported) {
+                binding.btnSupport.setEnabled(false);
+                binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
+                        ContextCompat.getColor(itemView.getContext(), R.color.primary_red)));
+                binding.btnSupport.setTextColor(Color.WHITE);
+                binding.btnSupport.setIconTint(ColorStateList.valueOf(Color.WHITE));
+                binding.btnSupport.setStrokeWidth(0);
+            } else {
+                binding.btnSupport.setEnabled(true);
+                binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
+                        ContextCompat.getColor(itemView.getContext(), R.color.primary_green)));
+                binding.btnSupport.setTextColor(Color.WHITE);
+                binding.btnSupport.setIconTint(ColorStateList.valueOf(Color.WHITE));
+                binding.btnSupport.setStrokeWidth(0);
+            }
+
+            binding.btnSupport.setOnClickListener(v -> {
+                int pos = getBindingAdapterPosition();
+                if (listener != null && pos != RecyclerView.NO_POSITION && !supportedUuids.contains(complaint.getClientUuid())) {
+                    supportedUuids.add(complaint.getClientUuid());
+                    notifyItemChanged(pos);
+                    listener.onSupportClick(complaint);
+                }
+            });
 
             binding.getRoot().setOnClickListener(v -> {
                 if (listener != null) {

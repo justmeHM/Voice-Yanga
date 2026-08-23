@@ -45,6 +45,10 @@ public class ComplaintRepository {
         return complaintDao.getMyComplaints(email);
     }
 
+    public LiveData<List<Complaint>> getCommunityComplaints(String email) {
+        return complaintDao.getCommunityComplaints(email);
+    }
+
     public LiveData<Complaint> getComplaint(String uuid) {
         return complaintDao.getComplaintByUuidLiveData(uuid);
     }
