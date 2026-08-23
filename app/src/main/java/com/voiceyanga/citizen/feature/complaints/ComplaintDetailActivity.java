@@ -103,10 +103,14 @@ public class ComplaintDetailActivity extends AppCompatActivity {
     private void displayComplaint(Complaint complaint) {
         binding.tvRefCode.setText(complaint.getReferenceCode() != null ? complaint.getReferenceCode() : "PENDING SYNC");
         binding.tvTitle.setText(complaint.getTitle());
-        binding.tvCategory.setText(complaint.getCategory().toUpperCase());
-        binding.tvLocation.setText(complaint.getLocation());
+        
+        String cat = complaint.getCategory();
+        binding.tvCategory.setText(cat != null ? cat.toUpperCase() : "GENERAL");
+        
+        binding.tvLocation.setText(complaint.getLocation() != null ? complaint.getLocation() : "Unknown");
         binding.tvDescription.setText(complaint.getDescription());
-        binding.tvPriority.setText(String.format(getString(R.string.priority_format), complaint.getPriority()));
+        binding.tvPriority.setText(String.format(getString(R.string.priority_format), 
+                complaint.getPriority() != null ? complaint.getPriority() : "MEDIUM"));
         
         binding.btnSupport.setText(String.format(Locale.getDefault(), getString(R.string.support_count_format), complaint.getSupportCount()));
 
@@ -115,15 +119,17 @@ public class ComplaintDetailActivity extends AppCompatActivity {
 
     private void updateTimeline(Complaint complaint) {
         List<TimelineAdapter.StatusPoint> points = new ArrayList<>();
-        String dateStr = new SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()).format(new Date(complaint.getCreatedAt()));
+        long created = complaint.getCreatedAt() > 0 ? complaint.getCreatedAt() : System.currentTimeMillis();
+        String dateStr = new SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()).format(new Date(created));
         String pending = getString(R.string.status_pending);
 
-        // In a real app, these dates would come from the server history
+        String currentStatus = complaint.getStatus() != null ? complaint.getStatus() : "SUBMITTED";
+
         points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_submitted), dateStr, true));
-        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_reviewed), pending, isAtLeast(complaint.getStatus(), "REVIEWED")));
-        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_assigned), pending, isAtLeast(complaint.getStatus(), "ASSIGNED")));
-        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_in_progress), pending, isAtLeast(complaint.getStatus(), "IN_PROGRESS")));
-        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_resolved), pending, isAtLeast(complaint.getStatus(), "RESOLVED")));
+        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_reviewed), pending, isAtLeast(currentStatus, "REVIEWED")));
+        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_assigned), pending, isAtLeast(currentStatus, "ASSIGNED")));
+        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_in_progress), pending, isAtLeast(currentStatus, "IN_PROGRESS")));
+        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_resolved), pending, isAtLeast(currentStatus, "RESOLVED")));
 
         binding.rvTimeline.setAdapter(new TimelineAdapter(points));
     }

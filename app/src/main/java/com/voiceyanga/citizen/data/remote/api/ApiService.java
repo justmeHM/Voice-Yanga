@@ -7,6 +7,7 @@ import com.voiceyanga.citizen.data.remote.dto.ComplaintResponse;
 import com.voiceyanga.citizen.data.remote.dto.HealthResponse;
 import com.voiceyanga.citizen.data.remote.dto.LocationDto;
 import com.voiceyanga.citizen.data.remote.dto.LoginRequest;
+import com.voiceyanga.citizen.data.remote.dto.PaginatedResponse;
 import com.voiceyanga.citizen.data.remote.dto.PhotoUploadResponse;
 import com.voiceyanga.citizen.data.remote.dto.RegisterRequest;
 
@@ -30,7 +31,7 @@ public interface ApiService {
     retrofit2.Call<AuthResponse> login(@Body LoginRequest request);
 
     @POST("auth/register")
-    retrofit2.Call<AuthResponse> register(@Body RegisterRequest request);
+    retrofit2.Call<Void> register(@Body RegisterRequest request);
 
     @POST("auth/refresh")
     retrofit2.Call<AuthResponse> refreshToken(@Body Map<String, String> body);
@@ -43,10 +44,10 @@ public interface ApiService {
 
     // Reference Data
     @GET("categories")
-    retrofit2.Call<List<CategoryDto>> getCategories();
+    retrofit2.Call<PaginatedResponse<CategoryDto>> getCategories();
 
     @GET("locations")
-    retrofit2.Call<List<LocationDto>> getLocations();
+    retrofit2.Call<PaginatedResponse<LocationDto>> getLocations();
 
     // Complaints
     @POST("complaints")
@@ -60,5 +61,8 @@ public interface ApiService {
     );
 
     @GET("complaints")
-    retrofit2.Call<java.util.List<com.voiceyanga.citizen.data.local.entity.Complaint>> getComplaints();
+    retrofit2.Call<PaginatedResponse<com.voiceyanga.citizen.data.local.entity.Complaint>> getComplaints();
+
+    @POST("complaints/{serverId}/support")
+    retrofit2.Call<Void> supportComplaint(@retrofit2.http.Path("serverId") String serverId);
 }

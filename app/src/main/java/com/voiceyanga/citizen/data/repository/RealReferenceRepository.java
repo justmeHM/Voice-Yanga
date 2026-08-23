@@ -3,6 +3,7 @@ package com.voiceyanga.citizen.data.repository;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
 import com.voiceyanga.citizen.data.remote.dto.CategoryDto;
 import com.voiceyanga.citizen.data.remote.dto.LocationDto;
+import com.voiceyanga.citizen.data.remote.dto.PaginatedResponse;
 import com.voiceyanga.citizen.domain.repository.ReferenceRepository;
 
 import java.util.List;
@@ -24,18 +25,18 @@ public class RealReferenceRepository implements ReferenceRepository {
 
     @Override
     public void getCategories(ReferenceCallback<List<CategoryDto>> callback) {
-        apiService.getCategories().enqueue(new Callback<List<CategoryDto>>() {
+        apiService.getCategories().enqueue(new Callback<PaginatedResponse<CategoryDto>>() {
             @Override
-            public void onResponse(Call<List<CategoryDto>> call, Response<List<CategoryDto>> response) {
+            public void onResponse(Call<PaginatedResponse<CategoryDto>> call, Response<PaginatedResponse<CategoryDto>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    callback.onSuccess(response.body());
+                    callback.onSuccess(response.body().getData());
                 } else {
                     callback.onError("Failed to fetch categories");
                 }
             }
 
             @Override
-            public void onFailure(Call<List<CategoryDto>> call, Throwable t) {
+            public void onFailure(Call<PaginatedResponse<CategoryDto>> call, Throwable t) {
                 callback.onError(t.getMessage());
             }
         });
@@ -43,18 +44,18 @@ public class RealReferenceRepository implements ReferenceRepository {
 
     @Override
     public void getLocations(ReferenceCallback<List<LocationDto>> callback) {
-        apiService.getLocations().enqueue(new Callback<List<LocationDto>>() {
+        apiService.getLocations().enqueue(new Callback<PaginatedResponse<LocationDto>>() {
             @Override
-            public void onResponse(Call<List<LocationDto>> call, Response<List<LocationDto>> response) {
+            public void onResponse(Call<PaginatedResponse<LocationDto>> call, Response<PaginatedResponse<LocationDto>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    callback.onSuccess(response.body());
+                    callback.onSuccess(response.body().getData());
                 } else {
                     callback.onError("Failed to fetch locations");
                 }
             }
 
             @Override
-            public void onFailure(Call<List<LocationDto>> call, Throwable t) {
+            public void onFailure(Call<PaginatedResponse<LocationDto>> call, Throwable t) {
                 callback.onError(t.getMessage());
             }
         });

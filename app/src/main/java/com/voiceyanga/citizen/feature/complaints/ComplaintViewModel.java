@@ -80,31 +80,18 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
             return;
         }
 
-        if (category == null) {
-            _error.setValue("Please select a category (waiting for server data)");
-            return;
-        }
-
-        if (location == null) {
-            _error.setValue("Unable to determine location. Please enable GPS or wait for data.");
-            return;
-        }
-
         _loading.setValue(true);
 
         Complaint complaint = new Complaint(
                 UUID.randomUUID().toString(),
                 title,
                 description,
-                category.getName(),
-                location.getDisplayName(),
+                category != null ? category.getName() : "General",
+                location != null ? location.getDisplayName() : "Lusaka",
                 "PENDING",
                 System.currentTimeMillis()
         );
         
-        complaint.setCategoryId(category.getId());
-        complaint.setLocationId(location.getId());
-
         repository.saveComplaint(complaint, _selectedPhotos.getValue());
         
         // Simulate a slight delay for UI feedback

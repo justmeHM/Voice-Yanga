@@ -18,7 +18,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext;
 public class SessionManager {
 
     private static final String PREF_NAME = "voice_yanga_secure_session";
-    private static final String KEY_ACCESS_TOKEN = "access_token";
+    private static final String KEY_TOKEN = "token";
     private static final String KEY_REFRESH_TOKEN = "refresh_token";
     private static final String KEY_USER_NAME = "user_name";
     private static final String KEY_USER_EMAIL = "user_email";
@@ -48,22 +48,22 @@ public class SessionManager {
 
     public void saveTokens(String access, String refresh) {
         prefs.edit()
-                .putString(KEY_ACCESS_TOKEN, access)
+                .putString(KEY_TOKEN, access)
                 .putString(KEY_REFRESH_TOKEN, refresh)
                 .apply();
     }
 
     public void saveUser(String name, String email, String phone, String role) {
         prefs.edit()
-                .putString(KEY_USER_NAME, name)
-                .putString(KEY_USER_EMAIL, email)
-                .putString(KEY_USER_PHONE, phone)
-                .putString(KEY_USER_ROLE, role)
+                .putString(KEY_USER_NAME, (name == null || name.equals("null null")) ? "Citizen" : name)
+                .putString(KEY_USER_EMAIL, email != null ? email : "")
+                .putString(KEY_USER_PHONE, phone != null ? phone : "")
+                .putString(KEY_USER_ROLE, role != null ? role : "CITIZEN")
                 .apply();
     }
 
     public String getAccessToken() {
-        return prefs.getString(KEY_ACCESS_TOKEN, null);
+        return prefs.getString(KEY_TOKEN, null);
     }
 
     public String getRefreshToken() {

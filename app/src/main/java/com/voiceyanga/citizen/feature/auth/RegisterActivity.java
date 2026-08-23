@@ -97,7 +97,8 @@ public class RegisterActivity extends AppCompatActivity {
 
         viewModel.getLoginSuccess().observe(this, success -> {
             if (success) {
-                Intent intent = new Intent(this, HomeActivity.class);
+                Toast.makeText(this, "Registration successful! Please log in.", Toast.LENGTH_LONG).show();
+                Intent intent = new Intent(this, LoginActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
                 finish();

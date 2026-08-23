@@ -10,23 +10,15 @@ import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.core.notifications.NotificationHelper;
 import com.voiceyanga.citizen.data.local.dao.ComplaintDao;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
-import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
 import com.voiceyanga.citizen.data.remote.dto.ComplaintRequest;
 import com.voiceyanga.citizen.data.remote.dto.ComplaintResponse;
-import com.voiceyanga.citizen.data.remote.dto.PhotoUploadResponse;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.List;
 
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedInject;
-import okhttp3.MediaType;
-import okhttp3.MultipartBody;
-import okhttp3.RequestBody;
+import okhttp3.ResponseBody;
 import retrofit2.Response;
 
 /**
@@ -75,34 +67,13 @@ public class SyncWorker extends Worker {
                 complaint.setSyncStatus("SYNCING");
                 complaintDao.update(complaint);
 
-                // 1. UPLOAD PHOTOS [FR-COMP-03]
-                List<ComplaintPhoto> localPhotos = complaintDao.getPhotosForComplaintSync(complaint.getClientUuid());
-                List<String> remotePhotoUrls = new ArrayList<>();
-                
-                for (ComplaintPhoto localPhoto : localPhotos) {
-                    MultipartBody.Part part = prepareFilePart(localPhoto.getPhotoUri());
-                    if (part != null) {
-                        RequestBody uuidPart = RequestBody.create(complaint.getClientUuid(), MediaType.parse("text/plain"));
-                        Response<PhotoUploadResponse> uploadResponse = apiService.uploadPhoto(part, uuidPart).execute();
-                        if (uploadResponse.isSuccessful() && uploadResponse.body() != null) {
-                            remotePhotoUrls.add(uploadResponse.body().getPhotoUrl());
-                        } else {
-                            throw new Exception("Photo upload failed for " + localPhoto.getPhotoUri() + ": " + uploadResponse.message());
-                        }
-                    }
-                }
-
-                // 2. SUBMIT COMPLAINT DATA
+                // 1. SUBMIT COMPLAINT DATA AS JSON (Instructions: Fix Only the Complaint 400 Error)
+                // Body must use category and location as strings. Do not send IDs or photos.
                 ComplaintRequest request = new ComplaintRequest(
-                        complaint.getClientUuid(),
                         complaint.getTitle(),
                         complaint.getDescription(),
-                        complaint.getCategoryId(),
-                        complaint.getLocationId(),
-                        complaint.getPriority(),
-                        complaint.getAuthorEmail(),
-                        complaint.getCreatedAt(),
-                        remotePhotoUrls
+                        complaint.getCategory(),
+                        complaint.getLocation()
                 );
 
                 Response<ComplaintResponse> response = apiService.createComplaint(request).execute();
@@ -110,14 +81,14 @@ public class SyncWorker extends Worker {
                 if (response.isSuccessful() && response.body() != null) {
                     ComplaintResponse result = response.body();
                     
-                    // 3. RECONCILE SERVER ID [Rule 23]
+                    // 2. RECONCILE SERVER ID [Rule 23]
                     complaint.setSyncStatus("SYNCED");
                     complaint.setServerId(result.getServerId());
                     complaint.setReferenceCode(result.getReferenceCode());
                     
                     complaintDao.update(complaint);
                     Log.d(TAG, "Sync successful for complaint: " + complaint.getReferenceCode());
-                    
+
                     // Notify user of success
                     notificationHelper.showNotification(
                             getApplicationContext().getString(R.string.sync_notification_title),
@@ -126,6 +97,10 @@ public class SyncWorker extends Worker {
                             "STATUS_CHANGE"
                     );
                 } else {
+                    try (ResponseBody responseBody = response.errorBody()) {
+                        String errorBody = responseBody != null ? responseBody.string() : "Unknown error";
+                        Log.e(TAG, "Sync failed. HTTP Status: " + response.code() + " | Response: " + errorBody);
+                    }
                     throw new Exception("Complaint submission failed: " + response.message());
                 }
             } catch (Exception e) {
@@ -141,29 +116,5 @@ public class SyncWorker extends Worker {
         }
 
         return hasErrors ? Result.failure() : Result.success();
-    }
-
-    private MultipartBody.Part prepareFilePart(String uriString) {
-        try {
-            android.net.Uri uri = android.net.Uri.parse(uriString);
-            InputStream inputStream = getApplicationContext().getContentResolver().openInputStream(uri);
-            if (inputStream == null) return null;
-
-            File tempFile = new File(getApplicationContext().getCacheDir(), "upload_" + System.currentTimeMillis() + ".jpg");
-            try (FileOutputStream out = new FileOutputStream(tempFile)) {
-                byte[] buffer = new byte[4096];
-                int read;
-                while ((read = inputStream.read(buffer)) != -1) {
-                    out.write(buffer, 0, read);
-                }
-            }
-            inputStream.close();
-
-            RequestBody requestFile = RequestBody.create(tempFile, MediaType.parse("image/jpeg"));
-            return MultipartBody.Part.createFormData("file", tempFile.getName(), requestFile);
-        } catch (Exception e) {
-            Log.e(TAG, "Error preparing file part", e);
-            return null;
-        }
     }
 }

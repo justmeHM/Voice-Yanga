@@ -41,54 +41,52 @@ public class NetworkModule {
     @Singleton
     public OkHttpClient provideOkHttpClient(
             HttpLoggingInterceptor loggingInterceptor, 
-            SessionManager sessionManager,
-            Provider<ApiService> apiServiceProvider) {
+            SessionManager sessionManager) {
         
         return new OkHttpClient.Builder()
                 .addInterceptor(loggingInterceptor)
                 .addInterceptor(chain -> {
-                    String token = sessionManager.getAccessToken();
-                    Request.Builder builder = chain.request().newBuilder();
-                    if (token != null && !token.isEmpty()) {
-                        builder.addHeader("Authorization", "Bearer " + token);
+                    String rawToken = sessionManager.getAccessToken();
+                    String cleanToken = (rawToken == null) ? null : rawToken.replace("\"", "")
+                                     .replace("Bearer ", "")
+                                     .trim();
+
+                    Request originalRequest = chain.request();
+                    
+                    android.util.Log.d("NetworkModule", "Request URL: " + originalRequest.url());
+                    android.util.Log.d("NetworkModule", "Authorization header exists: " + (cleanToken != null && !cleanToken.isEmpty()));
+
+                    if (cleanToken != null && !cleanToken.isEmpty()) {
+                        Request authenticatedRequest = originalRequest.newBuilder()
+                                .header("Authorization", "Bearer " + cleanToken)
+                                .build();
+                        return chain.proceed(authenticatedRequest);
                     }
-                    return chain.proceed(builder.build());
+                    return chain.proceed(originalRequest);
                 })
                 .authenticator((route, response) -> {
-                    // This is called when we get a 401
-                    String refreshToken = sessionManager.getRefreshToken();
-                    if (refreshToken == null) return null;
-
-                    synchronized (this) {
-                        // Double check if token was already refreshed by another thread
-                        String currentToken = sessionManager.getAccessToken();
-                        String responseToken = response.request().header("Authorization");
-                        if (responseToken != null && !responseToken.equals("Bearer " + currentToken)) {
-                            // Already refreshed
-                            return response.request().newBuilder()
-                                    .header("Authorization", "Bearer " + currentToken)
-                                    .build();
-                        }
-
-                        try {
-                            Map<String, String> body = new HashMap<>();
-                            body.put("refreshToken", refreshToken);
-                            retrofit2.Response<AuthResponse> refreshResponse = apiServiceProvider.get().refreshToken(body).execute();
-                            
-                            if (refreshResponse.isSuccessful() && refreshResponse.body() != null) {
-                                AuthResponse newAuth = refreshResponse.body();
-                                sessionManager.saveTokens(newAuth.getAccessToken(), newAuth.getRefreshToken());
-                                return response.request().newBuilder()
-                                        .header("Authorization", "Bearer " + newAuth.getAccessToken())
-                                        .build();
-                            } else {
-                                sessionManager.clearSession();
-                                return null;
-                            }
-                        } catch (IOException e) {
-                            return null;
-                        }
+                    if (responseCount(response) >= 2) {
+                        return null;
                     }
+
+                    // Check for specific backend error message
+                    String bodyString;
+                    try {
+                        okhttp3.ResponseBody body = response.peekBody(Long.MAX_VALUE);
+                        bodyString = body.string();
+                    } catch (Exception ignored) {
+                        bodyString = "";
+                    }
+
+                    if (bodyString.contains("Token is invalid or expired")) {
+                        android.util.Log.e("NetworkModule", "Token expired. Clearing session.");
+                        sessionManager.clearSession();
+                        // Instructions say "log in again, save new 'token', and retry".
+                        // In background sync, we return null to stop the loop and let the 
+                        // app handle the cleared session.
+                        return null;
+                    }
+                    return null;
                 })
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
@@ -109,5 +107,15 @@ public class NetworkModule {
     @Singleton
     public ApiService provideApiService(Retrofit retrofit) {
         return retrofit.create(ApiService.class);
+    }
+
+    private int responseCount(Response response) {
+        int count = 1;
+        Response prior = response.priorResponse();
+        while (prior != null) {
+            count++;
+            prior = prior.priorResponse();
+        }
+        return count;
     }
 }

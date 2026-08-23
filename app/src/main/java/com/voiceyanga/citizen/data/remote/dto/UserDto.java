@@ -11,6 +11,9 @@ public class UserDto {
 
     @SerializedName("lastName")
     private String lastName;
+
+    @SerializedName("name") // Fallback for some API versions
+    private String name;
     
     @SerializedName("email")
     private String email;
@@ -22,13 +25,14 @@ public class UserDto {
     private String role;
 
     public String getId() { return id; }
-    public String getFirstName() { return firstName; }
-    public String getLastName() { return lastName; }
     public String getEmail() { return email; }
     public String getPhone() { return phone; }
-    public String getRole() { return role; }
+    public String getRole() { return role != null ? role : "CITIZEN"; }
     
     public String getFullName() {
-        return firstName + " " + lastName;
+        if (name != null && !name.isEmpty()) return name;
+        if (firstName != null && lastName != null) return firstName + " " + lastName;
+        if (firstName != null) return firstName;
+        return "Citizen";
     }
 }

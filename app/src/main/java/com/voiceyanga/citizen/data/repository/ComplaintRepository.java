@@ -14,6 +14,7 @@ import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
 import com.voiceyanga.citizen.data.remote.SyncWorker;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
+import com.voiceyanga.citizen.data.remote.dto.PaginatedResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -51,13 +52,15 @@ public class ComplaintRepository {
     private void refreshComplaints() {
         executorService.execute(() -> {
             try {
-                Response<List<Complaint>> response = apiService.getComplaints().execute();
+                Response<PaginatedResponse<Complaint>> response = apiService.getComplaints().execute();
                 if (response.isSuccessful() && response.body() != null) {
-                    List<Complaint> serverComplaints = response.body();
-                    for (Complaint serverComplaint : serverComplaints) {
-                        // Mark as synced since it came from server
-                        serverComplaint.setSyncStatus("SYNCED");
-                        complaintDao.insert(serverComplaint);
+                    List<Complaint> serverComplaints = response.body().getData();
+                    if (serverComplaints != null) {
+                        for (Complaint serverComplaint : serverComplaints) {
+                            // Mark as synced since it came from server
+                            serverComplaint.setSyncStatus("SYNCED");
+                            complaintDao.insert(serverComplaint);
+                        }
                     }
                 }
             } catch (Exception e) {
@@ -139,7 +142,15 @@ public class ComplaintRepository {
     public void supportComplaint(String uuid) {
         executorService.execute(() -> {
             complaintDao.incrementSupportCount(uuid);
-            // In a real app, we would also sync this to the server
+            
+            Complaint complaint = complaintDao.getComplaintByUuid(uuid);
+            if (complaint != null && complaint.getServerId() != null) {
+                try {
+                    apiService.supportComplaint(complaint.getServerId()).execute();
+                } catch (Exception e) {
+                    android.util.Log.e("ComplaintRepo", "Support sync failed", e);
+                }
+            }
         });
     }
 

@@ -43,12 +43,15 @@ public class RealAuthRepository implements AuthRepository {
                 if (response.isSuccessful() && response.body() != null) {
                     AuthResponse authResponse = response.body();
                     sessionManager.saveTokens(authResponse.getAccessToken(), authResponse.getRefreshToken());
-                    sessionManager.saveUser(
-                            authResponse.getUser().getFullName(),
-                            authResponse.getUser().getEmail(),
-                            authResponse.getUser().getPhone(),
-                            authResponse.getUser().getRole()
-                    );
+                    
+                    if (authResponse.getUser() != null) {
+                        sessionManager.saveUser(
+                                authResponse.getUser().getFullName(),
+                                authResponse.getUser().getEmail(),
+                                authResponse.getUser().getPhone(),
+                                authResponse.getUser().getRole()
+                        );
+                    }
                     callback.onSuccess();
                 } else {
                     callback.onError("Login failed: " + response.message());
@@ -65,26 +68,22 @@ public class RealAuthRepository implements AuthRepository {
     @Override
     public void register(String firstName, String lastName, String phone, String email, String password, LoginCallback callback) {
         RegisterRequest request = new RegisterRequest(firstName, lastName, phone, email, password);
-        apiService.register(request).enqueue(new Callback<AuthResponse>() {
+        apiService.register(request).enqueue(new Callback<Void>() {
             @Override
-            public void onResponse(Call<AuthResponse> call, Response<AuthResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    AuthResponse authResponse = response.body();
-                    sessionManager.saveTokens(authResponse.getAccessToken(), authResponse.getRefreshToken());
-                    sessionManager.saveUser(
-                            authResponse.getUser().getFullName(),
-                            authResponse.getUser().getEmail(),
-                            authResponse.getUser().getPhone(),
-                            authResponse.getUser().getRole()
-                    );
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    // Save user data locally so greeting works
+                    sessionManager.saveUser(firstName + " " + lastName, email, phone, "CITIZEN");
                     callback.onSuccess();
+                } else if (response.code() == 409) {
+                    callback.onError("Account already exists with this email or phone.");
                 } else {
-                    callback.onError("Registration failed: " + response.message());
+                    callback.onError("Registration failed (Code " + response.code() + ")");
                 }
             }
 
             @Override
-            public void onFailure(Call<AuthResponse> call, Throwable t) {
+            public void onFailure(Call<Void> call, Throwable t) {
                 callback.onError("Network error: " + t.getMessage());
             }
         });

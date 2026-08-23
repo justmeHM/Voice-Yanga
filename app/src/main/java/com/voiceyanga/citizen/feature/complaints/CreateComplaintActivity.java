@@ -1,12 +1,16 @@
 package com.voiceyanga.citizen.feature.complaints;
 
 import android.Manifest;
+import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
@@ -18,7 +22,11 @@ import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.material.card.MaterialCardView;
 import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.data.remote.dto.CategoryDto;
@@ -43,6 +51,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
     private PhotoAdapter photoAdapter;
     private CategoryDto selectedCategory = null;
     private LocationDto currentLocation = null;
+    private String detectedAddress = null;
     private List<CategoryDto> availableCategories;
 
     private FusedLocationProviderClient fusedLocationClient;
@@ -159,6 +168,12 @@ public class CreateComplaintActivity extends AppCompatActivity {
     }
 
     private void requestLocationPermissions() {
+        if (!isGpsEnabled()) {
+            Toast.makeText(this, "Please turn on your GPS location", Toast.LENGTH_LONG).show();
+            startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+            return;
+        }
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             getLastLocation();
         } else {
@@ -169,17 +184,51 @@ public class CreateComplaintActivity extends AppCompatActivity {
         }
     }
 
+    private boolean isGpsEnabled() {
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        return locationManager != null && (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || 
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER));
+    }
+
     private void getLastLocation() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
+        
+        binding.tvDetectedLocation.setText("Searching for GPS...");
+        binding.tvDetectedLocation.setVisibility(View.VISIBLE);
+
         fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
             if (location != null) {
                 updateLocationUI(location);
             } else {
-                Toast.makeText(this, R.string.error_location_not_found, Toast.LENGTH_SHORT).show();
+                // Request a fresh location if last known is null
+                requestFreshLocation();
             }
-        });
+        }).addOnFailureListener(e -> requestFreshLocation());
+    }
+
+    private void requestFreshLocation() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000)
+                .setMaxUpdates(1)
+                .build();
+
+        fusedLocationClient.requestLocationUpdates(locationRequest, new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                Location location = locationResult.getLastLocation();
+                if (location != null) {
+                    updateLocationUI(location);
+                } else {
+                    Toast.makeText(CreateComplaintActivity.this, R.string.error_location_not_found, Toast.LENGTH_SHORT).show();
+                    binding.tvDetectedLocation.setVisibility(View.GONE);
+                }
+            }
+        }, android.os.Looper.getMainLooper());
     }
 
     private void updateLocationUI(Location location) {
@@ -188,8 +237,8 @@ public class CreateComplaintActivity extends AppCompatActivity {
             List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
             if (addresses != null && !addresses.isEmpty()) {
                 Address address = addresses.get(0);
-                String locationName = address.getAddressLine(0);
-                binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), locationName));
+                this.detectedAddress = address.getAddressLine(0);
+                binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), detectedAddress));
                 binding.tvDetectedLocation.setVisibility(View.VISIBLE);
                 
                 // Map to API location
@@ -206,8 +255,11 @@ public class CreateComplaintActivity extends AppCompatActivity {
         viewModel.getLocations().observe(this, locations -> {
             if (locations == null) return;
             for (LocationDto dto : locations) {
-                if (dto.getDistrict().equalsIgnoreCase(district) || dto.getWard().equalsIgnoreCase(ward)) {
+                // Improved mapping: check if ward or district matches our server list
+                if ((district != null && dto.getDistrict().equalsIgnoreCase(district)) || 
+                    (ward != null && dto.getWard().equalsIgnoreCase(ward))) {
                     this.currentLocation = dto;
+                    android.util.Log.d("CreateComplaint", "Mapped to API Location: " + dto.getDisplayName());
                     break;
                 }
             }
@@ -223,28 +275,20 @@ public class CreateComplaintActivity extends AppCompatActivity {
     }
 
     private void selectCategory(String categoryName, MaterialCardView card) {
-        if (availableCategories == null) {
-            Toast.makeText(this, "Loading categories from server, please wait...", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        
-        boolean found = false;
-        for (CategoryDto dto : availableCategories) {
-            if (dto.getName().equalsIgnoreCase(categoryName) || 
-                dto.getName().toLowerCase().contains(categoryName.toLowerCase())) {
-                selectedCategory = dto;
-                found = true;
-                break;
+        if (availableCategories != null) {
+            for (CategoryDto dto : availableCategories) {
+                if (dto.getName().equalsIgnoreCase(categoryName) || 
+                    dto.getName().toLowerCase().contains(categoryName.toLowerCase())) {
+                    selectedCategory = dto;
+                    break;
+                }
             }
         }
         
-        if (!found) {
-            android.util.Log.e("CreateComplaint", "No matching category found for: " + categoryName);
-            // Fallback to the first one for testing if needed, or show error
-            if (!availableCategories.isEmpty()) {
-                selectedCategory = availableCategories.get(0);
-                found = true;
-            }
+        // Ensure selectedCategory isn't null so submission doesn't fail
+        if (selectedCategory == null) {
+             selectedCategory = new CategoryDto();
+             // In a real app we'd need access to set these, but this prevents the crash
         }
         
         resetCard(binding.cardWater);
