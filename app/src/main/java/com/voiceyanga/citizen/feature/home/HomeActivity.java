@@ -14,6 +14,7 @@ import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.databinding.ActivityHomeBinding;
 import com.voiceyanga.citizen.feature.auth.LoginActivity;
 import com.voiceyanga.citizen.data.local.SessionManager;
+import com.voiceyanga.citizen.domain.repository.AuthRepository;
 import com.voiceyanga.citizen.feature.complaints.ComplaintDetailActivity;
 import com.voiceyanga.citizen.feature.complaints.CreateComplaintActivity;
 import com.voiceyanga.citizen.feature.complaints.NearbyIssuesActivity;
@@ -35,6 +36,9 @@ public class HomeActivity extends AppCompatActivity {
 
     @Inject
     SessionManager sessionManager;
+
+    @Inject
+    AuthRepository authRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -168,10 +172,11 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void logout() {
-        sessionManager.clearSession();
-        Intent intent = new Intent(this, LoginActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
+        authRepository.logout(success -> {
+            Intent intent = new Intent(this, LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+        });
     }
 }

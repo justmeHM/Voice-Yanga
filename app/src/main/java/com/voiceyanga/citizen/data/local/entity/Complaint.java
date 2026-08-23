@@ -15,8 +15,10 @@ public class Complaint {
     private String referenceCode;
     private String title;
     private String description;
-    private String category;
-    private String location;
+    private String category; // Display Name
+    private String categoryId; // Backend UUID
+    private String location; // Display Name
+    private String locationId; // Backend UUID
     private String priority;
     private String status;
     private int supportCount;
@@ -58,8 +60,14 @@ public class Complaint {
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
 
+    public String getCategoryId() { return categoryId; }
+    public void setCategoryId(String categoryId) { this.categoryId = categoryId; }
+
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
+
+    public String getLocationId() { return locationId; }
+    public void setLocationId(String locationId) { this.locationId = locationId; }
 
     public String getPriority() { return priority; }
     public void setPriority(String priority) { this.priority = priority; }

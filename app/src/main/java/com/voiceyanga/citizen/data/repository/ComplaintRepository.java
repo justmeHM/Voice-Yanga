@@ -13,6 +13,8 @@ import com.voiceyanga.citizen.data.local.entity.Comment;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
 import com.voiceyanga.citizen.data.remote.SyncWorker;
+import com.voiceyanga.citizen.data.remote.api.ApiService;
+
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -21,24 +23,47 @@ import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import retrofit2.Response;
+
 @Singleton
 public class ComplaintRepository {
 
     private final ComplaintDao complaintDao;
+    private final ApiService apiService;
     private final SessionManager sessionManager;
     private final ExecutorService executorService;
     private final WorkManager workManager;
 
     @Inject
-    public ComplaintRepository(ComplaintDao complaintDao, SessionManager sessionManager, WorkManager workManager) {
+    public ComplaintRepository(ComplaintDao complaintDao, ApiService apiService, SessionManager sessionManager, WorkManager workManager) {
         this.complaintDao = complaintDao;
+        this.apiService = apiService;
         this.sessionManager = sessionManager;
         this.executorService = Executors.newSingleThreadExecutor();
         this.workManager = workManager;
     }
 
     public LiveData<List<Complaint>> getAllComplaints() {
+        refreshComplaints();
         return complaintDao.getAllComplaints();
+    }
+
+    private void refreshComplaints() {
+        executorService.execute(() -> {
+            try {
+                Response<List<Complaint>> response = apiService.getComplaints().execute();
+                if (response.isSuccessful() && response.body() != null) {
+                    List<Complaint> serverComplaints = response.body();
+                    for (Complaint serverComplaint : serverComplaints) {
+                        // Mark as synced since it came from server
+                        serverComplaint.setSyncStatus("SYNCED");
+                        complaintDao.insert(serverComplaint);
+                    }
+                }
+            } catch (Exception e) {
+                android.util.Log.e("ComplaintRepo", "Refresh failed", e);
+            }
+        });
     }
 
     public LiveData<List<Complaint>> getMyComplaints(String email) {

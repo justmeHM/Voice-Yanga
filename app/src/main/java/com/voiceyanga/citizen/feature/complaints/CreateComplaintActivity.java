@@ -21,6 +21,8 @@ import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.material.card.MaterialCardView;
 import com.voiceyanga.citizen.R;
+import com.voiceyanga.citizen.data.remote.dto.CategoryDto;
+import com.voiceyanga.citizen.data.remote.dto.LocationDto;
 import com.voiceyanga.citizen.databinding.ActivityCreateComplaintBinding;
 import java.io.IOException;
 import java.util.List;
@@ -39,8 +41,9 @@ public class CreateComplaintActivity extends AppCompatActivity {
     private ActivityCreateComplaintBinding binding;
     private ComplaintViewModel viewModel;
     private PhotoAdapter photoAdapter;
-    private String selectedCategory = null;
-    private String detectedLocation = null;
+    private CategoryDto selectedCategory = null;
+    private LocationDto currentLocation = null;
+    private List<CategoryDto> availableCategories;
 
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityResultLauncher<String[]> locationPermissionLauncher;
@@ -100,6 +103,23 @@ public class CreateComplaintActivity extends AppCompatActivity {
     }
 
     private void setupObservers() {
+        viewModel.getCategories().observe(this, categories -> {
+            android.util.Log.d("CreateComplaint", "Categories loaded: " + (categories != null ? categories.size() : "null"));
+            if (categories != null) {
+                for (CategoryDto c : categories) {
+                    android.util.Log.d("CreateComplaint", "Category: " + c.getName() + " [" + c.getId() + "]");
+                }
+            }
+            this.availableCategories = categories;
+        });
+
+        viewModel.getLocations().observe(this, locations -> {
+            android.util.Log.d("CreateComplaint", "Locations loaded: " + (locations != null ? locations.size() : "null"));
+            if (locations != null && !locations.isEmpty()) {
+                this.currentLocation = locations.get(0);
+            }
+        });
+
         viewModel.getSubmissionSuccess().observe(this, success -> {
             if (success != null && success) {
                 Toast.makeText(this, R.string.complaint_submitted_success, Toast.LENGTH_SHORT).show();
@@ -129,10 +149,8 @@ public class CreateComplaintActivity extends AppCompatActivity {
         binding.btnSubmit.setOnClickListener(v -> {
             String title = binding.etTitle.getText().toString().trim();
             String description = binding.etDescription.getText().toString().trim();
-            String category = selectedCategory;
-            String location = detectedLocation != null ? detectedLocation : getString(R.string.location_placeholder);
-
-            viewModel.submitComplaint(title, description, category, location);
+            
+            viewModel.submitComplaint(title, description, selectedCategory, currentLocation);
         });
 
         binding.btnLocation.setOnClickListener(v -> requestLocationPermissions());
@@ -170,15 +188,30 @@ public class CreateComplaintActivity extends AppCompatActivity {
             List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
             if (addresses != null && !addresses.isEmpty()) {
                 Address address = addresses.get(0);
-                detectedLocation = address.getAddressLine(0);
-                binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), detectedLocation));
+                String locationName = address.getAddressLine(0);
+                binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), locationName));
                 binding.tvDetectedLocation.setVisibility(View.VISIBLE);
+                
+                // Map to API location
+                mapToApiLocation(address.getLocality(), address.getSubLocality());
             }
         } catch (IOException e) {
-            detectedLocation = location.getLatitude() + ", " + location.getLongitude();
-            binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), detectedLocation));
+            String locationName = location.getLatitude() + ", " + location.getLongitude();
+            binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), locationName));
             binding.tvDetectedLocation.setVisibility(View.VISIBLE);
         }
+    }
+
+    private void mapToApiLocation(String district, String ward) {
+        viewModel.getLocations().observe(this, locations -> {
+            if (locations == null) return;
+            for (LocationDto dto : locations) {
+                if (dto.getDistrict().equalsIgnoreCase(district) || dto.getWard().equalsIgnoreCase(ward)) {
+                    this.currentLocation = dto;
+                    break;
+                }
+            }
+        });
     }
 
     private void setupCategorySelection() {
@@ -189,8 +222,30 @@ public class CreateComplaintActivity extends AppCompatActivity {
         binding.cardSecurity.setOnClickListener(v -> selectCategory(getString(R.string.category_security), binding.cardSecurity));
     }
 
-    private void selectCategory(String category, MaterialCardView card) {
-        selectedCategory = category;
+    private void selectCategory(String categoryName, MaterialCardView card) {
+        if (availableCategories == null) {
+            Toast.makeText(this, "Loading categories from server, please wait...", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        boolean found = false;
+        for (CategoryDto dto : availableCategories) {
+            if (dto.getName().equalsIgnoreCase(categoryName) || 
+                dto.getName().toLowerCase().contains(categoryName.toLowerCase())) {
+                selectedCategory = dto;
+                found = true;
+                break;
+            }
+        }
+        
+        if (!found) {
+            android.util.Log.e("CreateComplaint", "No matching category found for: " + categoryName);
+            // Fallback to the first one for testing if needed, or show error
+            if (!availableCategories.isEmpty()) {
+                selectedCategory = availableCategories.get(0);
+                found = true;
+            }
+        }
         
         resetCard(binding.cardWater);
         resetCard(binding.cardSanitation);

@@ -25,7 +25,7 @@ public class ProfileViewModel extends ViewModel {
 
     public void updateProfile(String name, String email, String phone) {
         // In a real app, this would call a repository -> API
-        sessionManager.saveUser(name, email, phone);
+        sessionManager.saveUser(name, email, phone, sessionManager.getUserRole());
         _updateSuccess.setValue(true);
     }
 }

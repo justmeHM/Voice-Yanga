@@ -11,6 +11,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.voiceyanga.citizen.R;
+import com.voiceyanga.citizen.domain.repository.AuthRepository;
+import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 
 @AndroidEntryPoint
@@ -19,6 +21,9 @@ public class ForgotPasswordActivity extends AppCompatActivity {
     private TextInputEditText etEmail;
     private MaterialButton btnReset;
     private ProgressBar pbLoading;
+
+    @Inject
+    AuthRepository authRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,20 +44,23 @@ public class ForgotPasswordActivity extends AppCompatActivity {
                 return;
             }
 
-            performMockReset(email);
+            performReset(email);
         });
     }
 
-    private void performMockReset(String email) {
+    private void performReset(String email) {
         pbLoading.setVisibility(View.VISIBLE);
         btnReset.setEnabled(false);
 
-        // Simulate network delay
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        authRepository.resetPassword(email, success -> {
             pbLoading.setVisibility(View.GONE);
             btnReset.setEnabled(true);
-            Toast.makeText(this, R.string.reset_link_sent, Toast.LENGTH_LONG).show();
-            finish();
-        }, 1500);
+            if (success) {
+                Toast.makeText(this, R.string.reset_link_sent, Toast.LENGTH_LONG).show();
+                finish();
+            } else {
+                Toast.makeText(this, "Failed to send reset link", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

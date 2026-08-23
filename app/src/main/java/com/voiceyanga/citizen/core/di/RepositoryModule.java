@@ -1,7 +1,9 @@
 package com.voiceyanga.citizen.core.di;
 
-import com.voiceyanga.citizen.data.repository.FakeAuthRepository;
+import com.voiceyanga.citizen.data.repository.RealAuthRepository;
+import com.voiceyanga.citizen.data.repository.RealReferenceRepository;
 import com.voiceyanga.citizen.domain.repository.AuthRepository;
+import com.voiceyanga.citizen.domain.repository.ReferenceRepository;
 import javax.inject.Singleton;
 import dagger.Binds;
 import dagger.Module;
@@ -18,5 +20,9 @@ public abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    public abstract AuthRepository bindAuthRepository(FakeAuthRepository impl);
+    public abstract AuthRepository bindAuthRepository(RealAuthRepository impl);
+
+    @Binds
+    @Singleton
+    public abstract ReferenceRepository bindReferenceRepository(RealReferenceRepository impl);
 }

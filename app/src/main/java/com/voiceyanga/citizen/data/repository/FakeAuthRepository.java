@@ -34,8 +34,8 @@ public class FakeAuthRepository implements AuthRepository {
         // Simulate network delay
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
             if ("test@citizen.com".equals(email) && "password123".equals(password)) {
-                sessionManager.saveToken("mock_token_12345");
-                sessionManager.saveUser("Harrison Mwewa", email, "+260 971 123456");
+                sessionManager.saveTokens("mock_access_token", "mock_refresh_token");
+                sessionManager.saveUser("Harrison Mwewa", email, "+260 971 123456", "CITIZEN");
                 callback.onSuccess();
             } else {
                 callback.onError(context.getString(R.string.error_invalid_credentials));
@@ -47,9 +47,22 @@ public class FakeAuthRepository implements AuthRepository {
     public void register(String firstName, String lastName, String phone, String email, String password, LoginCallback callback) {
         // Simulate network delay for registration
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-            sessionManager.saveToken("mock_registered_token_67890");
-            sessionManager.saveUser(firstName + " " + lastName, email, phone);
+            sessionManager.saveTokens("mock_registered_access_token", "mock_registered_refresh_token");
+            sessionManager.saveUser(firstName + " " + lastName, email, phone, "CITIZEN");
             callback.onSuccess();
+        }, 1500);
+    }
+
+    @Override
+    public void logout(LogoutCallback callback) {
+        sessionManager.clearSession();
+        callback.onResult(true);
+    }
+
+    @Override
+    public void resetPassword(String email, LogoutCallback callback) {
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            callback.onResult(true);
         }, 1500);
     }
 }

@@ -1,22 +1,33 @@
 package com.voiceyanga.citizen.feature.complaints;
 
-import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MutableLiveData;
 import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
+import com.voiceyanga.citizen.data.remote.dto.CategoryDto;
+import com.voiceyanga.citizen.data.remote.dto.LocationDto;
 import com.voiceyanga.citizen.data.repository.ComplaintRepository;
+import com.voiceyanga.citizen.domain.repository.ReferenceRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import javax.inject.Inject;
 import android.app.Application;
 import androidx.annotation.NonNull;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 import dagger.hilt.android.lifecycle.HiltViewModel;
 
 @HiltViewModel
 public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
 
     private final ComplaintRepository repository;
+    private final ReferenceRepository referenceRepository;
+
+    private final MutableLiveData<List<CategoryDto>> _categories = new MutableLiveData<>();
+    public LiveData<List<CategoryDto>> getCategories() { return _categories; }
+
+    private final MutableLiveData<List<LocationDto>> _locations = new MutableLiveData<>();
+    public LiveData<List<LocationDto>> getLocations() { return _locations; }
+
     private final MutableLiveData<Boolean> _submissionSuccess = new MutableLiveData<>();
     public LiveData<Boolean> getSubmissionSuccess() { return _submissionSuccess; }
 
@@ -30,14 +41,52 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
     public LiveData<List<String>> getSelectedPhotos() { return _selectedPhotos; }
 
     @Inject
-    public ComplaintViewModel(@NonNull Application application, ComplaintRepository repository) {
+    public ComplaintViewModel(@NonNull Application application, ComplaintRepository repository, ReferenceRepository referenceRepository) {
         super(application);
         this.repository = repository;
+        this.referenceRepository = referenceRepository;
+        loadReferenceData();
     }
 
-    public void submitComplaint(String title, String description, String category, String location) {
-        if (title.isEmpty() || description.isEmpty() || category == null) {
+    private void loadReferenceData() {
+        referenceRepository.getCategories(new ReferenceRepository.ReferenceCallback<List<CategoryDto>>() {
+            @Override
+            public void onSuccess(List<CategoryDto> data) {
+                _categories.setValue(data);
+            }
+
+            @Override
+            public void onError(String message) {
+                _error.setValue(message);
+            }
+        });
+
+        referenceRepository.getLocations(new ReferenceRepository.ReferenceCallback<List<LocationDto>>() {
+            @Override
+            public void onSuccess(List<LocationDto> data) {
+                _locations.setValue(data);
+            }
+
+            @Override
+            public void onError(String message) {
+                _error.setValue(message);
+            }
+        });
+    }
+
+    public void submitComplaint(String title, String description, CategoryDto category, LocationDto location) {
+        if (title.isEmpty() || description.isEmpty()) {
             _error.setValue(getApplication().getString(R.string.error_fill_fields));
+            return;
+        }
+
+        if (category == null) {
+            _error.setValue("Please select a category (waiting for server data)");
+            return;
+        }
+
+        if (location == null) {
+            _error.setValue("Unable to determine location. Please enable GPS or wait for data.");
             return;
         }
 
@@ -47,11 +96,14 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
                 UUID.randomUUID().toString(),
                 title,
                 description,
-                category,
-                location,
+                category.getName(),
+                location.getDisplayName(),
                 "PENDING",
                 System.currentTimeMillis()
         );
+        
+        complaint.setCategoryId(category.getId());
+        complaint.setLocationId(location.getId());
 
         repository.saveComplaint(complaint, _selectedPhotos.getValue());
         

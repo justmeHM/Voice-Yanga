@@ -18,10 +18,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext;
 public class SessionManager {
 
     private static final String PREF_NAME = "voice_yanga_secure_session";
-    private static final String KEY_TOKEN = "auth_token";
+    private static final String KEY_ACCESS_TOKEN = "access_token";
+    private static final String KEY_REFRESH_TOKEN = "refresh_token";
     private static final String KEY_USER_NAME = "user_name";
     private static final String KEY_USER_EMAIL = "user_email";
     private static final String KEY_USER_PHONE = "user_phone";
+    private static final String KEY_USER_ROLE = "user_role";
 
     private SharedPreferences prefs;
 
@@ -40,22 +42,32 @@ public class SessionManager {
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             );
         } catch (GeneralSecurityException | IOException e) {
-            // Fallback to standard SharedPreferences if encryption fails (e.g., unsupported hardware)
-            // In a production app, this should be logged to a crash reporting tool.
             prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         }
     }
 
-    public void saveToken(String token) {
-        prefs.edit().putString(KEY_TOKEN, token).apply();
+    public void saveTokens(String access, String refresh) {
+        prefs.edit()
+                .putString(KEY_ACCESS_TOKEN, access)
+                .putString(KEY_REFRESH_TOKEN, refresh)
+                .apply();
     }
 
-    public void saveUser(String name, String email, String phone) {
+    public void saveUser(String name, String email, String phone, String role) {
         prefs.edit()
                 .putString(KEY_USER_NAME, name)
                 .putString(KEY_USER_EMAIL, email)
                 .putString(KEY_USER_PHONE, phone)
+                .putString(KEY_USER_ROLE, role)
                 .apply();
+    }
+
+    public String getAccessToken() {
+        return prefs.getString(KEY_ACCESS_TOKEN, null);
+    }
+
+    public String getRefreshToken() {
+        return prefs.getString(KEY_REFRESH_TOKEN, null);
     }
 
     public String getUserName() {
@@ -70,12 +82,12 @@ public class SessionManager {
         return prefs.getString(KEY_USER_PHONE, "");
     }
 
-    public String getToken() {
-        return prefs.getString(KEY_TOKEN, null);
+    public String getUserRole() {
+        return prefs.getString(KEY_USER_ROLE, "CITIZEN");
     }
 
     public boolean isLoggedIn() {
-        return getToken() != null;
+        return getAccessToken() != null;
     }
 
     public void clearSession() {
