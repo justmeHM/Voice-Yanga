@@ -1,6 +1,7 @@
 package com.voiceyanga.citizen.data.repository;
 
 import com.voiceyanga.citizen.data.remote.api.ApiService;
+import com.voiceyanga.citizen.data.remote.dto.BaseResponse;
 import com.voiceyanga.citizen.data.remote.dto.CategoryDto;
 import com.voiceyanga.citizen.data.remote.dto.LocationDto;
 import com.voiceyanga.citizen.data.remote.dto.PaginatedResponse;
@@ -25,10 +26,10 @@ public class RealReferenceRepository implements ReferenceRepository {
 
     @Override
     public void getCategories(ReferenceCallback<List<CategoryDto>> callback) {
-        apiService.getCategories().enqueue(new Callback<PaginatedResponse<CategoryDto>>() {
+        apiService.getCategories().enqueue(new Callback<BaseResponse<List<CategoryDto>>>() {
             @Override
-            public void onResponse(Call<PaginatedResponse<CategoryDto>> call, Response<PaginatedResponse<CategoryDto>> response) {
-                if (response.isSuccessful() && response.body() != null) {
+            public void onResponse(Call<BaseResponse<List<CategoryDto>>> call, Response<BaseResponse<List<CategoryDto>>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
                     callback.onSuccess(response.body().getData());
                 } else {
                     callback.onError("Failed to fetch categories");
@@ -36,7 +37,7 @@ public class RealReferenceRepository implements ReferenceRepository {
             }
 
             @Override
-            public void onFailure(Call<PaginatedResponse<CategoryDto>> call, Throwable t) {
+            public void onFailure(Call<BaseResponse<List<CategoryDto>>> call, Throwable t) {
                 callback.onError(t.getMessage());
             }
         });
@@ -44,10 +45,10 @@ public class RealReferenceRepository implements ReferenceRepository {
 
     @Override
     public void getLocations(ReferenceCallback<List<LocationDto>> callback) {
-        apiService.getLocations().enqueue(new Callback<PaginatedResponse<LocationDto>>() {
+        apiService.getLocations().enqueue(new Callback<BaseResponse<List<LocationDto>>>() {
             @Override
-            public void onResponse(Call<PaginatedResponse<LocationDto>> call, Response<PaginatedResponse<LocationDto>> response) {
-                if (response.isSuccessful() && response.body() != null) {
+            public void onResponse(Call<BaseResponse<List<LocationDto>>> call, Response<BaseResponse<List<LocationDto>>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
                     callback.onSuccess(response.body().getData());
                 } else {
                     callback.onError("Failed to fetch locations");
@@ -55,7 +56,7 @@ public class RealReferenceRepository implements ReferenceRepository {
             }
 
             @Override
-            public void onFailure(Call<PaginatedResponse<LocationDto>> call, Throwable t) {
+            public void onFailure(Call<BaseResponse<List<LocationDto>>> call, Throwable t) {
                 callback.onError(t.getMessage());
             }
         });

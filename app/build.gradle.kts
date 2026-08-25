@@ -77,4 +77,7 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.firebase.messaging)
     implementation(libs.security.crypto)
+    implementation(libs.shimmer)
+    implementation(libs.biometric)
+    implementation(libs.lottie)
 }

@@ -14,7 +14,7 @@ import androidx.room.PrimaryKey;
         childColumns = "complaintUuid",
         onDelete = ForeignKey.CASCADE
     ),
-    indices = {@Index("complaintUuid")}
+    indices = {@Index(value = {"complaintUuid", "authorName", "content"}, unique = true)}
 )
 public class Comment {
 

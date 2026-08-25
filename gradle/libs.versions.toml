@@ -21,6 +21,9 @@ glide = "4.16.0"
 playServicesLocation = "21.3.0"
 firebaseMessaging = "24.1.0"
 securityCrypto = "1.1.0"
+biometric = "1.1.0"
+shimmer = "0.5.0"
+lottie = "6.4.1"
 mockito = "5.11.0"
 archCore = "2.2.0"
 
@@ -50,6 +53,9 @@ glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "gl
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging", version.ref = "firebaseMessaging" }
 security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
+shimmer = { group = "com.facebook.shimmer", name = "shimmer", version.ref = "shimmer" }
+lottie = { group = "com.airbnb.android", name = "lottie", version.ref = "lottie" }
 mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
 arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "archCore" }
 

@@ -13,7 +13,7 @@ import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.databinding.ItemComplaintBinding;
 
-import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -23,7 +23,7 @@ import java.util.Set;
 public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.ViewHolder> {
 
     private final OnComplaintClickListener listener;
-    private final Set<String> supportedUuids = new HashSet<>();
+    private String currentUserEmail;
 
     public interface OnComplaintClickListener {
         void onComplaintClick(Complaint complaint);
@@ -31,6 +31,10 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
     }
 
     public ComplaintAdapter(OnComplaintClickListener listener) {
+        this(listener, null);
+    }
+
+    public ComplaintAdapter(OnComplaintClickListener listener, String currentUserEmail) {
         super(new DiffUtil.ItemCallback<Complaint>() {
             @Override
             public boolean areItemsTheSame(@NonNull Complaint oldItem, @NonNull Complaint newItem) {
@@ -42,10 +46,17 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
                 return oldItem.getSyncStatus().equals(newItem.getSyncStatus()) &&
                         oldItem.getStatus().equals(newItem.getStatus()) &&
                         oldItem.getTitle().equals(newItem.getTitle()) &&
-                        oldItem.getSupportCount() == newItem.getSupportCount();
+                        oldItem.getSupportCount() == newItem.getSupportCount() &&
+                        oldItem.isSupportedByMe() == newItem.isSupportedByMe();
             }
         });
         this.listener = listener;
+        this.currentUserEmail = currentUserEmail;
+    }
+
+    public void setCurrentUserEmail(String email) {
+        this.currentUserEmail = email;
+        notifyDataSetChanged();
     }
 
     @NonNull
@@ -58,10 +69,10 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(getItem(position));
+        holder.bind(getItem(position), currentUserEmail);
     }
 
-    class ViewHolder extends RecyclerView.ViewHolder {
+    static class ViewHolder extends RecyclerView.ViewHolder {
         private final ItemComplaintBinding binding;
         private final OnComplaintClickListener listener;
 
@@ -71,12 +82,31 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
             this.listener = listener;
         }
 
-        void bind(Complaint complaint) {
+        void bind(Complaint complaint, String currentUserEmail) {
             binding.tvCategory.setText(complaint.getCategory() != null ? complaint.getCategory().toUpperCase() : "");
             binding.tvTitle.setText(complaint.getTitle());
             binding.tvLocation.setText(complaint.getLocation());
-            binding.tvStatus.setText(complaint.getStatus());
             
+            // Relative time logic
+            long diff = System.currentTimeMillis() - complaint.getCreatedAt();
+            String timeStr;
+            if (diff < 60000) timeStr = "Just now";
+            else if (diff < 3600000) timeStr = (diff / 60000) + "m ago";
+            else if (diff < 86400000) timeStr = (diff / 3600000) + "h ago";
+            else timeStr = (diff / 86400000) + "d ago";
+            binding.tvTime.setText(timeStr);
+            
+            String priority = complaint.getCalculatedPriority();
+            binding.tvStatus.setText(itemView.getContext().getString(R.string.status_priority_format, priority, complaint.getStatus()));
+            
+            if ("CRITICAL".equals(priority)) {
+                binding.tvStatus.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.primary_red));
+            } else if ("HIGH".equals(priority)) {
+                binding.tvStatus.setTextColor(Color.parseColor("#E67E22")); // Orange
+            } else {
+                binding.tvStatus.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.primary_green));
+            }
+
             String syncStatus = complaint.getSyncStatus();
             int color;
 
@@ -97,28 +127,33 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
             binding.tvSyncStatus.setTextColor(color);
 
             // Support button logic
-            boolean isSupported = supportedUuids.contains(complaint.getClientUuid());
-            if (isSupported) {
-                binding.btnSupport.setEnabled(false);
-                binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
-                        ContextCompat.getColor(itemView.getContext(), R.color.primary_red)));
-                binding.btnSupport.setTextColor(Color.WHITE);
-                binding.btnSupport.setIconTint(ColorStateList.valueOf(Color.WHITE));
-                binding.btnSupport.setStrokeWidth(0);
+            boolean isMyComplaint = currentUserEmail != null && currentUserEmail.equals(complaint.getAuthorEmail());
+            
+            if (isMyComplaint) {
+                binding.btnSupport.setVisibility(android.view.View.GONE);
             } else {
-                binding.btnSupport.setEnabled(true);
-                binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
-                        ContextCompat.getColor(itemView.getContext(), R.color.primary_green)));
-                binding.btnSupport.setTextColor(Color.WHITE);
-                binding.btnSupport.setIconTint(ColorStateList.valueOf(Color.WHITE));
-                binding.btnSupport.setStrokeWidth(0);
+                binding.btnSupport.setVisibility(android.view.View.VISIBLE);
+                if (complaint.isSupportedByMe()) {
+                    binding.btnSupport.setEnabled(false);
+                    binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
+                            ContextCompat.getColor(itemView.getContext(), R.color.primary_red)));
+                    binding.btnSupport.setTextColor(Color.WHITE);
+                    binding.btnSupport.setIconTint(ColorStateList.valueOf(Color.WHITE));
+                    binding.btnSupport.setStrokeWidth(0);
+                } else {
+                    binding.btnSupport.setEnabled(true);
+                    binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
+                            ContextCompat.getColor(itemView.getContext(), R.color.primary_green)));
+                    binding.btnSupport.setTextColor(Color.WHITE);
+                    binding.btnSupport.setIconTint(ColorStateList.valueOf(Color.WHITE));
+                    binding.btnSupport.setStrokeWidth(0);
+                }
             }
 
             binding.btnSupport.setOnClickListener(v -> {
                 int pos = getBindingAdapterPosition();
-                if (listener != null && pos != RecyclerView.NO_POSITION && !supportedUuids.contains(complaint.getClientUuid())) {
-                    supportedUuids.add(complaint.getClientUuid());
-                    notifyItemChanged(pos);
+                if (listener != null && pos != RecyclerView.NO_POSITION && !complaint.isSupportedByMe()) {
+                    com.voiceyanga.citizen.core.utils.HapticHelper.performClick(v);
                     listener.onSupportClick(complaint);
                 }
             });

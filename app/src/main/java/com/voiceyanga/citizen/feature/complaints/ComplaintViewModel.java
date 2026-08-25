@@ -40,12 +40,42 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
     private final MutableLiveData<List<String>> _selectedPhotos = new MutableLiveData<>(new ArrayList<>());
     public LiveData<List<String>> getSelectedPhotos() { return _selectedPhotos; }
 
+    private final MutableLiveData<Complaint> _draft = new MutableLiveData<>();
+    public LiveData<Complaint> getDraft() { return _draft; }
+
     @Inject
     public ComplaintViewModel(@NonNull Application application, ComplaintRepository repository, ReferenceRepository referenceRepository) {
         super(application);
         this.repository = repository;
         this.referenceRepository = referenceRepository;
         loadReferenceData();
+        loadDraft();
+    }
+
+    private void loadDraft() {
+        new Thread(() -> {
+            Complaint draft = repository.getDraftSync();
+            if (draft != null) {
+                _draft.postValue(draft);
+            }
+        }).start();
+    }
+
+    public void saveDraft(String title, String description, CategoryDto category, LocationDto location) {
+        Complaint draft = new Complaint(
+                UUID.randomUUID().toString(),
+                title,
+                description,
+                category != null ? category.getName() : null,
+                location != null ? location.getDisplayName() : null,
+                "DRAFT",
+                System.currentTimeMillis()
+        );
+        repository.saveAsDraft(draft);
+    }
+
+    public void deleteDraft() {
+        repository.deleteDraft();
     }
 
     private void loadReferenceData() {
@@ -74,9 +104,11 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         });
     }
 
-    public void submitComplaint(String title, String description, CategoryDto category, LocationDto location) {
-        if (title.isEmpty() || description.isEmpty()) {
-            _error.setValue(getApplication().getString(R.string.error_fill_fields));
+    public void submitComplaint(String title, String description, CategoryDto category, LocationDto location, double lat, double lon) {
+        if (title.isEmpty() || description.length() < 10) {
+            _error.setValue(description.isEmpty() ? 
+                getApplication().getString(R.string.error_fill_fields) : 
+                "Description must be at least 10 characters");
             return;
         }
 
@@ -91,6 +123,8 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
                 "PENDING",
                 System.currentTimeMillis()
         );
+        complaint.setLatitude(lat);
+        complaint.setLongitude(lon);
         
         repository.saveComplaint(complaint, _selectedPhotos.getValue());
         

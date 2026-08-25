@@ -1,12 +1,21 @@
 package com.voiceyanga.citizen.feature.home;
 
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
 import androidx.core.view.GravityCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.voiceyanga.citizen.R;
@@ -22,6 +31,7 @@ import com.voiceyanga.citizen.feature.notifications.NotificationCenterActivity;
 import com.voiceyanga.citizen.feature.profile.ProfileActivity;
 import com.voiceyanga.citizen.ui.common.AboutActivity;
 import com.voiceyanga.citizen.ui.common.SupportActivity;
+import java.util.Calendar;
 import java.util.Locale;
 import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
@@ -33,6 +43,7 @@ public class HomeActivity extends AppCompatActivity {
     private HomeViewModel viewModel;
     private ComplaintAdapter adapter;
     private boolean isFabExpanded = false;
+    private ConnectivityManager.NetworkCallback networkCallback;
 
     @Inject
     SessionManager sessionManager;
@@ -42,9 +53,16 @@ public class HomeActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         binding = ActivityHomeBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.drawerLayoutParent, (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            return insets;
+        });
 
         viewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         
@@ -56,6 +74,41 @@ public class HomeActivity extends AppCompatActivity {
         setupObservers();
         setupListeners();
         handleDeepLink();
+        setupNetworkListener();
+    }
+
+    private void setupNetworkListener() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(Network network) {
+                runOnUiThread(() -> binding.tvOfflineBanner.setVisibility(View.GONE));
+            }
+
+            @Override
+            public void onLost(Network network) {
+                runOnUiThread(() -> binding.tvOfflineBanner.setVisibility(View.VISIBLE));
+            }
+        };
+
+        NetworkRequest request = new NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build();
+        cm.registerNetworkCallback(request, networkCallback);
+        
+        // Initial check
+        NetworkCapabilities caps = cm.getNetworkCapabilities(cm.getActiveNetwork());
+        boolean online = caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        binding.tvOfflineBanner.setVisibility(online ? View.GONE : View.VISIBLE);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (networkCallback != null) {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            cm.unregisterNetworkCallback(networkCallback);
+        }
     }
 
     private void handleDeepLink() {
@@ -70,7 +123,14 @@ public class HomeActivity extends AppCompatActivity {
     private void setupHeader() {
         String name = sessionManager.getUserName();
         String email = sessionManager.getUserEmail();
-        binding.tvGreeting.setText(String.format(getString(R.string.greeting_format), name));
+        
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        String greeting;
+        if (hour < 12) greeting = "Good morning";
+        else if (hour < 17) greeting = "Good afternoon";
+        else greeting = "Good evening";
+
+        binding.tvGreeting.setText(String.format("%s, %s", greeting, name));
         
         // Update Nav Drawer Header
         View headerView = binding.navView.getHeaderView(0);
@@ -97,17 +157,71 @@ public class HomeActivity extends AppCompatActivity {
                 viewModel.supportComplaint(complaint.getClientUuid());
                 Toast.makeText(HomeActivity.this, R.string.support_thanks, Toast.LENGTH_SHORT).show();
             }
-        });
+        }, sessionManager.getUserEmail());
         binding.rvComplaints.setLayoutManager(new LinearLayoutManager(this));
         binding.rvComplaints.setAdapter(adapter);
     }
 
     private void setupObservers() {
+        viewModel.getLoading().observe(this, isLoading -> {
+            if (isLoading != null) {
+                if (isLoading) {
+                    binding.shimmerFeed.startShimmer();
+                    binding.shimmerFeed.setVisibility(View.VISIBLE);
+                    binding.rvComplaints.setVisibility(View.GONE);
+                } else {
+                    binding.shimmerFeed.stopShimmer();
+                    binding.shimmerFeed.setVisibility(View.GONE);
+                    binding.rvComplaints.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
         viewModel.getComplaints().observe(this, complaints -> {
+            // When data arrives, stop loading
+            ((MutableLiveData<Boolean>)viewModel.getLoading()).setValue(false);
+            
             adapter.submitList(complaints);
             binding.llEmptyState.setVisibility(
                     (complaints == null || complaints.isEmpty()) ? View.VISIBLE : View.GONE);
             binding.swipeRefresh.setRefreshing(false);
+        });
+
+        viewModel.getLatestMyComplaint().observe(this, complaint -> {
+            if (complaint != null) {
+                binding.cardLatestReport.setVisibility(View.VISIBLE);
+                binding.tvLatestTitle.setText(complaint.getTitle());
+                binding.tvLatestStatus.setText(complaint.getStatus());
+                
+                // Format relative time
+                long diff = System.currentTimeMillis() - complaint.getCreatedAt();
+                String timeStr;
+                if (diff < 60000) timeStr = "Just now";
+                else if (diff < 3600000) timeStr = (diff / 60000) + "m ago";
+                else if (diff < 86400000) timeStr = (diff / 3600000) + "h ago";
+                else timeStr = (diff / 86400000) + "d ago";
+                
+                binding.tvLatestDate.setText(timeStr);
+                
+                binding.cardLatestReport.setOnClickListener(v -> {
+                    Intent intent = new Intent(this, ComplaintDetailActivity.class);
+                    intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaint.getClientUuid());
+                    startActivity(intent);
+                });
+            } else {
+                binding.cardLatestReport.setVisibility(View.GONE);
+            }
+        });
+
+        viewModel.getDraft().observe(this, draft -> {
+            if (draft != null) {
+                binding.cardResumeDraft.setVisibility(View.VISIBLE);
+                binding.btnResume.setOnClickListener(v -> {
+                    startActivity(new Intent(this, CreateComplaintActivity.class));
+                });
+            } else {
+                binding.cardResumeDraft.setVisibility(View.GONE);
+            }
         });
     }
 
@@ -156,6 +270,38 @@ public class HomeActivity extends AppCompatActivity {
 
         binding.btnNotifications.setOnClickListener(v -> 
             startActivity(new Intent(this, NotificationCenterActivity.class)));
+
+        binding.btnSort.setOnClickListener(this::showSortMenu);
+
+        binding.btnSeeMore.setOnClickListener(v -> 
+            startActivity(new Intent(this, MyComplaintsActivity.class)));
+
+        binding.chipGroupFilters.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            int checkedId = checkedIds.isEmpty() ? View.NO_ID : checkedIds.get(0);
+            if (checkedId == R.id.chipAll) {
+                viewModel.clearFilters();
+            } else if (checkedId == R.id.chipResolved) {
+                viewModel.setFilter("status", "RESOLVED");
+            } else if (checkedId == R.id.chipCritical) {
+                viewModel.setFilter("priority", "CRITICAL");
+            }
+        });
+    }
+
+    private void showSortMenu(View v) {
+        android.widget.PopupMenu popup = new android.widget.PopupMenu(this, v);
+        popup.getMenu().add(0, 1, 0, "Newest First");
+        popup.getMenu().add(0, 2, 1, "Most Supported");
+        
+        popup.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 1) {
+                viewModel.setSortOrder("NEWEST");
+            } else if (item.getItemId() == 2) {
+                viewModel.setSortOrder("SUPPORT");
+            }
+            return true;
+        });
+        popup.show();
     }
 
     private void toggleFabMenu() {

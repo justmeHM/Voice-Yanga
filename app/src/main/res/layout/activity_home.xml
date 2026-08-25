@@ -84,6 +84,17 @@
                                 </LinearLayout>
 
                                 <ImageButton
+                                    android:id="@+id/btnSort"
+                                    android:layout_width="40dp"
+                                    android:layout_height="40dp"
+                                    android:layout_marginEnd="8dp"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:contentDescription="@string/desc_sort_feed"
+                                    android:scaleType="centerInside"
+                                    android:src="@drawable/ic_sort_vector"
+                                    app:tint="@color/primary_green" />
+
+                                <ImageButton
                                     android:id="@+id/btnNotifications"
                                     android:layout_width="40dp"
                                     android:layout_height="40dp"
@@ -98,6 +109,18 @@
 
                         </com.google.android.material.appbar.MaterialToolbar>
 
+                        <TextView
+                            android:id="@+id/tvOfflineBanner"
+                            android:layout_width="match_parent"
+                            android:layout_height="28dp"
+                            android:background="#D64545"
+                            android:gravity="center"
+                            android:text="@string/offline_banner_text"
+                            android:textColor="@android:color/white"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:visibility="gone" />
+
                         <!-- Welcome Header -->
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -110,36 +133,155 @@
                                 android:id="@+id/tvGreeting"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/welcome_message"
                                 android:textColor="?android:attr/textColorPrimary"
                                 android:textSize="24sp"
-                                android:textStyle="bold" />
-
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
-
-                                <ImageView
-                                    android:layout_width="14dp"
-                                    android:layout_height="14dp"
-                                    android:importantForAccessibility="no"
-                                    android:src="@android:drawable/ic_menu_mylocation"
-                                    app:tint="?android:attr/textColorSecondary" />
-
-                                <TextView
-                                    android:id="@+id/tvLocation"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginStart="4dp"
-                                    android:text="@string/location_placeholder"
-                                    android:textColor="?android:attr/textColorSecondary"
-                                    android:textSize="14sp" />
-                            </LinearLayout>
+                                android:textStyle="bold"
+                                tools:text="Good morning, John" />
 
                         </LinearLayout>
+
+                        <!-- Resume Draft Card -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardResumeDraft"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginHorizontal="24dp"
+                            android:layout_marginTop="16dp"
+                            android:visibility="gone"
+                            app:cardCornerRadius="12dp"
+                            app:cardElevation="2dp"
+                            app:strokeColor="@color/primary_green"
+                            app:strokeWidth="1dp"
+                            app:cardBackgroundColor="#F0FDF4">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:padding="16dp">
+
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@android:drawable/ic_menu_edit"
+                                    app:tint="@color/primary_green" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="12dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/resume_draft_title"
+                                    android:textColor="@color/primary_green"
+                                    android:textStyle="bold" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnResume"
+                                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/btn_resume"
+                                    android:textColor="@color/primary_green"
+                                    android:textSize="12sp" />
+
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <!-- Resume Draft Card -->
+
+                        <!-- Latest Report Summary Card -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardLatestReport"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginHorizontal="24dp"
+                            android:layout_marginTop="16dp"
+                            android:visibility="gone"
+                            app:cardCornerRadius="12dp"
+                            app:cardElevation="2dp"
+                            app:strokeColor="@color/neutral_200"
+                            app:strokeWidth="1dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="16dp">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <TextView
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:text="@string/latest_report_header"
+                                        android:textColor="?android:attr/textColorSecondary"
+                                        android:textSize="12sp"
+                                        android:textStyle="bold" />
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnSeeMore"
+                                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:minHeight="0dp"
+                                        android:minWidth="0dp"
+                                        android:padding="4dp"
+                                        android:text="@string/btn_see_more"
+                                        android:textSize="12sp"
+                                        app:rippleColor="@color/primary_green_light" />
+
+                                </LinearLayout>
+
+                                <TextView
+                                    android:id="@+id/tvLatestTitle"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold"
+                                    tools:text="Broken water pipe on Cairo Rd" />
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="8dp"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <TextView
+                                        android:id="@+id/tvLatestStatus"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:background="@drawable/bg_status_chip"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="2dp"
+                                        android:textColor="@color/primary_green"
+                                        android:textSize="10sp"
+                                        android:textStyle="bold"
+                                        tools:text="SUBMITTED" />
+
+                                    <TextView
+                                        android:id="@+id/tvLatestDate"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="12dp"
+                                        android:textColor="?android:attr/textColorSecondary"
+                                        android:textSize="12sp"
+                                        tools:text="2 hours ago" />
+
+                                </LinearLayout>
+
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
 
                         <!-- CTA Card -->
                         <com.google.android.material.card.MaterialCardView
@@ -190,6 +332,47 @@
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
 
+                        <HorizontalScrollView
+                            android:id="@+id/hsvFilters"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:layout_marginBottom="16dp"
+                            android:paddingHorizontal="24dp"
+                            android:scrollbars="none">
+
+                            <com.google.android.material.chip.ChipGroup
+                                android:id="@+id/chipGroupFilters"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:singleSelection="true"
+                                app:selectionRequired="true">
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chipAll"
+                                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:checked="true"
+                                    android:text="@string/filter_all" />
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chipResolved"
+                                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/filter_resolved" />
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chipCritical"
+                                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/filter_critical" />
+
+                            </com.google.android.material.chip.ChipGroup>
+                        </HorizontalScrollView>
+
                         <LinearLayout
                             android:id="@+id/llNearbyIssuesHeader"
                             android:layout_width="match_parent"
@@ -239,6 +422,25 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent">
 
+                    <com.facebook.shimmer.ShimmerFrameLayout
+                        android:id="@+id/shimmerFeed"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:visibility="gone"
+                        app:shimmer_auto_start="true"
+                        app:shimmer_duration="1000">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+                            <include layout="@layout/shimmer_item_complaint" />
+                            <include layout="@layout/shimmer_item_complaint" />
+                            <include layout="@layout/shimmer_item_complaint" />
+                        </LinearLayout>
+
+                    </com.facebook.shimmer.ShimmerFrameLayout>
+
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvComplaints"
                         android:layout_width="match_parent"
@@ -257,12 +459,14 @@
                         android:padding="32dp"
                         android:visibility="gone">
 
-                        <ImageView
-                            android:layout_width="80dp"
-                            android:layout_height="80dp"
-                            android:alpha="0.3"
-                            android:importantForAccessibility="no"
-                            android:src="@android:drawable/ic_menu_edit" />
+                        <com.airbnb.lottie.LottieAnimationView
+                            android:id="@+id/lottieEmpty"
+                            android:layout_width="150dp"
+                            android:layout_height="150dp"
+                            app:lottie_autoPlay="true"
+                            app:lottie_loop="true"
+                            app:lottie_url="https://assets9.lottiefiles.com/packages/lf20_gl9c9vga.json"
+                            app:lottie_fallbackRes="@android:drawable/ic_menu_edit" />
 
                         <TextView
                             android:layout_width="wrap_content"

@@ -35,6 +35,13 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         notifyDataSetChanged();
     }
 
+    public Notification getNotificationAt(int position) {
+        if (position >= 0 && position < notifications.size()) {
+            return notifications.get(position);
+        }
+        return null;
+    }
+
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {

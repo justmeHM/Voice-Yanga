@@ -24,6 +24,7 @@ public class SessionManager {
     private static final String KEY_USER_EMAIL = "user_email";
     private static final String KEY_USER_PHONE = "user_phone";
     private static final String KEY_USER_ROLE = "user_role";
+    private static final String KEY_BIOMETRIC_ENABLED = "biometric_enabled";
 
     private SharedPreferences prefs;
 
@@ -91,6 +92,21 @@ public class SessionManager {
     }
 
     public void clearSession() {
-        prefs.edit().clear().apply();
+        prefs.edit()
+                .remove(KEY_TOKEN)
+                .remove(KEY_REFRESH_TOKEN)
+                .remove(KEY_USER_NAME)
+                .remove(KEY_USER_EMAIL)
+                .remove(KEY_USER_PHONE)
+                .remove(KEY_USER_ROLE)
+                .apply();
+    }
+
+    public void setBiometricEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_BIOMETRIC_ENABLED, enabled).apply();
+    }
+
+    public boolean isBiometricEnabled() {
+        return prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false);
     }
 }

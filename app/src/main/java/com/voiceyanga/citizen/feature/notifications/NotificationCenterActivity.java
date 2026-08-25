@@ -3,9 +3,12 @@ package com.voiceyanga.citizen.feature.notifications;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import com.voiceyanga.citizen.databinding.ActivityNotificationCenterBinding;
 import com.voiceyanga.citizen.feature.complaints.ComplaintDetailActivity;
 import dagger.hilt.android.AndroidEntryPoint;
@@ -46,6 +49,22 @@ public class NotificationCenterActivity extends AppCompatActivity {
         });
         binding.rvNotifications.setLayoutManager(new LinearLayoutManager(this));
         binding.rvNotifications.setAdapter(adapter);
+
+        new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+                return false;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                int position = viewHolder.getBindingAdapterPosition();
+                com.voiceyanga.citizen.data.local.entity.Notification notification = adapter.getNotificationAt(position);
+                if (notification != null) {
+                    viewModel.markAsRead(notification.getId());
+                }
+            }
+        }).attachToRecyclerView(binding.rvNotifications);
     }
 
     private void observeViewModel() {

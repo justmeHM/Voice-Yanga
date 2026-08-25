@@ -33,6 +33,7 @@ import com.voiceyanga.citizen.data.remote.dto.CategoryDto;
 import com.voiceyanga.citizen.data.remote.dto.LocationDto;
 import com.voiceyanga.citizen.databinding.ActivityCreateComplaintBinding;
 import java.io.IOException;
+import java.io.File;
 import java.util.List;
 import java.util.Locale;
 import dagger.hilt.android.AndroidEntryPoint;
@@ -51,12 +52,17 @@ public class CreateComplaintActivity extends AppCompatActivity {
     private PhotoAdapter photoAdapter;
     private CategoryDto selectedCategory = null;
     private LocationDto currentLocation = null;
+    private double currentLatitude = 0.0;
+    private double currentLongitude = 0.0;
     private String detectedAddress = null;
     private List<CategoryDto> availableCategories;
 
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityResultLauncher<String[]> locationPermissionLauncher;
     private ActivityResultLauncher<String> galleryLauncher;
+    private ActivityResultLauncher<String> cameraPermissionLauncher;
+    private ActivityResultLauncher<android.net.Uri> cameraLauncher;
+    private android.net.Uri cameraImageUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,6 +79,13 @@ public class CreateComplaintActivity extends AppCompatActivity {
         setupObservers();
         setupListeners();
         setupCategorySelection();
+
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                handleBackPress();
+            }
+        });
     }
 
     private void setupPermissionLaunchers() {
@@ -99,10 +112,53 @@ public class CreateComplaintActivity extends AppCompatActivity {
                     }
                 }
         );
+
+        cameraLauncher = registerForActivityResult(
+                new ActivityResultContracts.TakePicture(),
+                success -> {
+                    if (success && cameraImageUri != null) {
+                        viewModel.addPhoto(cameraImageUri.toString());
+                    }
+                }
+        );
+
+        cameraPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                isGranted -> {
+                    if (isGranted) {
+                        launchCamera();
+                    } else {
+                        Toast.makeText(this, "Camera permission is required to take photos", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
     }
 
     private void setupToolbar() {
-        binding.btnBack.setOnClickListener(v -> finish());
+        binding.btnBack.setOnClickListener(v -> handleBackPress());
+    }
+
+    private void handleBackPress() {
+        String title = binding.etTitle.getText().toString().trim();
+        String desc = binding.etDescription.getText().toString().trim();
+
+        if (!title.isEmpty() || !desc.isEmpty()) {
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                    .setTitle("Save Draft?")
+                    .setMessage("You have unsaved changes. Would you like to save this as a draft?")
+                    .setPositiveButton("Save", (dialog, which) -> {
+                        viewModel.saveDraft(title, desc, selectedCategory, currentLocation);
+                        finish();
+                    })
+                    .setNegativeButton("Discard", (dialog, which) -> {
+                        viewModel.deleteDraft();
+                        finish();
+                    })
+                    .setNeutralButton("Cancel", null)
+                    .show();
+        } else {
+            finish();
+        }
     }
 
     private void setupRecyclerView() {
@@ -152,6 +208,14 @@ public class CreateComplaintActivity extends AppCompatActivity {
         viewModel.getSelectedPhotos().observe(this, photos -> {
             photoAdapter.setPhotos(photos);
         });
+
+        viewModel.getDraft().observe(this, draft -> {
+            if (draft != null) {
+                binding.etTitle.setText(draft.getTitle());
+                binding.etDescription.setText(draft.getDescription());
+                // Logic to select category and location if stored could go here
+            }
+        });
     }
 
     private void setupListeners() {
@@ -159,12 +223,67 @@ public class CreateComplaintActivity extends AppCompatActivity {
             String title = binding.etTitle.getText().toString().trim();
             String description = binding.etDescription.getText().toString().trim();
             
-            viewModel.submitComplaint(title, description, selectedCategory, currentLocation);
+            viewModel.submitComplaint(title, description, selectedCategory, currentLocation, 
+                    currentLatitude, currentLongitude);
         });
 
         binding.btnLocation.setOnClickListener(v -> requestLocationPermissions());
 
-        binding.btnAddPhotos.setOnClickListener(v -> galleryLauncher.launch("image/*"));
+        binding.btnManualLocation.setOnClickListener(v -> showManualLocationDialog());
+
+        binding.btnAddPhotos.setOnClickListener(v -> showPhotoSourceDialog());
+    }
+
+    private void showPhotoSourceDialog() {
+        String[] options = {getString(R.string.option_take_photo), getString(R.string.option_choose_gallery)};
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.photos_label)
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        checkCameraPermission();
+                    } else {
+                        galleryLauncher.launch("image/*");
+                    }
+                })
+                .show();
+    }
+
+    private void checkCameraPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            launchCamera();
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA);
+        }
+    }
+
+    private void launchCamera() {
+        File imageFolder = new File(getCacheDir(), "images");
+        if (!imageFolder.exists()) {
+            boolean ignored = imageFolder.mkdirs();
+        }
+        File photoFile = new File(imageFolder, "cam_" + System.currentTimeMillis() + ".jpg");
+        
+        cameraImageUri = androidx.core.content.FileProvider.getUriForFile(this, 
+                getPackageName() + ".provider", photoFile);
+        
+        cameraLauncher.launch(cameraImageUri);
+    }
+
+    private void showManualLocationDialog() {
+        viewModel.getLocations().observe(this, locations -> {
+            if (locations == null || locations.isEmpty()) {
+                Toast.makeText(this, "Locations not loaded yet", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            SearchableLocationDialog dialog = new SearchableLocationDialog(locations, location -> {
+                this.currentLocation = location;
+                this.detectedAddress = currentLocation.getDisplayName();
+                binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), detectedAddress));
+                binding.tvDetectedLocation.setVisibility(View.VISIBLE);
+            });
+            dialog.show(getSupportFragmentManager(), "search_location");
+        });
     }
 
     private void requestLocationPermissions() {
@@ -195,6 +314,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
             return;
         }
         
+        binding.pbLocationLoading.setVisibility(View.VISIBLE);
         binding.tvDetectedLocation.setText("Searching for GPS...");
         binding.tvDetectedLocation.setVisibility(View.VISIBLE);
 
@@ -205,11 +325,14 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 // Request a fresh location if last known is null
                 requestFreshLocation();
             }
-        }).addOnFailureListener(e -> requestFreshLocation());
+        }).addOnFailureListener(e -> {
+            requestFreshLocation();
+        });
     }
 
     private void requestFreshLocation() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            binding.pbLocationLoading.setVisibility(View.GONE);
             return;
         }
 
@@ -224,6 +347,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 if (location != null) {
                     updateLocationUI(location);
                 } else {
+                    binding.pbLocationLoading.setVisibility(View.GONE);
                     Toast.makeText(CreateComplaintActivity.this, R.string.error_location_not_found, Toast.LENGTH_SHORT).show();
                     binding.tvDetectedLocation.setVisibility(View.GONE);
                 }
@@ -232,6 +356,8 @@ public class CreateComplaintActivity extends AppCompatActivity {
     }
 
     private void updateLocationUI(Location location) {
+        this.currentLatitude = location.getLatitude();
+        this.currentLongitude = location.getLongitude();
         Geocoder geocoder = new Geocoder(this, Locale.getDefault());
         try {
             List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
@@ -244,10 +370,12 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 // Map to API location
                 mapToApiLocation(address.getLocality(), address.getSubLocality());
             }
+            binding.pbLocationLoading.setVisibility(View.GONE);
         } catch (IOException e) {
             String locationName = location.getLatitude() + ", " + location.getLongitude();
             binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), locationName));
             binding.tvDetectedLocation.setVisibility(View.VISIBLE);
+            binding.pbLocationLoading.setVisibility(View.GONE);
         }
     }
 

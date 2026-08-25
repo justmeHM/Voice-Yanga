@@ -1,5 +1,6 @@
 package com.voiceyanga.citizen.feature.complaints;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
@@ -31,6 +32,7 @@ public class ComplaintDetailActivity extends AppCompatActivity {
     private String complaintUuid;
     private PhotoAdapter photoAdapter;
     private CommentAdapter commentAdapter;
+    private Complaint currentComplaint;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +58,31 @@ public class ComplaintDetailActivity extends AppCompatActivity {
 
     private void setupToolbar() {
         binding.toolbar.setNavigationOnClickListener(v -> finish());
+        binding.toolbar.inflateMenu(R.menu.complaint_detail_menu);
+        binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_share) {
+                shareComplaint();
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private void shareComplaint() {
+        if (currentComplaint == null) return;
+        
+        String shareBody = String.format(
+            "Help me get this issue noticed! %s in %s. Ref: %s. Reported via Voice Yanga.",
+            currentComplaint.getTitle(),
+            currentComplaint.getLocation(),
+            currentComplaint.getReferenceCode() != null ? currentComplaint.getReferenceCode() : "Pending"
+        );
+
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_SUBJECT, "Voice Yanga Report");
+        intent.putExtra(Intent.EXTRA_TEXT, shareBody);
+        startActivity(Intent.createChooser(intent, "Share via"));
     }
 
     private void setupTimeline() {
@@ -77,6 +104,7 @@ public class ComplaintDetailActivity extends AppCompatActivity {
     private void observeViewModel() {
         viewModel.getComplaint(complaintUuid).observe(this, complaint -> {
             if (complaint != null) {
+                this.currentComplaint = complaint;
                 displayComplaint(complaint);
             }
         });
@@ -98,6 +126,12 @@ public class ComplaintDetailActivity extends AppCompatActivity {
                 commentAdapter.setComments(comments);
             }
         });
+
+        viewModel.getCommentSuccess().observe(this, success -> {
+            if (success != null && success) {
+                binding.etComment.setText("");
+            }
+        });
     }
 
     private void displayComplaint(Complaint complaint) {
@@ -109,10 +143,33 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         
         binding.tvLocation.setText(complaint.getLocation() != null ? complaint.getLocation() : "Unknown");
         binding.tvDescription.setText(complaint.getDescription());
-        binding.tvPriority.setText(String.format(getString(R.string.priority_format), 
-                complaint.getPriority() != null ? complaint.getPriority() : "MEDIUM"));
+        
+        String priority = complaint.getCalculatedPriority();
+        binding.tvPriority.setText(String.format(getString(R.string.priority_format), priority));
+        
+        if ("CRITICAL".equals(priority)) {
+            binding.tvPriority.setTextColor(Color.RED);
+        } else if ("HIGH".equals(priority)) {
+            binding.tvPriority.setTextColor(Color.parseColor("#E67E22"));
+        } else {
+            binding.tvPriority.setTextColor(ContextCompat.getColor(this, R.color.primary_green));
+        }
         
         binding.btnSupport.setText(String.format(Locale.getDefault(), getString(R.string.support_count_format), complaint.getSupportCount()));
+
+        if (complaint.isSupportedByMe()) {
+            binding.btnSupport.setEnabled(false);
+            binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
+                    ContextCompat.getColor(this, R.color.primary_red)));
+            binding.btnSupport.setTextColor(Color.WHITE);
+            binding.btnSupport.setIconTintResource(android.R.color.white);
+        } else {
+            binding.btnSupport.setEnabled(true);
+            binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
+                    ContextCompat.getColor(this, android.R.color.white)));
+            binding.btnSupport.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+            binding.btnSupport.setIconTintResource(R.color.primary_green);
+        }
 
         updateTimeline(complaint);
     }
@@ -143,6 +200,7 @@ public class ComplaintDetailActivity extends AppCompatActivity {
 
     private void setupListeners() {
         binding.btnSupport.setOnClickListener(v -> {
+            com.voiceyanga.citizen.core.utils.HapticHelper.performSuccess(v);
             viewModel.supportComplaint(complaintUuid);
             viewModel.simulateProgress(complaintUuid); // Mock update for UI verification
             
@@ -154,6 +212,14 @@ public class ComplaintDetailActivity extends AppCompatActivity {
             binding.btnSupport.setIconTintResource(android.R.color.white);
             
             Toast.makeText(this, R.string.support_thanks, Toast.LENGTH_SHORT).show();
+        });
+
+        binding.btnPostComment.setOnClickListener(v -> {
+            String message = binding.etComment.getText().toString().trim();
+            if (!message.isEmpty()) {
+                com.voiceyanga.citizen.core.utils.HapticHelper.performClick(v);
+                viewModel.postComment(complaintUuid, message, true);
+            }
         });
     }
 }

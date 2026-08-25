@@ -188,6 +188,31 @@
                 android:nestedScrollingEnabled="false"
                 tools:listitem="@layout/item_comment" />
 
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etComment"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/comment_hint"
+                    android:inputType="textMultiLine"
+                    android:minLines="1" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPostComment"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:text="@string/btn_post_comment"
+                app:rippleColor="@color/primary_green_light" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSupport"
                 android:layout_width="match_parent"

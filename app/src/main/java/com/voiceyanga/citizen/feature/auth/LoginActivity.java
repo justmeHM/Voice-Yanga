@@ -11,7 +11,10 @@ import androidx.lifecycle.ViewModelProvider;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.voiceyanga.citizen.R;
+import com.voiceyanga.citizen.core.utils.BiometricHelper;
+import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.feature.home.HomeActivity;
+import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 
 @AndroidEntryPoint
@@ -21,6 +24,9 @@ public class LoginActivity extends AppCompatActivity {
     private TextInputEditText etEmail, etPassword;
     private MaterialButton btnLogin;
     private ProgressBar pbLoading;
+
+    @Inject
+    SessionManager sessionManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

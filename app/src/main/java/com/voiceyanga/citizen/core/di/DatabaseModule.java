@@ -20,7 +20,11 @@ public class DatabaseModule {
     @Singleton
     public AppDatabase provideDatabase(@ApplicationContext Context context) {
         return Room.databaseBuilder(context, AppDatabase.class, "voice_yanga_db")
-                .fallbackToDestructiveMigration()
+                .addMigrations(
+                        AppDatabase.MIGRATION_6_7, 
+                        AppDatabase.MIGRATION_7_8, 
+                        AppDatabase.MIGRATION_8_9,
+                        AppDatabase.MIGRATION_9_10)
                 .build();
     }
 

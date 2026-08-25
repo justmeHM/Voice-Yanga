@@ -12,11 +12,18 @@ import com.voiceyanga.citizen.data.local.dao.ComplaintDao;
 import com.voiceyanga.citizen.data.local.entity.Comment;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
+import com.voiceyanga.citizen.data.local.entity.PendingAction;
 import com.voiceyanga.citizen.data.remote.SyncWorker;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
+import com.voiceyanga.citizen.data.remote.dto.BaseResponse;
+import com.voiceyanga.citizen.data.remote.dto.CommentRequest;
+import com.voiceyanga.citizen.data.remote.dto.CommentResponse;
 import com.voiceyanga.citizen.data.remote.dto.PaginatedResponse;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -45,18 +52,30 @@ public class ComplaintRepository {
     }
 
     public LiveData<List<Complaint>> getAllComplaints() {
-        refreshComplaints();
+        refreshComplaints(Collections.emptyMap());
         return complaintDao.getAllComplaints();
     }
 
-    private void refreshComplaints() {
+    public LiveData<List<Complaint>> getAllComplaints(Map<String, String> filters) {
+        refreshComplaints(filters);
+        return complaintDao.getAllComplaints();
+    }
+
+    private void refreshComplaints(Map<String, String> filters) {
         executorService.execute(() -> {
             try {
-                Response<PaginatedResponse<Complaint>> response = apiService.getComplaints().execute();
-                if (response.isSuccessful() && response.body() != null) {
-                    List<Complaint> serverComplaints = response.body().getData();
+                Response<BaseResponse<PaginatedResponse<Complaint>>> response = apiService.getComplaints(filters).execute();
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    List<Complaint> serverComplaints = response.body().getData().getData();
                     if (serverComplaints != null) {
                         for (Complaint serverComplaint : serverComplaints) {
+                            // PRESERVE LOCAL FLAGS
+                            Complaint existing = complaintDao.getComplaintByUuid(serverComplaint.getClientUuid());
+                            if (existing != null) {
+                                serverComplaint.setSupportedByMe(existing.isSupportedByMe());
+                                serverComplaint.setCommentCount(existing.getCommentCount());
+                            }
+                            
                             // Mark as synced since it came from server
                             serverComplaint.setSyncStatus("SYNCED");
                             complaintDao.insert(serverComplaint);
@@ -69,16 +88,97 @@ public class ComplaintRepository {
         });
     }
 
-    public LiveData<List<Complaint>> getMyComplaints(String email) {
-        return complaintDao.getMyComplaints(email);
+    public void refreshComments(String serverId, String complaintUuid) {
+        executorService.execute(() -> {
+            try {
+                Response<List<CommentResponse>> response = apiService.getComments(serverId).execute();
+                if (response.isSuccessful() && response.body() != null) {
+                    for (CommentResponse dto : response.body()) {
+                        // RECONCILIATION: Delete local duplicate if it exists
+                        complaintDao.deleteLocalComment(complaintUuid, dto.getAuthorName(), dto.getMessage());
+                        
+                        Comment comment = new Comment(
+                                dto.getId(),
+                                complaintUuid,
+                                dto.getAuthorName(),
+                                dto.getMessage(),
+                                dto.isOfficial(),
+                                System.currentTimeMillis() // Simplification: API uses ISO strings
+                        );
+                        complaintDao.insertComment(comment);
+                    }
+                    complaintDao.updateCommentCount(complaintUuid);
+                }
+            } catch (Exception e) {
+                android.util.Log.e("ComplaintRepo", "Comment refresh failed", e);
+            }
+        });
+    }
+
+    public void postComment(String complaintUuid, String serverId, String message, boolean isCitizenVisible) {
+        executorService.execute(() -> {
+            String author = sessionManager.getUserName();
+            if (author == null || author.isEmpty()) author = "Anonymous User";
+            
+            // Save locally first for immediate feedback
+            Comment localComment = new Comment(
+                    UUID.randomUUID().toString(),
+                    complaintUuid,
+                    author,
+                    message,
+                    false,
+                    System.currentTimeMillis()
+            );
+            complaintDao.insertComment(localComment);
+            complaintDao.updateCommentCount(complaintUuid);
+
+            // Queue for background sync
+            complaintDao.insertPendingAction(new PendingAction("COMMENT", complaintUuid, message));
+            scheduleSync();
+        });
+    }
+
+    public LiveData<List<Complaint>> getMyActiveComplaints(String email) {
+        return complaintDao.getMyActiveComplaints(email);
+    }
+
+    public LiveData<List<Complaint>> getMyResolvedComplaints(String email) {
+        return complaintDao.getMyResolvedComplaints(email);
+    }
+
+    public LiveData<Complaint> getLatestMyComplaint(String email) {
+        return complaintDao.getLatestMyComplaint(email);
+    }
+
+    public LiveData<Integer> getMyReportsCount(String email) {
+        return complaintDao.getMyReportsCount(email);
+    }
+
+    public LiveData<Integer> getSupportedCount() {
+        return complaintDao.getSupportedCount();
     }
 
     public LiveData<List<Complaint>> getCommunityComplaints(String email) {
         return complaintDao.getCommunityComplaints(email);
     }
 
+    public LiveData<List<Complaint>> getCommunityComplaints(String email, String status, String category, String query) {
+        // Refresh from server too
+        Map<String, String> filters = new HashMap<>();
+        if (status != null) filters.put("status", status);
+        if (category != null) filters.put("category", category);
+        if (query != null && !query.isEmpty()) filters.put("search", query);
+        refreshComplaints(filters);
+
+        return complaintDao.getFilteredCommunityComplaints(email, status, category, query);
+    }
+
     public LiveData<Complaint> getComplaint(String uuid) {
         return complaintDao.getComplaintByUuidLiveData(uuid);
+    }
+
+    public Complaint getComplaintSync(String uuid) {
+        return complaintDao.getComplaintByUuid(uuid);
     }
 
     public LiveData<List<Comment>> getComments(String complaintUuid) {
@@ -94,63 +194,16 @@ public class ComplaintRepository {
      * [Rule 73] This supports the "Mobile First, API Second" strategy with realistic mock data.
      */
     public void simulateProgress(String uuid) {
-        executorService.execute(() -> {
-            Complaint complaint = complaintDao.getComplaintByUuid(uuid);
-            if (complaint == null || !"SYNCED".equals(complaint.getSyncStatus())) return;
-
-            String currentStatus = complaint.getStatus();
-            String nextStatus;
-            String commentMsg;
-
-            switch (currentStatus) {
-                case "SUBMITTED":
-                    nextStatus = "REVIEWED";
-                    commentMsg = "Your report has been reviewed by our triage team.";
-                    break;
-                case "REVIEWED":
-                    nextStatus = "ASSIGNED";
-                    commentMsg = "A technician from the Matero Water and Sewerage department has been assigned.";
-                    break;
-                case "ASSIGNED":
-                    nextStatus = "IN_PROGRESS";
-                    commentMsg = "The technician is on-site investigating the issue.";
-                    break;
-                case "IN_PROGRESS":
-                    nextStatus = "RESOLVED";
-                    commentMsg = "The issue has been fixed and verified. Thank you for reporting!";
-                    break;
-                default:
-                    return;
-            }
-
-            complaint.setStatus(nextStatus);
-            complaint.setUpdatedAt(System.currentTimeMillis());
-            complaintDao.update(complaint);
-
-            Comment comment = new Comment(
-                    UUID.randomUUID().toString(),
-                    uuid,
-                    "Official Admin",
-                    commentMsg,
-                    true,
-                    System.currentTimeMillis()
-            );
-            complaintDao.insertComment(comment);
-        });
+        // Disabled mocking [Rule 73]
     }
 
     public void supportComplaint(String uuid) {
         executorService.execute(() -> {
             complaintDao.incrementSupportCount(uuid);
             
-            Complaint complaint = complaintDao.getComplaintByUuid(uuid);
-            if (complaint != null && complaint.getServerId() != null) {
-                try {
-                    apiService.supportComplaint(complaint.getServerId()).execute();
-                } catch (Exception e) {
-                    android.util.Log.e("ComplaintRepo", "Support sync failed", e);
-                }
-            }
+            // Queue for background sync
+            complaintDao.insertPendingAction(new PendingAction("SUPPORT", uuid, null));
+            scheduleSync();
         });
     }
 
@@ -166,21 +219,6 @@ public class ComplaintRepository {
             }
             
             scheduleSync();
-            addMockOfficialComment(complaint.getClientUuid());
-        });
-    }
-
-    private void addMockOfficialComment(String complaintUuid) {
-        executorService.execute(() -> {
-            Comment comment = new Comment(
-                    UUID.randomUUID().toString(),
-                    complaintUuid,
-                    "Official Admin",
-                    "We have received your report and it is currently being reviewed by the Matero District office.",
-                    true,
-                    System.currentTimeMillis() + 1000 // 1 second after submission
-            );
-            complaintDao.insertComment(comment);
         });
     }
 
@@ -218,5 +256,21 @@ public class ComplaintRepository {
 
     public List<Complaint> getPendingComplaints() {
         return complaintDao.getPendingComplaints();
+    }
+
+    public void saveAsDraft(Complaint complaint) {
+        executorService.execute(() -> {
+            complaintDao.deleteDraft();
+            complaint.setSyncStatus("DRAFT");
+            complaintDao.insert(complaint);
+        });
+    }
+
+    public Complaint getDraftSync() {
+        return complaintDao.getDraft();
+    }
+
+    public void deleteDraft() {
+        executorService.execute(complaintDao::deleteDraft);
     }
 }

@@ -83,6 +83,7 @@
     <string name="empty_notifications_title">No notifications yet</string>
     <string name="empty_notifications_subtitle">We\'ll notify you when your reports are updated or someone comments.</string>
     <string name="priority_format">%1$s PRIORITY</string>
+    <string name="status_priority_format">%1$s • %2$s</string>
     <string name="empty_reports_title">No reports yet</string>
     <string name="empty_reports_subtitle">When you report a community problem,\nyou\'ll see it here.</string>
     <string name="menu_profile">Profile</string>
@@ -138,4 +139,29 @@
     <string name="label_phone">PHONE</string>
     <string name="empty_nearby_issues">No nearby issues found</string>
     <string name="profile_coming_soon_desc">We are currently working on a secure way to manage your account details.</string>
+    <string name="comment_hint">Add a reply...</string>
+    <string name="btn_post_comment">POST REPLY</string>
+    <string name="label_first_name">First Name</string>
+    <string name="label_last_name">Last Name</string>
+    <string name="label_email_hint">Email (Read-only)</string>
+    <string name="label_phone_hint">Phone</string>
+    <string name="btn_update_profile">UPDATE PROFILE</string>
+    <string name="profile_updated">Profile updated successfully</string>
+    <string name="filter_all">All</string>
+    <string name="filter_resolved">Resolved</string>
+    <string name="filter_critical">Critical</string>
+    <string name="select_manually">Select Manually</string>
+    <string name="offline_banner_text">Offline - Syncing paused</string>
+    <string name="resume_draft_title">Continue where you left off...</string>
+    <string name="btn_resume">Resume</string>
+    <string name="latest_report_header">Your Latest Report</string>
+    <string name="btn_see_more">See More</string>
+    <string name="stat_my_reports">My Reports</string>
+    <string name="stat_community_support">Community Support</string>
+    <string name="label_enable_biometric">Enable Biometric Login</string>
+    <string name="title_select_location">Select Location</string>
+    <string name="hint_search_locations">Search wards or districts...</string>
+    <string name="desc_sort_feed">Sort community feed</string>
+    <string name="option_take_photo">Take Photo</string>
+    <string name="option_choose_gallery">Choose from Gallery</string>
 </resources>

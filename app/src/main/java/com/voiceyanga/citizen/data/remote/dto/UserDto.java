@@ -24,10 +24,20 @@ public class UserDto {
     @SerializedName("role")
     private String role;
 
+    @SerializedName("locationId")
+    private String locationId;
+
+    @SerializedName("fcmToken")
+    private String fcmToken;
+
     public String getId() { return id; }
+    public String getFirstName() { return firstName; }
+    public String getLastName() { return lastName; }
     public String getEmail() { return email; }
     public String getPhone() { return phone; }
     public String getRole() { return role != null ? role : "CITIZEN"; }
+    public String getLocationId() { return locationId; }
+    public String getFcmToken() { return fcmToken; }
     
     public String getFullName() {
         if (name != null && !name.isEmpty()) return name;

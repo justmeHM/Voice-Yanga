@@ -26,6 +26,10 @@ public class Complaint {
     private String authorEmail;
     private long createdAt;
     private long updatedAt;
+    private double latitude;
+    private double longitude;
+    private boolean supportedByMe;
+    private int commentCount;
 
     public Complaint(@NonNull String clientUuid, String title, String description, String category, String location, String syncStatus, long createdAt) {
         this.clientUuid = clientUuid;
@@ -89,4 +93,24 @@ public class Complaint {
 
     public long getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(long updatedAt) { this.updatedAt = updatedAt; }
+
+    public double getLatitude() { return latitude; }
+    public void setLatitude(double latitude) { this.latitude = latitude; }
+
+    public double getLongitude() { return longitude; }
+    public void setLongitude(double longitude) { this.longitude = longitude; }
+
+    public boolean isSupportedByMe() { return supportedByMe; }
+    public void setSupportedByMe(boolean supportedByMe) { this.supportedByMe = supportedByMe; }
+
+    public int getCommentCount() { return commentCount; }
+    public void setCommentCount(int commentCount) { this.commentCount = commentCount; }
+
+    public String getCalculatedPriority() {
+        int engagementScore = supportCount + (commentCount * 2); // Comments carry more weight
+        if (engagementScore >= 20) return "CRITICAL";
+        if (engagementScore >= 10) return "HIGH";
+        if (engagementScore >= 5) return "MEDIUM";
+        return "LOW";
+    }
 }

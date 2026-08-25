@@ -3,6 +3,7 @@ package com.voiceyanga.citizen.core.notifications;
 import androidx.annotation.NonNull;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
+import com.voiceyanga.citizen.data.repository.UserRepository;
 import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 
@@ -11,6 +12,9 @@ public class VoiceYangaMessagingService extends FirebaseMessagingService {
 
     @Inject
     NotificationHelper notificationHelper;
+
+    @Inject
+    UserRepository userRepository;
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
@@ -31,6 +35,6 @@ public class VoiceYangaMessagingService extends FirebaseMessagingService {
     @Override
     public void onNewToken(@NonNull String token) {
         super.onNewToken(token);
-        // In a real app, send this token to the server
+        userRepository.registerFcmToken(token);
     }
 }

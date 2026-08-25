@@ -341,15 +341,43 @@
                 android:textAlignment="viewStart"
                 app:icon="@drawable/ic_location_vector" />
 
-            <TextView
-                android:id="@+id/tvDetectedLocation"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnManualLocation"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:text="@string/select_manually"
+                android:textSize="12sp"
+                app:rippleColor="@color/primary_green_light" />
+
+            <LinearLayout
+                android:id="@+id/llLocationResult"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="@string/location_not_detected"
-                android:textColor="@color/primary_green"
-                android:textSize="14sp"
-                android:visibility="gone" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ProgressBar
+                    android:id="@+id/pbLocationLoading"
+                    style="?android:attr/progressBarStyleSmall"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginEnd="8dp"
+                    android:indeterminateTint="@color/primary_green"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tvDetectedLocation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/location_not_detected"
+                    android:textColor="@color/primary_green"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+
+            </LinearLayout>
 
             <TextView
                 android:layout_width="wrap_content"

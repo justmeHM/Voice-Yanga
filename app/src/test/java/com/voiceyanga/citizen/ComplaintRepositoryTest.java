@@ -13,6 +13,7 @@ import androidx.work.OneTimeWorkRequest;
 import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.data.local.dao.ComplaintDao;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
+import com.voiceyanga.citizen.data.remote.api.ApiService;
 import com.voiceyanga.citizen.data.repository.ComplaintRepository;
 import java.util.Collections;
 import java.util.UUID;
@@ -32,6 +33,9 @@ public class ComplaintRepositoryTest {
     private ComplaintDao complaintDao;
 
     @Mock
+    private ApiService apiService;
+
+    @Mock
     private SessionManager sessionManager;
 
     @Mock
@@ -44,7 +48,7 @@ public class ComplaintRepositoryTest {
         MockitoAnnotations.openMocks(this);
         when(sessionManager.getUserEmail()).thenReturn("test@example.com");
         
-        repository = new ComplaintRepository(complaintDao, sessionManager, workManager);
+        repository = new ComplaintRepository(complaintDao, apiService, sessionManager, workManager);
     }
 
     @Test
