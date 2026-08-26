@@ -113,7 +113,7 @@
                             android:id="@+id/tvOfflineBanner"
                             android:layout_width="match_parent"
                             android:layout_height="28dp"
-                            android:background="#D64545"
+                            android:background="@color/primary_red"
                             android:gravity="center"
                             android:text="@string/offline_banner_text"
                             android:textColor="@android:color/white"
@@ -150,9 +150,9 @@
                             android:visibility="gone"
                             app:cardCornerRadius="12dp"
                             app:cardElevation="2dp"
-                            app:strokeColor="@color/primary_green"
+                            app:strokeColor="?attr/colorPrimary"
                             app:strokeWidth="1dp"
-                            app:cardBackgroundColor="#F0FDF4">
+                            app:cardBackgroundColor="?attr/colorSurfaceVariant">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -165,6 +165,7 @@
                                     android:layout_width="24dp"
                                     android:layout_height="24dp"
                                     android:src="@android:drawable/ic_menu_edit"
+                                    android:contentDescription="@null"
                                     app:tint="@color/primary_green" />
 
                                 <TextView
@@ -188,8 +189,6 @@
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
 
-                        <!-- Resume Draft Card -->
-
                         <!-- Latest Report Summary Card -->
                         <com.google.android.material.card.MaterialCardView
                             android:id="@+id/cardLatestReport"
@@ -200,7 +199,7 @@
                             android:visibility="gone"
                             app:cardCornerRadius="12dp"
                             app:cardElevation="2dp"
-                            app:strokeColor="@color/neutral_200"
+                            app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp">
 
                             <LinearLayout
@@ -315,7 +314,8 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="8dp"
                                     android:text="@string/report_card_subtitle"
-                                    android:textColor="#E7F3ED"
+                                    android:textColor="?attr/colorOnPrimary"
+                                    android:alpha="0.8"
                                     android:textSize="14sp" />
 
                                 <com.google.android.material.button.MaterialButton
@@ -325,89 +325,13 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="20dp"
                                     android:text="@string/report_problem_desc"
-                                    android:textColor="@color/primary_green"
-                                    app:backgroundTint="@android:color/white"
+                                    android:textColor="?attr/colorPrimary"
+                                    app:backgroundTint="?attr/colorSurface"
                                     app:cornerRadius="8dp" />
 
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
 
-                        <HorizontalScrollView
-                            android:id="@+id/hsvFilters"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:layout_marginBottom="16dp"
-                            android:paddingHorizontal="24dp"
-                            android:scrollbars="none">
-
-                            <com.google.android.material.chip.ChipGroup
-                                android:id="@+id/chipGroupFilters"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                app:singleSelection="true"
-                                app:selectionRequired="true">
-
-                                <com.google.android.material.chip.Chip
-                                    android:id="@+id/chipAll"
-                                    style="@style/Widget.MaterialComponents.Chip.Choice"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:checked="true"
-                                    android:text="@string/filter_all" />
-
-                                <com.google.android.material.chip.Chip
-                                    android:id="@+id/chipResolved"
-                                    style="@style/Widget.MaterialComponents.Chip.Choice"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/filter_resolved" />
-
-                                <com.google.android.material.chip.Chip
-                                    android:id="@+id/chipCritical"
-                                    style="@style/Widget.MaterialComponents.Chip.Choice"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/filter_critical" />
-
-                            </com.google.android.material.chip.ChipGroup>
-                        </HorizontalScrollView>
-
-                        <LinearLayout
-                            android:id="@+id/llNearbyIssuesHeader"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            android:paddingHorizontal="24dp"
-                            android:paddingBottom="8dp"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:background="?attr/selectableItemBackground">
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="@string/nearby_issues_title"
-                                android:textColor="?android:attr/textColorPrimary"
-                                android:textSize="18sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/tvCriticalBadge"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:background="@drawable/bg_status_chip"
-                                android:backgroundTint="@color/primary_red_light"
-                                android:paddingHorizontal="8dp"
-                                android:paddingVertical="4dp"
-                                android:textColor="@color/primary_red"
-                                android:textSize="12sp"
-                                android:textStyle="bold"
-                                tools:text="3 Critical" />
-
-                        </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.appbar.CollapsingToolbarLayout>
             </com.google.android.material.appbar.AppBarLayout>
@@ -441,6 +365,10 @@
 
                     </com.facebook.shimmer.ShimmerFrameLayout>
 
+                    <include
+                        android:id="@+id/layoutError"
+                        layout="@layout/layout_error" />
+
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvComplaints"
                         android:layout_width="match_parent"
@@ -459,14 +387,12 @@
                         android:padding="32dp"
                         android:visibility="gone">
 
-                        <com.airbnb.lottie.LottieAnimationView
+                        <ImageView
                             android:id="@+id/lottieEmpty"
-                            android:layout_width="150dp"
-                            android:layout_height="150dp"
-                            app:lottie_autoPlay="true"
-                            app:lottie_loop="true"
-                            app:lottie_url="https://assets9.lottiefiles.com/packages/lf20_gl9c9vga.json"
-                            app:lottie_fallbackRes="@android:drawable/ic_menu_edit" />
+                            android:layout_width="120dp"
+                            android:layout_height="120dp"
+                            android:src="@drawable/vote_icon"
+                            android:alpha="0.5" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -544,8 +470,8 @@
             app:headerLayout="@layout/nav_header_home"
             app:itemHorizontalPadding="24dp"
             app:itemIconPadding="16dp"
-            app:itemIconTint="?android:attr/textColorPrimary"
-            app:itemTextColor="?android:attr/textColorPrimary"
+            app:itemIconTint="?attr/colorOnSurface"
+            app:itemTextColor="?attr/colorOnSurface"
             app:menu="@menu/nav_drawer_menu" />
 
     </androidx.drawerlayout.widget.DrawerLayout>

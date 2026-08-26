@@ -27,7 +27,8 @@ import retrofit2.converter.gson.GsonConverterFactory;
 @InstallIn(SingletonComponent.class)
 public class NetworkModule {
 
-    private static final String BASE_URL = "http://192.168.43.35:3000/api/v1/";
+    // Use your computer's IP address for physical device testing
+    private static final String BASE_URL = "http://10.214.122.10:3000/api/v1/";
 
     @Provides
     @Singleton
@@ -56,12 +57,13 @@ public class NetworkModule {
                     android.util.Log.d("NetworkModule", "Request URL: " + originalRequest.url());
                     android.util.Log.d("NetworkModule", "Authorization header exists: " + (cleanToken != null && !cleanToken.isEmpty()));
 
-                    if (cleanToken != null && !cleanToken.isEmpty()) {
+                    if (cleanToken != null && !cleanToken.isEmpty() && !cleanToken.equals("null")) {
                         Request authenticatedRequest = originalRequest.newBuilder()
                                 .header("Authorization", "Bearer " + cleanToken)
                                 .build();
                         return chain.proceed(authenticatedRequest);
                     }
+                    android.util.Log.w("NetworkModule", "No valid token available for request: " + originalRequest.url());
                     return chain.proceed(originalRequest);
                 })
                 .authenticator((route, response) -> {

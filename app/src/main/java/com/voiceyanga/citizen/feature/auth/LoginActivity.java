@@ -42,6 +42,12 @@ public class LoginActivity extends AppCompatActivity {
         TextView tvRegister = findViewById(R.id.tvRegister);
         TextView tvForgotPassword = findViewById(R.id.tvForgotPassword);
 
+        // Auto-fill from Registration if applicable
+        String prefilledEmail = getIntent().getStringExtra("email");
+        String prefilledPassword = getIntent().getStringExtra("password");
+        if (prefilledEmail != null) etEmail.setText(prefilledEmail);
+        if (prefilledPassword != null) etPassword.setText(prefilledPassword);
+
         btnLogin.setOnClickListener(v -> {
             String email = etEmail.getText() != null ? etEmail.getText().toString().trim() : "";
             String password = etPassword.getText() != null ? etPassword.getText().toString().trim() : "";

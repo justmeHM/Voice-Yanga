@@ -20,7 +20,7 @@
             android:layout_height="64dp"
             app:cardCornerRadius="32dp"
             app:cardElevation="0dp"
-            app:strokeColor="#FFFFFF"
+            app:strokeColor="?attr/colorOnPrimary"
             app:strokeWidth="2dp">
 
             <ImageView
@@ -51,7 +51,7 @@
             android:layout_marginTop="2dp"
             android:alpha="0.8"
             android:text="test@citizen.com"
-            android:textColor="#E7F3ED"
+            android:textColor="?attr/colorOnPrimary"
             android:textSize="13sp"
             android:gravity="center" />
     </LinearLayout>
@@ -65,19 +65,19 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="#D64545" />
+            android:background="@color/primary_red" />
 
         <View
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="#FFFFFF" />
+            android:background="?attr/colorSurface" />
 
         <View
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="#16834B" />
+            android:background="?attr/colorPrimary" />
     </LinearLayout>
 
 </LinearLayout>

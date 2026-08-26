@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="report_problem"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_edit"
+        android:shortcutShortLabel="@string/report_problem_desc"
+        android:shortcutLongLabel="@string/create_complaint_title">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.voiceyanga.citizen"
+            android:targetClass="com.voiceyanga.citizen.feature.complaints.CreateComplaintActivity" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+</shortcuts>

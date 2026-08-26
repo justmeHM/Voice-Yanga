@@ -9,7 +9,7 @@
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/white">
+        android:background="?attr/colorSurface">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
@@ -17,12 +17,12 @@
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@drawable/ic_back_small"
             app:title="@string/complaint_details_title"
-            app:titleTextColor="#17211B" />
+            app:titleTextColor="?attr/colorOnSurface" />
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="@color/neutral_200" />
+            android:background="?attr/colorOutline" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
@@ -68,7 +68,7 @@
                     android:background="@drawable/bg_status_chip"
                     android:paddingHorizontal="12dp"
                     android:paddingVertical="6dp"
-                    android:textColor="#16834B"
+                    android:textColor="?attr/colorPrimary"
                     android:textSize="12sp"
                     android:textStyle="bold" />
 
@@ -77,7 +77,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:textColor="#D64545"
+                    android:textColor="@color/primary_red"
                     android:textSize="12sp"
                     android:textStyle="bold" />
 

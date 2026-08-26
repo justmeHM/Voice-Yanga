@@ -8,12 +8,20 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.voiceyanga.citizen.databinding.ItemPhotoBinding;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> {
 
     private final List<String> photoUris = new ArrayList<>();
+    private final Map<String, String> photoLabels = new HashMap<>();
     private final OnRemoveListener listener;
+
+    public interface OnRemoveListener {
+        void onRemove(String uri);
+        default void onLabelChanged(String uri, String label) {}
+    }
 
     public PhotoAdapter(OnRemoveListener listener) {
         this.listener = listener;
@@ -23,6 +31,10 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         photoUris.clear();
         photoUris.addAll(photos);
         notifyDataSetChanged();
+    }
+
+    public String getLabel(String uri) {
+        return photoLabels.getOrDefault(uri, "General");
     }
 
     @NonNull
@@ -57,6 +69,19 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
                     .centerCrop()
                     .into(binding.ivPhoto);
 
+            String label = photoLabels.getOrDefault(uri, "General");
+            binding.tvLabel.setText(label);
+            binding.tvLabel.setVisibility(View.VISIBLE);
+
+            binding.getRoot().setOnClickListener(v -> {
+                if (listener != null) {
+                    String nextLabel = "General".equals(label) ? "Close-up" : "General";
+                    photoLabels.put(uri, nextLabel);
+                    listener.onLabelChanged(uri, nextLabel);
+                    notifyItemChanged(getBindingAdapterPosition());
+                }
+            });
+
             binding.btnRemove.setVisibility(listener != null ? View.VISIBLE : View.GONE);
             binding.btnRemove.setOnClickListener(v -> {
                 if (listener != null) {
@@ -64,9 +89,5 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
                 }
             });
         }
-    }
-
-    public interface OnRemoveListener {
-        void onRemove(String uri);
     }
 }

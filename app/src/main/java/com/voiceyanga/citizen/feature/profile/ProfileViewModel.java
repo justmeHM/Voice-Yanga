@@ -35,15 +35,31 @@ public class ProfileViewModel extends ViewModel {
     public ProfileViewModel(SessionManager sessionManager, ApiService apiService) {
         this.sessionManager = sessionManager;
         this.apiService = apiService;
+        
+        // INITIALIZE FROM LOCAL SESSION [UX Improvement]
+        UserDto cached = new UserDto();
+        String fullName = sessionManager.getUserName();
+        if (fullName != null && fullName.contains(" ")) {
+            int firstSpace = fullName.indexOf(" ");
+            cached.setFirstName(fullName.substring(0, firstSpace));
+            cached.setLastName(fullName.substring(firstSpace + 1).trim());
+        } else {
+            cached.setFirstName(fullName != null ? fullName : "Citizen");
+            cached.setLastName("");
+        }
+        cached.setEmail(sessionManager.getUserEmail());
+        cached.setPhone(sessionManager.getUserPhone());
+        _userProfile.setValue(cached);
+
         fetchProfile();
     }
 
     public void fetchProfile() {
-        apiService.getProfile().enqueue(new Callback<BaseResponse<UserDto>>() {
+        apiService.getProfile().enqueue(new Callback<UserDto>() {
             @Override
-            public void onResponse(Call<BaseResponse<UserDto>> call, Response<BaseResponse<UserDto>> response) {
-                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
-                    UserDto user = response.body().getData();
+            public void onResponse(Call<UserDto> call, Response<UserDto> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    UserDto user = response.body();
                     _userProfile.setValue(user);
                     // Update local session
                     sessionManager.saveUser(
@@ -56,7 +72,7 @@ public class ProfileViewModel extends ViewModel {
             }
 
             @Override
-            public void onFailure(Call<BaseResponse<UserDto>> call, Throwable t) {
+            public void onFailure(Call<UserDto> call, Throwable t) {
                 _error.setValue(t.getMessage());
             }
         });
@@ -68,10 +84,10 @@ public class ProfileViewModel extends ViewModel {
         updates.put("lastName", lastName);
         updates.put("phone", phone);
 
-        apiService.updateProfile(updates).enqueue(new Callback<BaseResponse<UserDto>>() {
+        apiService.updateProfile(updates).enqueue(new Callback<UserDto>() {
             @Override
-            public void onResponse(Call<BaseResponse<UserDto>> call, Response<BaseResponse<UserDto>> response) {
-                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+            public void onResponse(Call<UserDto> call, Response<UserDto> response) {
+                if (response.isSuccessful() && response.body() != null) {
                     _updateSuccess.setValue(true);
                     fetchProfile(); // Refresh
                 } else {
@@ -80,7 +96,7 @@ public class ProfileViewModel extends ViewModel {
             }
 
             @Override
-            public void onFailure(Call<BaseResponse<UserDto>> call, Throwable t) {
+            public void onFailure(Call<UserDto> call, Throwable t) {
                 _error.setValue(t.getMessage());
             }
         });
@@ -90,14 +106,14 @@ public class ProfileViewModel extends ViewModel {
         Map<String, Object> updates = new HashMap<>();
         updates.put("fcmToken", token);
 
-        apiService.updateProfile(updates).enqueue(new Callback<BaseResponse<UserDto>>() {
+        apiService.updateProfile(updates).enqueue(new Callback<UserDto>() {
             @Override
-            public void onResponse(Call<BaseResponse<UserDto>> call, Response<BaseResponse<UserDto>> response) {
+            public void onResponse(Call<UserDto> call, Response<UserDto> response) {
                 android.util.Log.d("ProfileVM", "FCM Token registered: " + response.isSuccessful());
             }
 
             @Override
-            public void onFailure(Call<BaseResponse<UserDto>> call, Throwable t) {
+            public void onFailure(Call<UserDto> call, Throwable t) {
                 android.util.Log.e("ProfileVM", "FCM Token registration failed", t);
             }
         });

@@ -2,12 +2,23 @@
     <!-- Base application theme. -->
     <style name="Base.Theme.VoiceYanga" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary_green</item>
+        <item name="colorPrimaryVariant">@color/primary_green_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+
+        <item name="colorSecondary">@color/primary_green</item>
+        <item name="colorOnSecondary">@color/white</item>
+
         <item name="android:windowBackground">@color/background_white</item>
         <item name="android:statusBarColor">@color/background_white</item>
         <item name="android:windowLightStatusBar">true</item>
 
         <!-- Semantic color mapping -->
-        <item name="colorSurface">@color/background_white</item>
+        <item name="colorSurface">@color/surface_light</item>
+        <item name="colorOnSurface">@color/on_surface_light</item>
+        <item name="colorSurfaceVariant">@color/surface_variant_light</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_variant_light</item>
+        <item name="colorOutline">@color/outline_light</item>
+
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
     </style>

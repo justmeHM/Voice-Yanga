@@ -31,6 +31,8 @@ public class ComplaintPhoto {
     @NonNull
     private String photoUri; // Local file path or content URI
 
+    private String label; // "Close-up", "Wide-view", etc.
+
     public ComplaintPhoto(@NonNull String complaintUuid, @NonNull String photoUri) {
         this.complaintUuid = complaintUuid;
         this.photoUri = photoUri;
@@ -46,4 +48,7 @@ public class ComplaintPhoto {
     @NonNull
     public String getPhotoUri() { return photoUri; }
     public void setPhotoUri(@NonNull String photoUri) { this.photoUri = photoUri; }
+
+    public String getLabel() { return label; }
+    public void setLabel(String label) { this.label = label; }
 }

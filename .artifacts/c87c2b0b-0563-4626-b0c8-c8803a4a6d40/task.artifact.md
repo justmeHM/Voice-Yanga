@@ -1,22 +1,14 @@
-- `[x]` UX Improvement 1: Skeleton Shimmer Loading
-- `[x]` UX Improvement 2: Predictive Location Search
-- `[x]` UX Improvement 3: Haptic Interaction
-- `[x]` UX Improvement 5: Offline Drafts
-- `[x]` UX Improvement 12: Personal Impact Widget
-- `[x]` UX Improvement 15: Biometric Unlock
-- `[x]` UX Improvement 16: Advanced Client-Side Sorting
-- `[x]` UX Improvement 2: Lottie-Powered Empty States
-    - `[x]` Add Lottie dependency
-    - `[x]` Replace static icons in Home, My Complaints, and Notifications with Lottie animations
-- `[x]` UX Improvement 6: Smart Image Compression
-    - `[x]` Create `ImageCompressor` utility
-    - `[x]` Integrate compression into `SyncWorker` before upload
-- `[x]` UX Improvement 13: Share to Socials
-    - `[x]` Add "Share" icon to Complaint Detail toolbar
-    - `[x]` Implement sharing intent with formatted issue details
-- `[x]` UX Improvement 17: Swipe-to-Dismiss Notifications
-    - `[x]` Implement `ItemTouchHelper` in Notification Center
-    - `[x]` Sync swiped notifications with the backend in the background
-- `[x]` UX Improvement 18: Sticky Offline Banner
-    - `[x]` Add "Offline" banner UI to Home screen
-    - `[x]` Implement real-time network connectivity listener
+- `[x]` Fix "Forced Redirect" Swipe Bug
+    - `[x]` Increase gesture distance and velocity thresholds (300px / 2000vel)
+    - `[x]` Move gesture detection to `dispatchTouchEvent` for consistency
+- `[x]` Stabilize Biometric Flow
+    - `[x]` Ensure biometric preference persists after logout
+    - `[x]` Explicitly restore biometric flag in `SessionManager.clearSession()`
+- `[x]` Fix Empty Profile Initialization
+    - `[x]` Harden name splitting logic in `ProfileViewModel`
+    - `[x]` Ensure cached session data is displayed instantly
+- `[x]` Verify Assignment Visibility
+    - `[x]` Ensure `assignedTo` field is correctly mapped from server data
+    - `[x]` Display assignee name in the Status Timeline
+- `[x]` UI Cleanup
+    - `[x]` Confirm home filters and placeholders are removed

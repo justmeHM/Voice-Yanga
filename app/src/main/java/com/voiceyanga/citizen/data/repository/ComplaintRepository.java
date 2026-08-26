@@ -18,6 +18,7 @@ import com.voiceyanga.citizen.data.remote.api.ApiService;
 import com.voiceyanga.citizen.data.remote.dto.BaseResponse;
 import com.voiceyanga.citizen.data.remote.dto.CommentRequest;
 import com.voiceyanga.citizen.data.remote.dto.CommentResponse;
+import com.voiceyanga.citizen.data.remote.dto.ComplaintDto;
 import com.voiceyanga.citizen.data.remote.dto.PaginatedResponse;
 
 import java.util.Collections;
@@ -64,23 +65,55 @@ public class ComplaintRepository {
     private void refreshComplaints(Map<String, String> filters) {
         executorService.execute(() -> {
             try {
-                Response<BaseResponse<PaginatedResponse<Complaint>>> response = apiService.getComplaints(filters).execute();
-                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
-                    List<Complaint> serverComplaints = response.body().getData().getData();
+                Response<List<ComplaintDto>> response = apiService.getComplaints(filters).execute();
+                if (response.isSuccessful() && response.body() != null) {
+                    List<ComplaintDto> serverComplaints = response.body();
                     if (serverComplaints != null) {
-                        for (Complaint serverComplaint : serverComplaints) {
-                            // PRESERVE LOCAL FLAGS
+                        for (ComplaintDto dto : serverComplaints) {
+                            Complaint serverComplaint = new Complaint(
+                                    dto.getClientUuid() != null ? dto.getClientUuid() : dto.getServerId(),
+                                    dto.getTitle(),
+                                    dto.getDescription(),
+                                    dto.getCategory() != null ? dto.getCategory().getName() : "General",
+                                    dto.getLocation() != null ? dto.getLocation().getDisplayName() : "Lusaka",
+                                    "SYNCED",
+                                    dto.getCreatedAt()
+                            );
+                            serverComplaint.setServerId(dto.getServerId());
+                            serverComplaint.setReferenceCode(dto.getReferenceCode());
+                            serverComplaint.setStatus(dto.getStatus());
+                            serverComplaint.setPriority(dto.getPriority());
+                            serverComplaint.setSupportCount(dto.getSupportCount());
+                            serverComplaint.setUpdatedAt(dto.getUpdatedAt());
+                            serverComplaint.setLatitude(dto.getLatitude());
+                            serverComplaint.setLongitude(dto.getLongitude());
+                            serverComplaint.setAuthorEmail(dto.getAuthorEmail());
+                            
+                            if (dto.getCategory() != null) {
+                                serverComplaint.setCategoryId(dto.getCategory().getId());
+                            }
+                            if (dto.getLocation() != null) {
+                                serverComplaint.setLocationId(dto.getLocation().getId());
+                            }
+
+                            // PRESERVE LOCAL-ONLY FLAGS
                             Complaint existing = complaintDao.getComplaintByUuid(serverComplaint.getClientUuid());
                             if (existing != null) {
                                 serverComplaint.setSupportedByMe(existing.isSupportedByMe());
                                 serverComplaint.setCommentCount(existing.getCommentCount());
                             }
                             
-                            // Mark as synced since it came from server
-                            serverComplaint.setSyncStatus("SYNCED");
                             complaintDao.insert(serverComplaint);
                         }
                     }
+                } else {
+                    String errorBody = "";
+                    try (okhttp3.ResponseBody body = response.errorBody()) {
+                        if (body != null) {
+                            errorBody = body.string();
+                        }
+                    } catch (Exception ignored) {}
+                    android.util.Log.e("ComplaintRepo", "Refresh failed (" + response.code() + "): " + errorBody);
                 }
             } catch (Exception e) {
                 android.util.Log.e("ComplaintRepo", "Refresh failed", e);
@@ -207,14 +240,18 @@ public class ComplaintRepository {
         });
     }
 
-    public void saveComplaint(Complaint complaint, List<String> photoUris) {
+    public void saveComplaint(Complaint complaint, List<String> photoUris, Map<String, String> photoLabels) {
         executorService.execute(() -> {
             complaint.setAuthorEmail(sessionManager.getUserEmail());
             complaintDao.insert(complaint);
             
             if (photoUris != null) {
                 for (String uri : photoUris) {
-                    complaintDao.insertPhoto(new ComplaintPhoto(complaint.getClientUuid(), uri));
+                    ComplaintPhoto photo = new ComplaintPhoto(complaint.getClientUuid(), uri);
+                    if (photoLabels != null) {
+                        photo.setLabel(photoLabels.getOrDefault(uri, "General"));
+                    }
+                    complaintDao.insertPhoto(photo);
                 }
             }
             

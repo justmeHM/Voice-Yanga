@@ -4,6 +4,7 @@
         <!-- Localhost for Emulator -->
         <domain includeSubdomains="true">10.0.2.2</domain>
         <!-- Add your PC's local IP here if testing on physical device -->
+        <domain includeSubdomains="true">10.214.122.10</domain>
         <domain includeSubdomains="true">192.168.43.35</domain>
     </domain-config>
 </network-security-config>

@@ -7,7 +7,10 @@ import com.google.gson.annotations.SerializedName;
  */
 public class BaseResponse<T> {
     @SerializedName("success")
-    private boolean success;
+    private Boolean success;
+
+    @SerializedName("error")
+    private Boolean error;
 
     @SerializedName("data")
     private T data;
@@ -16,7 +19,9 @@ public class BaseResponse<T> {
     private String message;
 
     public boolean isSuccess() {
-        return success;
+        if (success != null) return success;
+        if (error != null) return !error;
+        return true; // Assume success if neither field is present (direct data)
     }
 
     public T getData() {

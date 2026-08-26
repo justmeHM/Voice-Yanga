@@ -22,6 +22,7 @@ public class AuthViewModel extends ViewModel {
 
     public void login(String email, String password) {
         isLoading.setValue(true);
+        errorMessage.setValue(null);
         authRepository.login(email, password, new AuthRepository.LoginCallback() {
             @Override
             public void onSuccess() {
@@ -39,6 +40,7 @@ public class AuthViewModel extends ViewModel {
 
     public void register(String firstName, String lastName, String phone, String email, String password) {
         isLoading.setValue(true);
+        errorMessage.setValue(null);
         authRepository.register(firstName, lastName, phone, email, password, new AuthRepository.LoginCallback() {
             @Override
             public void onSuccess() {

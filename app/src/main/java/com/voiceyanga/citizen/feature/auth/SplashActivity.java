@@ -43,7 +43,11 @@ public class SplashActivity extends AppCompatActivity {
                     BiometricHelper.showPrompt(this, new BiometricHelper.BiometricCallback() {
                         @Override
                         public void onAuthenticated() {
-                            startActivity(new Intent(SplashActivity.this, HomeActivity.class));
+                            Intent intent = new Intent(SplashActivity.this, HomeActivity.class);
+                            if (getIntent().getExtras() != null) {
+                                intent.putExtras(getIntent().getExtras());
+                            }
+                            startActivity(intent);
                             finish();
                         }
 
@@ -55,12 +59,25 @@ public class SplashActivity extends AppCompatActivity {
                         }
                     });
                 } else {
-                    startActivity(new Intent(SplashActivity.this, HomeActivity.class));
+                    Intent intent = new Intent(SplashActivity.this, HomeActivity.class);
+                    if (getIntent().getExtras() != null) {
+                        intent.putExtras(getIntent().getExtras());
+                    }
+                    startActivity(intent);
                     finish();
                 }
             } else {
-                startActivity(new Intent(SplashActivity.this, LoginActivity.class));
-                finish();
+                if (sessionManager.isFirstLaunch()) {
+                    // Stay on Splash screen to show "Get Started" UI
+                    findViewById(R.id.btnGetStarted).setOnClickListener(v -> {
+                        sessionManager.setFirstLaunch(false);
+                        startActivity(new Intent(SplashActivity.this, RegisterActivity.class));
+                        finish();
+                    });
+                } else {
+                    startActivity(new Intent(SplashActivity.this, LoginActivity.class));
+                    finish();
+                }
             }
         });
 

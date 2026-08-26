@@ -2,13 +2,27 @@
 <resources>
     <!-- Voice Yanga Dark Palette -->
     <color name="primary_green">#22C55E</color>
+    <color name="primary_green_dark">#16A34A</color>
     <color name="primary_red">#EF4444</color>
     <color name="primary_green_light">#064E3B</color>
     <color name="primary_red_light">#7F1D1D</color>
+
+    <!-- Semantic Surface Mappings (Dark) -->
+    <color name="surface_light">#111827</color>
+    <color name="on_surface_light">#F9FAFB</color>
+    <color name="surface_variant_light">#1F2937</color>
+    <color name="on_surface_variant_light">#D1D5DB</color>
+    <color name="outline_light">#374151</color>
 
     <!-- Legacy Mappings for Dark Mode -->
     <color name="text_primary">#F9FAFB</color>
     <color name="text_secondary">#9CA3AF</color>
     <color name="background_white">#111827</color>
     <color name="neutral_200">#374151</color>
+
+    <!-- Status Colors (Dark) -->
+    <color name="status_pending_bg">#431407</color>
+    <color name="status_pending_text">#FB923C</color>
+    <color name="status_resolved_bg">#064E3B</color>
+    <color name="status_resolved_text">#4ADE80</color>
 </resources>

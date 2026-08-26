@@ -30,6 +30,7 @@ public class Complaint {
     private double longitude;
     private boolean supportedByMe;
     private int commentCount;
+    private String assignedTo;
 
     public Complaint(@NonNull String clientUuid, String title, String description, String category, String location, String syncStatus, long createdAt) {
         this.clientUuid = clientUuid;
@@ -105,6 +106,9 @@ public class Complaint {
 
     public int getCommentCount() { return commentCount; }
     public void setCommentCount(int commentCount) { this.commentCount = commentCount; }
+
+    public String getAssignedTo() { return assignedTo; }
+    public void setAssignedTo(String assignedTo) { this.assignedTo = assignedTo; }
 
     public String getCalculatedPriority() {
         int engagementScore = supportCount + (commentCount * 2); // Comments carry more weight

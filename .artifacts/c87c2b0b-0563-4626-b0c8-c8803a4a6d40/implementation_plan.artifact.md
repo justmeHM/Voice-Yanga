@@ -1,42 +1,48 @@
-# Enterprise UX Improvements: Phase 4 (Next 5 Features)
+# Final UX Polish & Stability Plan
 
-Continue the transformation into a premium enterprise application with edge-to-edge aesthetics, automation, and privacy enhancements.
+Fix critical navigation issues, stabilize the biometric flow, and ensure all assignment data is visible.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Edge-to-Edge**: The app UI will now flow behind the status and navigation bars for a more immersive look.
-> - **Category Suggester**: The app will automatically suggest a category based on the words in your title (e.g., typing "Water" will auto-select the Water category).
-> - **Privacy**: GPS metadata (EXIF) will be stripped from photos before they leave your device.
+> - **Swipe Sensitivity**: I've adjusted the gesture detection logic to prevent accidental "forced" redirects. Swipes now require a clear horizontal motion.
+> - **Biometric Fix**: Corrected the initialization logic to ensure Fingerprint/Face ID works correctly across all device states.
+> - **Assignment Data**: The "Assigned" status now correctly pulls and displays the organization name from the database.
 
 ## Proposed Changes
 
-### 1. Edge-to-Edge Design (UX Improvement #4)
-- **Activity Logic**: Update `BaseActivity` (or all main activities) to use `enableEdgeToEdge()` and apply proper window insets (padding) to prevent UI overlap with system bars.
-- **Styling**: Update themes to make status and navigation bars transparent.
+### 1. Robust Swipe Navigation
 
-### 2. Keyword-Based Category Suggester (UX Improvement #9)
-- **Logic**: Implement a local keyword mapper in `CreateComplaintActivity` (e.g., "pipe", "leak" -> Water; "pothole", "street" -> Roads).
-- **Automation**: Listen to title input and automatically select the matching category card if a strong match is found.
+#### [MODIFY] [HomeActivity.java](file:///C:/Users/m/AndroidStudioProjects/VoiceYanga/app/src/main/java/com/voiceyanga/citizen/feature/home/HomeActivity.java)
+- Update `onFling` logic to compare `diffX` vs `diffY`. This ensures vertical scrolling doesn't trigger a horizontal activity transition.
+- Use `slide_in_left` and `slide_out_right` for natural "push" navigation to the My Complaints page.
 
-### 3. Exif Data Stripping (UX Improvement #8)
-- **Utility**: Update `ImageCompressor` to strip metadata tags (especially GPS location and device info) from the Bitmap before saving the compressed JPEG.
+#### [MODIFY] [MyComplaintsActivity.java](file:///C:/Users/m/AndroidStudioProjects/VoiceYanga/app/src/main/java/com/voiceyanga/citizen/feature/home/MyComplaintsActivity.java)
+- Update `onFling` logic to detect Left Swipes (Right-to-Left) and return Home with a "pop" animation.
 
-### 4. Detailed Error Views (UX Improvement #19)
-- **UI**: Create a reusable `LayoutErrorBinding` with a "Retry" button.
-- **Integration**: Replace empty white screens with this layout in Home and Notifications when the initial network fetch fails.
+### 2. Biometric & Splash Stability
 
-### 5. Dynamic App Shortcuts (UX Improvement #20)
-- **Shortcuts**: Add "Report a Problem" as a long-press shortcut on the app icon.
-- **Deep Linking**: Ensure it opens `CreateComplaintActivity` directly.
+#### [MODIFY] [SplashActivity.java](file:///C:/Users/m/AndroidStudioProjects/VoiceYanga/app/src/main/java/com/voiceyanga/citizen/feature/auth/SplashActivity.java)
+- Ensure Intent extras (like deep links) are preserved through the biometric authentication loop.
+- Fix null-pointer risks in the `sessionManager` check.
+
+#### [MODIFY] [ProfileViewModel.java](file:///C:/Users/m/AndroidStudioProjects/VoiceYanga/app/src/main/java/com/voiceyanga/citizen/feature/profile/ProfileViewModel.java)
+- Robust string splitting for full name to prevent crashes if the name has extra spaces or is just one word.
+
+### 3. Assignment Visibility
+
+#### [MODIFY] [TimelineAdapter.java](file:///C:/Users/m/AndroidStudioProjects/VoiceYanga/app/src/main/java/com/voiceyanga/citizen/feature/complaints/TimelineAdapter.java)
+- Update `bind()` to show `subLabel` text (e.g., "Assigned (Water Dept)") in a secondary font style.
+
+#### [MODIFY] [ComplaintDetailActivity.java](file:///C:/Users/m/AndroidStudioProjects/VoiceYanga/app/src/main/java/com/voiceyanga/citizen/feature/complaints/ComplaintDetailActivity.java)
+- Pass the `assignedTo` field to the timeline builder.
 
 ## Verification Plan
 
 ### Automated Tests
-- `gradle_build`: Verify resource linking for new error layouts.
+- `gradle_build`: Verify no regression in syntax or resource IDs.
 
 ### Manual Verification
-- **Edge-to-Edge**: Verify the background color flows all the way to the top and bottom of the screen.
-- **Suggester**: Type "Broken water pipe" in the title; verify the "Water" category is automatically highlighted.
-- **Privacy**: Upload a photo; verify the server copy has no EXIF location data.
-- **Shortcuts**: Long-press the app icon on the Android home screen and tap "Report a Problem."
+- **Gestures**: Scroll the feed vertically; verify it *doesn't* redirect you. Swipe Right deliberately; verify smooth transition.
+- **Biometrics**: Enable in Profile, close app, and re-launch.
+- **Timeline**: View an issue marked "ASSIGNED" and confirm the organization name is visible.

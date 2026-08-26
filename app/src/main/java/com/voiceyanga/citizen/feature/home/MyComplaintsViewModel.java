@@ -44,6 +44,10 @@ public class MyComplaintsViewModel extends ViewModel {
         showResolved.setValue(resolved);
     }
 
+    public void setLoading(boolean loading) {
+        _loading.setValue(loading);
+    }
+
     public LiveData<Integer> getMyReportsCount() {
         return repository.getMyReportsCount(sessionManager.getUserEmail());
     }

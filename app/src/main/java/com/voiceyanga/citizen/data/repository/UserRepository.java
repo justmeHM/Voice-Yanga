@@ -2,7 +2,6 @@ package com.voiceyanga.citizen.data.repository;
 
 import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
-import com.voiceyanga.citizen.data.remote.dto.BaseResponse;
 import com.voiceyanga.citizen.data.remote.dto.UserDto;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,14 +26,14 @@ public class UserRepository {
         Map<String, Object> updates = new HashMap<>();
         updates.put("fcmToken", token);
 
-        apiService.updateProfile(updates).enqueue(new Callback<BaseResponse<UserDto>>() {
+        apiService.updateProfile(updates).enqueue(new Callback<UserDto>() {
             @Override
-            public void onResponse(Call<BaseResponse<UserDto>> call, Response<BaseResponse<UserDto>> response) {
+            public void onResponse(Call<UserDto> call, Response<UserDto> response) {
                 android.util.Log.d("UserRepo", "FCM Token registered: " + response.isSuccessful());
             }
 
             @Override
-            public void onFailure(Call<BaseResponse<UserDto>> call, Throwable t) {
+            public void onFailure(Call<UserDto> call, Throwable t) {
                 android.util.Log.e("UserRepo", "FCM Token registration failed", t);
             }
         });

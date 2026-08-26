@@ -23,9 +23,17 @@ public class HomeViewModel extends ViewModel {
     private final SessionManager sessionManager;
     private final MutableLiveData<Map<String, String>> filters = new MutableLiveData<>(new HashMap<>());
     private final MutableLiveData<String> sortOrder = new MutableLiveData<>("NEWEST");
-    private final LiveData<List<Complaint>> complaints;
+    
+    private final MutableLiveData<List<Complaint>> _sortedComplaints = new MutableLiveData<>();
+    public LiveData<List<Complaint>> getComplaints() { return _sortedComplaints; }
+
     private final MutableLiveData<Boolean> _loading = new MutableLiveData<>(false);
     public LiveData<Boolean> getLoading() { return _loading; }
+
+    private final MutableLiveData<String> _error = new MutableLiveData<>();
+    public LiveData<String> getError() { return _error; }
+
+    private final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor();
 
     @Inject
     public HomeViewModel(ComplaintRepository repository, SessionManager sessionManager) {
@@ -42,33 +50,40 @@ public class HomeViewModel extends ViewModel {
             return repository.getCommunityComplaints(email, status, category, search);
         });
 
-        this.complaints = Transformations.switchMap(sortOrder, order -> 
-            Transformations.map(filteredComplaints, list -> {
-                if (list == null) return null;
-                java.util.List<Complaint> sorted = new java.util.ArrayList<>(list);
-                switch (order) {
-                    case "SUPPORT":
-                        sorted.sort((c1, c2) -> Integer.compare(c2.getSupportCount(), c1.getSupportCount()));
-                        break;
-                    case "CLOSEST":
-                        // Closest logic would need user location, for now by lat/lon if available
-                        break;
-                    case "NEWEST":
-                    default:
-                        sorted.sort((c1, c2) -> Long.compare(c2.getCreatedAt(), c1.getCreatedAt()));
-                        break;
-                }
-                return sorted;
-            })
-        );
+        // Observe filteredComplaints and trigger sort
+        filteredComplaints.observeForever(list -> performSort(list, sortOrder.getValue()));
+        sortOrder.observeForever(order -> performSort(filteredComplaints.getValue(), order));
+    }
+
+    private void performSort(List<Complaint> list, String order) {
+        if (list == null) {
+            _sortedComplaints.postValue(null);
+            return;
+        }
+        
+        executor.execute(() -> {
+            java.util.List<Complaint> sorted = new java.util.ArrayList<>(list);
+            switch (order != null ? order : "NEWEST") {
+                case "SUPPORT":
+                    sorted.sort((c1, c2) -> Integer.compare(c2.getSupportCount(), c1.getSupportCount()));
+                    break;
+                case "NEWEST":
+                default:
+                    sorted.sort((c1, c2) -> Long.compare(c2.getCreatedAt(), c1.getCreatedAt()));
+                    break;
+            }
+            _sortedComplaints.postValue(sorted);
+        });
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        executor.shutdown();
     }
 
     public void setSortOrder(String order) {
         sortOrder.setValue(order);
-    }
-
-    public LiveData<List<Complaint>> getComplaints() {
-        return complaints;
     }
 
     public void setFilter(String key, String value) {
@@ -91,6 +106,10 @@ public class HomeViewModel extends ViewModel {
 
     public void supportComplaint(String uuid) {
         repository.supportComplaint(uuid);
+    }
+
+    public void setLoading(boolean loading) {
+        _loading.postValue(loading);
     }
 
     public LiveData<Complaint> getLatestMyComplaint() {

@@ -9,7 +9,7 @@
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/white">
+        android:background="?attr/colorSurface">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
@@ -17,12 +17,12 @@
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@drawable/ic_back_small"
             app:title="@string/nearby_issues_title"
-            app:titleTextColor="#17211B" />
+            app:titleTextColor="?attr/colorOnSurface" />
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="@color/neutral_200" />
+            android:background="?attr/colorOutline" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout

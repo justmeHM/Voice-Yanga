@@ -52,7 +52,11 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
         }
 
         void bind(StatusPoint point, boolean isFirst, boolean isLast, boolean isNextCompleted) {
-            binding.tvStatusName.setText(point.label);
+            String labelText = point.label;
+            if (point.subLabel != null) {
+                labelText += " (" + point.subLabel + ")";
+            }
+            binding.tvStatusName.setText(labelText);
             binding.tvStatusDate.setText(point.date);
             
             binding.vLineTop.setVisibility(isFirst ? View.INVISIBLE : View.VISIBLE);
@@ -83,11 +87,17 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
         String label;
         String date;
         boolean isCompleted;
+        String subLabel;
 
         public StatusPoint(String label, String date, boolean isCompleted) {
+            this(label, date, isCompleted, null);
+        }
+
+        public StatusPoint(String label, String date, boolean isCompleted, String subLabel) {
             this.label = label;
             this.date = date;
             this.isCompleted = isCompleted;
+            this.subLabel = subLabel;
         }
     }
 }

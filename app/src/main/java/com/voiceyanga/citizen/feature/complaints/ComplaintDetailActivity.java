@@ -4,7 +4,11 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.voiceyanga.citizen.R;
@@ -18,7 +22,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 import android.content.res.ColorStateList;
-import android.graphics.Color;
 import androidx.core.content.ContextCompat;
 import dagger.hilt.android.AndroidEntryPoint;
 
@@ -36,9 +39,16 @@ public class ComplaintDetailActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         binding = ActivityComplaintDetailBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            return insets;
+        });
 
         complaintUuid = getIntent().getStringExtra(EXTRA_COMPLAINT_UUID);
         if (complaintUuid == null) {
@@ -148,9 +158,9 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         binding.tvPriority.setText(String.format(getString(R.string.priority_format), priority));
         
         if ("CRITICAL".equals(priority)) {
-            binding.tvPriority.setTextColor(Color.RED);
+            binding.tvPriority.setTextColor(ContextCompat.getColor(this, R.color.primary_red));
         } else if ("HIGH".equals(priority)) {
-            binding.tvPriority.setTextColor(Color.parseColor("#E67E22"));
+            binding.tvPriority.setTextColor(ContextCompat.getColor(this, R.color.status_pending_text));
         } else {
             binding.tvPriority.setTextColor(ContextCompat.getColor(this, R.color.primary_green));
         }
@@ -161,8 +171,8 @@ public class ComplaintDetailActivity extends AppCompatActivity {
             binding.btnSupport.setEnabled(false);
             binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
                     ContextCompat.getColor(this, R.color.primary_red)));
-            binding.btnSupport.setTextColor(Color.WHITE);
-            binding.btnSupport.setIconTintResource(android.R.color.white);
+            binding.btnSupport.setTextColor(ContextCompat.getColor(this, R.color.white));
+            binding.btnSupport.setIconTintResource(R.color.white);
         } else {
             binding.btnSupport.setEnabled(true);
             binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
@@ -184,7 +194,7 @@ public class ComplaintDetailActivity extends AppCompatActivity {
 
         points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_submitted), dateStr, true));
         points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_reviewed), pending, isAtLeast(currentStatus, "REVIEWED")));
-        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_assigned), pending, isAtLeast(currentStatus, "ASSIGNED")));
+        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_assigned), pending, isAtLeast(currentStatus, "ASSIGNED"), complaint.getAssignedTo()));
         points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_in_progress), pending, isAtLeast(currentStatus, "IN_PROGRESS")));
         points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_resolved), pending, isAtLeast(currentStatus, "RESOLVED")));
 
@@ -208,8 +218,8 @@ public class ComplaintDetailActivity extends AppCompatActivity {
             binding.btnSupport.setEnabled(false);
             binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
                     ContextCompat.getColor(this, R.color.primary_red)));
-            binding.btnSupport.setTextColor(Color.WHITE);
-            binding.btnSupport.setIconTintResource(android.R.color.white);
+            binding.btnSupport.setTextColor(ContextCompat.getColor(this, R.color.white));
+            binding.btnSupport.setIconTintResource(R.color.white);
             
             Toast.makeText(this, R.string.support_thanks, Toast.LENGTH_SHORT).show();
         });

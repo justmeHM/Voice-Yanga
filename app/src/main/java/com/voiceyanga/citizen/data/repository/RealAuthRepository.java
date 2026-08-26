@@ -40,26 +40,43 @@ public class RealAuthRepository implements AuthRepository {
         apiService.login(request).enqueue(new Callback<AuthResponse>() {
             @Override
             public void onResponse(Call<AuthResponse> call, Response<AuthResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
+                if (response.isSuccessful()) {
                     AuthResponse authResponse = response.body();
-                    sessionManager.saveTokens(authResponse.getAccessToken(), authResponse.getRefreshToken());
-                    
-                    if (authResponse.getUser() != null) {
-                        sessionManager.saveUser(
-                                authResponse.getUser().getFullName(),
-                                authResponse.getUser().getEmail(),
-                                authResponse.getUser().getPhone(),
-                                authResponse.getUser().getRole()
-                        );
+                    if (authResponse != null) {
+                        android.util.Log.d("AuthRepo", "Login success. Token present: " + (authResponse.getAccessToken() != null));
+                        sessionManager.saveTokens(authResponse.getAccessToken(), authResponse.getRefreshToken());
+                        
+                        if (authResponse.getUser() != null) {
+                            android.util.Log.d("AuthRepo", "User info present: " + authResponse.getUser().getFullName());
+                            sessionManager.saveUser(
+                                    authResponse.getUser().getFullName(),
+                                    authResponse.getUser().getEmail(),
+                                    authResponse.getUser().getPhone(),
+                                    authResponse.getUser().getRole()
+                            );
+                        } else {
+                            android.util.Log.w("AuthRepo", "Login success but user object is NULL in response");
+                        }
+                        callback.onSuccess();
+                    } else {
+                        android.util.Log.e("AuthRepo", "Login success but body is NULL");
+                        callback.onError("Login failed: empty response");
                     }
-                    callback.onSuccess();
                 } else {
-                    callback.onError("Login failed: " + response.message());
+                    String errorMsg = "Login failed (" + response.code() + "): " + response.message();
+                    try {
+                        if (response.errorBody() != null) {
+                            errorMsg += " - " + response.errorBody().string();
+                        }
+                    } catch (Exception ignored) {}
+                    android.util.Log.e("AuthRepo", errorMsg);
+                    callback.onError(errorMsg);
                 }
             }
 
             @Override
             public void onFailure(Call<AuthResponse> call, Throwable t) {
+                android.util.Log.e("AuthRepo", "Network error during login", t);
                 callback.onError("Network error: " + t.getMessage());
             }
         });

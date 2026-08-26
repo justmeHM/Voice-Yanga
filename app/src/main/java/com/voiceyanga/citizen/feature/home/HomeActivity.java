@@ -51,6 +51,8 @@ public class HomeActivity extends AppCompatActivity {
     @Inject
     AuthRepository authRepository;
 
+    private android.view.GestureDetector gestureDetector;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
@@ -73,8 +75,38 @@ public class HomeActivity extends AppCompatActivity {
         setupRecyclerView();
         setupObservers();
         setupListeners();
+        setupGestures();
         handleDeepLink();
         setupNetworkListener();
+    }
+
+    private void setupGestures() {
+        gestureDetector = new android.view.GestureDetector(this, new android.view.GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onFling(android.view.MotionEvent e1, android.view.MotionEvent e2, float velocityX, float velocityY) {
+                if (e1 == null || e2 == null) return false;
+                float diffX = e2.getX() - e1.getX();
+                float diffY = e2.getY() - e1.getY();
+                
+                // HIGHER THRESHOLDS for deliberate swiping (300px, 2000 velocity)
+                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 300 && Math.abs(velocityX) > 2000) {
+                    if (diffX > 0) { // Right Swipe
+                        startActivity(new Intent(HomeActivity.this, MyComplaintsActivity.class));
+                        overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(android.view.MotionEvent ev) {
+        if (gestureDetector != null && gestureDetector.onTouchEvent(ev)) {
+            return true;
+        }
+        return super.dispatchTouchEvent(ev);
     }
 
     private void setupNetworkListener() {
@@ -138,9 +170,6 @@ public class HomeActivity extends AppCompatActivity {
         TextView tvNavEmail = headerView.findViewById(R.id.tvNavUserEmail);
         if (tvNavName != null) tvNavName.setText(name);
         if (tvNavEmail != null) tvNavEmail.setText(email);
-
-        // Mock critical badge
-        binding.tvCriticalBadge.setText(String.format(Locale.getDefault(), getString(R.string.critical_issues_badge), 3));
     }
 
     private void setupRecyclerView() {
@@ -163,6 +192,17 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void setupObservers() {
+        viewModel.getError().observe(this, error -> {
+            if (error != null) {
+                binding.layoutError.llErrorRoot.setVisibility(View.VISIBLE);
+                binding.layoutError.tvErrorMessage.setText(error);
+                binding.rvComplaints.setVisibility(View.GONE);
+                binding.shimmerFeed.setVisibility(View.GONE);
+            } else {
+                binding.layoutError.llErrorRoot.setVisibility(View.GONE);
+            }
+        });
+
         viewModel.getLoading().observe(this, isLoading -> {
             if (isLoading != null) {
                 if (isLoading) {
@@ -179,7 +219,7 @@ public class HomeActivity extends AppCompatActivity {
 
         viewModel.getComplaints().observe(this, complaints -> {
             // When data arrives, stop loading
-            ((MutableLiveData<Boolean>)viewModel.getLoading()).setValue(false);
+            viewModel.setLoading(false);
             
             adapter.submitList(complaints);
             binding.llEmptyState.setVisibility(
@@ -276,16 +316,7 @@ public class HomeActivity extends AppCompatActivity {
         binding.btnSeeMore.setOnClickListener(v -> 
             startActivity(new Intent(this, MyComplaintsActivity.class)));
 
-        binding.chipGroupFilters.setOnCheckedStateChangeListener((group, checkedIds) -> {
-            int checkedId = checkedIds.isEmpty() ? View.NO_ID : checkedIds.get(0);
-            if (checkedId == R.id.chipAll) {
-                viewModel.clearFilters();
-            } else if (checkedId == R.id.chipResolved) {
-                viewModel.setFilter("status", "RESOLVED");
-            } else if (checkedId == R.id.chipCritical) {
-                viewModel.setFilter("priority", "CRITICAL");
-            }
-        });
+        binding.layoutError.btnRetry.setOnClickListener(v -> viewModel.retrySync());
     }
 
     private void showSortMenu(View v) {

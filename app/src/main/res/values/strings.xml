@@ -62,6 +62,10 @@
     <string name="category_roads">Roads</string>
     <string name="category_electricity">Electricity</string>
     <string name="category_security">Security</string>
+    <string name="category_other">Other</string>
+    <string name="label_custom_category">Specify problem type</string>
+    <string name="hint_custom_category">e.g. Noise pollution, Stray animals</string>
+    <string name="error_empty_custom_category">Please specify the category</string>
     <string name="error_empty_title">Title is required</string>
     <string name="error_empty_desc">Description is required</string>
     <string name="error_no_category">Please select a category</string>

@@ -5,6 +5,7 @@
 
     <!-- Voice Yanga Semantic Palette -->
     <color name="primary_green">#16834B</color>
+    <color name="primary_green_dark">#11663D</color>
     <color name="primary_red">#D64545</color>
     <color name="primary_green_light">#F0FDF4</color>
     <color name="primary_red_light">#FEE2E2</color>
@@ -21,8 +22,21 @@
     <color name="neutral_800">#1F2937</color>
     <color name="neutral_900">#111827</color>
 
+    <!-- Semantic Surface Mappings -->
+    <color name="surface_light">#FFFFFF</color>
+    <color name="on_surface_light">#111827</color>
+    <color name="surface_variant_light">#F3F4F6</color>
+    <color name="on_surface_variant_light">#4B5563</color>
+    <color name="outline_light">#E5E7EB</color>
+
     <!-- Legacy Mappings for compatibility -->
     <color name="text_primary">#17211B</color>
     <color name="text_secondary">#66736B</color>
     <color name="background_white">#FFFFFF</color>
+
+    <!-- Status Colors -->
+    <color name="status_pending_bg">#FFF7ED</color>
+    <color name="status_pending_text">#EA580C</color>
+    <color name="status_resolved_bg">#F0FDF4</color>
+    <color name="status_resolved_text">#16A34A</color>
 </resources>

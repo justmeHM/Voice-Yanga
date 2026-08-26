@@ -31,7 +31,7 @@
                     android:contentDescription="@string/back_button_desc"
                     android:scaleType="centerInside"
                     android:src="@drawable/ic_cancel_back"
-                    app:tint="@color/text_primary" />
+                    app:tint="?attr/colorOnSurface" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -49,7 +49,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="@color/neutral_200" />
+            android:background="?attr/colorOutline" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
@@ -138,7 +138,7 @@
                         android:focusable="true"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="2dp"
-                        app:strokeColor="@color/neutral_200"
+                        app:strokeColor="?attr/colorOutline"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -176,7 +176,7 @@
                         android:focusable="true"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="2dp"
-                        app:strokeColor="@color/neutral_200"
+                        app:strokeColor="?attr/colorOutline"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -214,7 +214,7 @@
                         android:focusable="true"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="2dp"
-                        app:strokeColor="@color/neutral_200"
+                        app:strokeColor="?attr/colorOutline"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -252,7 +252,7 @@
                         android:focusable="true"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="2dp"
-                        app:strokeColor="@color/neutral_200"
+                        app:strokeColor="?attr/colorOutline"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -290,7 +290,7 @@
                         android:focusable="true"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="2dp"
-                        app:strokeColor="@color/neutral_200"
+                        app:strokeColor="?attr/colorOutline"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -318,8 +318,64 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
+                    <!-- Other Category -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardOther"
+                        android:layout_width="100dp"
+                        android:layout_height="120dp"
+                        android:layout_margin="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="2dp"
+                        app:strokeColor="?attr/colorOutline"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="@string/category_other"
+                                android:textColor="?android:attr/textColorPrimary"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="8dp"
+                                android:src="@drawable/about"
+                                android:contentDescription="@string/category_other" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
                 </LinearLayout>
             </HorizontalScrollView>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilCustomCategory"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="@string/label_custom_category"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etCustomCategory"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/hint_custom_category"
+                    android:inputType="textCapSentences" />
+            </com.google.android.material.textfield.TextInputLayout>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -373,7 +429,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/location_not_detected"
-                    android:textColor="@color/primary_green"
+                    android:textColor="?attr/colorPrimary"
                     android:textSize="14sp"
                     android:visibility="gone" />
 

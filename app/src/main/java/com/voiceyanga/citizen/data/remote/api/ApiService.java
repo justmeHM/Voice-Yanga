@@ -5,11 +5,13 @@ import com.voiceyanga.citizen.data.remote.dto.BaseResponse;
 import com.voiceyanga.citizen.data.remote.dto.CategoryDto;
 import com.voiceyanga.citizen.data.remote.dto.CommentRequest;
 import com.voiceyanga.citizen.data.remote.dto.CommentResponse;
+import com.voiceyanga.citizen.data.remote.dto.ComplaintDto;
 import com.voiceyanga.citizen.data.remote.dto.ComplaintRequest;
 import com.voiceyanga.citizen.data.remote.dto.ComplaintResponse;
 import com.voiceyanga.citizen.data.remote.dto.HealthResponse;
 import com.voiceyanga.citizen.data.remote.dto.LocationDto;
 import com.voiceyanga.citizen.data.remote.dto.LoginRequest;
+import com.voiceyanga.citizen.data.remote.dto.NotificationDto;
 import com.voiceyanga.citizen.data.remote.dto.PaginatedResponse;
 import com.voiceyanga.citizen.data.remote.dto.PhotoUploadResponse;
 import com.voiceyanga.citizen.data.remote.dto.RegisterRequest;
@@ -52,17 +54,17 @@ public interface ApiService {
 
     // Reference Data
     @GET("categories")
-    retrofit2.Call<BaseResponse<List<CategoryDto>>> getCategories();
+    retrofit2.Call<List<CategoryDto>> getCategories();
 
     @GET("locations")
-    retrofit2.Call<BaseResponse<List<LocationDto>>> getLocations();
+    retrofit2.Call<List<LocationDto>> getLocations();
 
     // Users
     @GET("users/profile")
-    retrofit2.Call<BaseResponse<UserDto>> getProfile();
+    retrofit2.Call<UserDto> getProfile();
 
     @PATCH("users/profile")
-    retrofit2.Call<BaseResponse<UserDto>> updateProfile(@Body Map<String, Object> body);
+    retrofit2.Call<UserDto> updateProfile(@Body Map<String, Object> body);
 
     // Complaints
     @POST("complaints")
@@ -74,7 +76,7 @@ public interface ApiService {
 
     // Notifications
     @GET("notifications")
-    retrofit2.Call<BaseResponse<PaginatedResponse<Notification>>> getNotifications();
+    retrofit2.Call<List<NotificationDto>> getNotifications();
 
     @PATCH("notifications/{id}/read")
     retrofit2.Call<Void> markNotificationRead(@Path("id") String id);
@@ -83,7 +85,7 @@ public interface ApiService {
     retrofit2.Call<Void> markAllNotificationsRead();
 
     @GET("complaints")
-    retrofit2.Call<BaseResponse<PaginatedResponse<com.voiceyanga.citizen.data.local.entity.Complaint>>> getComplaints(
+    retrofit2.Call<List<ComplaintDto>> getComplaints(
             @QueryMap Map<String, String> filters);
 
     @POST("complaints/{serverId}/support")

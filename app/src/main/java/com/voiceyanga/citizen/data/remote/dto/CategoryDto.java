@@ -15,4 +15,12 @@ public class CategoryDto {
     public String getId() { return id; }
     public String getName() { return name; }
     public boolean isActive() { return isActive; }
+
+    public CategoryDto() {}
+
+    public CategoryDto(String id, String name) {
+        this.id = id;
+        this.name = name;
+        this.isActive = true;
+    }
 }

@@ -6,7 +6,7 @@
     android:layout_marginBottom="8dp"
     app:cardCornerRadius="12dp"
     app:cardElevation="0dp"
-    app:strokeColor="@color/neutral_200"
+    app:strokeColor="?attr/colorOutline"
     app:strokeWidth="1dp">
 
     <LinearLayout
@@ -22,7 +22,7 @@
             android:layout_height="24dp"
             android:layout_marginTop="2dp"
             android:src="@drawable/ic_notification_bell_vector"
-            app:tint="@color/primary_green" />
+            app:tint="?attr/colorPrimary" />
 
         <LinearLayout
             android:layout_width="match_parent"

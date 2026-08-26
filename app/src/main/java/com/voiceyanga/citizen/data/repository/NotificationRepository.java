@@ -5,6 +5,7 @@ import com.voiceyanga.citizen.data.local.dao.NotificationDao;
 import com.voiceyanga.citizen.data.local.entity.Notification;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
 import com.voiceyanga.citizen.data.remote.dto.BaseResponse;
+import com.voiceyanga.citizen.data.remote.dto.NotificationDto;
 import com.voiceyanga.citizen.data.remote.dto.PaginatedResponse;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -35,14 +36,31 @@ public class NotificationRepository {
     private void refreshNotifications() {
         executorService.execute(() -> {
             try {
-                Response<BaseResponse<PaginatedResponse<Notification>>> response = apiService.getNotifications().execute();
-                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
-                    List<Notification> serverNotifications = response.body().getData().getData();
+                Response<List<NotificationDto>> response = apiService.getNotifications().execute();
+                if (response.isSuccessful() && response.body() != null) {
+                    List<NotificationDto> serverNotifications = response.body();
                     if (serverNotifications != null) {
-                        for (Notification notification : serverNotifications) {
+                        for (NotificationDto dto : serverNotifications) {
+                            Notification notification = new Notification(
+                                    dto.getId(),
+                                    dto.getComplaintUuid(),
+                                    dto.getTitle(),
+                                    dto.getMessage(),
+                                    dto.getType(),
+                                    dto.getTimestamp()
+                            );
+                            notification.setRead(dto.isRead());
                             notificationDao.insert(notification);
                         }
                     }
+                } else {
+                    String errorBody = "";
+                    try {
+                        if (response.errorBody() != null) {
+                            errorBody = response.errorBody().string();
+                        }
+                    } catch (Exception ignored) {}
+                    android.util.Log.e("NotificationRepo", "Refresh failed (" + response.code() + "): " + errorBody);
                 }
             } catch (Exception e) {
                 android.util.Log.e("NotificationRepo", "Refresh failed", e);

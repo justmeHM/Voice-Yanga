@@ -13,7 +13,7 @@ import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
 import com.voiceyanga.citizen.data.local.entity.Notification;
 import com.voiceyanga.citizen.data.local.entity.PendingAction;
 
-@Database(entities = {Complaint.class, Comment.class, ComplaintPhoto.class, Notification.class, PendingAction.class}, version = 10, exportSchema = false)
+@Database(entities = {Complaint.class, Comment.class, ComplaintPhoto.class, Notification.class, PendingAction.class}, version = 12, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract ComplaintDao complaintDao();
     public abstract NotificationDao notificationDao();
@@ -46,6 +46,20 @@ public abstract class AppDatabase extends RoomDatabase {
         @Override
         public void migrate(@NonNull SupportSQLiteDatabase database) {
             database.execSQL("ALTER TABLE complaints ADD COLUMN commentCount INTEGER NOT NULL DEFAULT 0");
+        }
+    };
+
+    public static final Migration MIGRATION_10_11 = new Migration(10, 11) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE complaint_photos ADD COLUMN label TEXT");
+        }
+    };
+
+    public static final Migration MIGRATION_11_12 = new Migration(11, 12) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE complaints ADD COLUMN assignedTo TEXT");
         }
     };
 }

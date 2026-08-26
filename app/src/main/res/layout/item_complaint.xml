@@ -7,7 +7,7 @@
     android:layout_margin="8dp"
     app:cardCornerRadius="12dp"
     app:cardElevation="2dp"
-    app:strokeColor="@color/neutral_200"
+    app:strokeColor="?attr/colorOutline"
     app:strokeWidth="1dp">
 
     <LinearLayout
@@ -74,7 +74,7 @@
                 android:background="@drawable/bg_status_chip"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="4dp"
-                android:textColor="#16834B"
+                android:textColor="?attr/colorPrimary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 

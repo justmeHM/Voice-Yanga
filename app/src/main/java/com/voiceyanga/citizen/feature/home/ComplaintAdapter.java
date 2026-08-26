@@ -5,7 +5,6 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import android.content.res.ColorStateList;
-import android.graphics.Color;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
@@ -102,7 +101,7 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
             if ("CRITICAL".equals(priority)) {
                 binding.tvStatus.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.primary_red));
             } else if ("HIGH".equals(priority)) {
-                binding.tvStatus.setTextColor(Color.parseColor("#E67E22")); // Orange
+                binding.tvStatus.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.status_pending_text));
             } else {
                 binding.tvStatus.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.primary_green));
             }
@@ -137,15 +136,15 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
                     binding.btnSupport.setEnabled(false);
                     binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
                             ContextCompat.getColor(itemView.getContext(), R.color.primary_red)));
-                    binding.btnSupport.setTextColor(Color.WHITE);
-                    binding.btnSupport.setIconTint(ColorStateList.valueOf(Color.WHITE));
+                    binding.btnSupport.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.white));
+                    binding.btnSupport.setIconTint(ColorStateList.valueOf(ContextCompat.getColor(itemView.getContext(), R.color.white)));
                     binding.btnSupport.setStrokeWidth(0);
                 } else {
                     binding.btnSupport.setEnabled(true);
                     binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
                             ContextCompat.getColor(itemView.getContext(), R.color.primary_green)));
-                    binding.btnSupport.setTextColor(Color.WHITE);
-                    binding.btnSupport.setIconTint(ColorStateList.valueOf(Color.WHITE));
+                    binding.btnSupport.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.white));
+                    binding.btnSupport.setIconTint(ColorStateList.valueOf(ContextCompat.getColor(itemView.getContext(), R.color.white)));
                     binding.btnSupport.setStrokeWidth(0);
                 }
             }

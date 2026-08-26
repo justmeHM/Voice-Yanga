@@ -100,6 +100,8 @@ public class RegisterActivity extends AppCompatActivity {
                 Toast.makeText(this, "Registration successful! Please log in.", Toast.LENGTH_LONG).show();
                 Intent intent = new Intent(this, LoginActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                intent.putExtra("email", etEmail.getText() != null ? etEmail.getText().toString().trim() : "");
+                intent.putExtra("password", etPassword.getText() != null ? etPassword.getText().toString().trim() : "");
                 startActivity(intent);
                 finish();
             }

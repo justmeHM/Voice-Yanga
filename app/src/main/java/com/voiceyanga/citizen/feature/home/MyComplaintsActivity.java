@@ -3,10 +3,15 @@ package com.voiceyanga.citizen.feature.home;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.google.android.material.tabs.TabLayout;
+import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.databinding.ActivityMyComplaintsBinding;
 import com.voiceyanga.citizen.feature.complaints.ComplaintDetailActivity;
@@ -23,11 +28,20 @@ public class MyComplaintsActivity extends AppCompatActivity {
     @Inject
     com.voiceyanga.citizen.data.local.SessionManager sessionManager;
 
+    private android.view.GestureDetector gestureDetector;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         binding = ActivityMyComplaintsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            return insets;
+        });
 
         viewModel = new ViewModelProvider(this).get(MyComplaintsViewModel.class);
 
@@ -35,6 +49,36 @@ public class MyComplaintsActivity extends AppCompatActivity {
         setupTabs();
         setupRecyclerView();
         observeViewModel();
+        setupGestures();
+    }
+
+    private void setupGestures() {
+        gestureDetector = new android.view.GestureDetector(this, new android.view.GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onFling(android.view.MotionEvent e1, android.view.MotionEvent e2, float velocityX, float velocityY) {
+                if (e1 == null || e2 == null) return false;
+                float diffX = e2.getX() - e1.getX();
+                float diffY = e2.getY() - e1.getY();
+                
+                // HIGHER THRESHOLDS for deliberate swiping (300px, 2000 velocity)
+                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 300 && Math.abs(velocityX) > 2000) {
+                    if (diffX < 0) { // Left Swipe (Right to Left)
+                        finish();
+                        overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(android.view.MotionEvent ev) {
+        if (gestureDetector != null && gestureDetector.onTouchEvent(ev)) {
+            return true;
+        }
+        return super.dispatchTouchEvent(ev);
     }
 
     private void setupToolbar() {
@@ -86,7 +130,7 @@ public class MyComplaintsActivity extends AppCompatActivity {
 
         viewModel.getMyComplaints().observe(this, complaints -> {
             // When data arrives, stop loading
-            ((androidx.lifecycle.MutableLiveData<Boolean>)viewModel.getLoading()).setValue(false);
+            viewModel.setLoading(false);
             
             adapter.submitList(complaints);
             binding.llEmptyState.setVisibility(

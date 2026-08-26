@@ -14,6 +14,7 @@ import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
 import com.voiceyanga.citizen.data.local.entity.PendingAction;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
+import com.voiceyanga.citizen.data.remote.dto.BaseResponse;
 import com.voiceyanga.citizen.data.remote.dto.CommentRequest;
 import com.voiceyanga.citizen.data.remote.dto.CommentResponse;
 import com.voiceyanga.citizen.data.remote.dto.ComplaintRequest;
@@ -114,6 +115,7 @@ public class SyncWorker extends Worker {
         
         if (!localPhotos.isEmpty()) {
             for (ComplaintPhoto localPhoto : localPhotos) {
+                Log.d(TAG, "Uploading photo with label: " + localPhoto.getLabel());
                 MultipartBody.Part filePart = prepareFilePart(localPhoto.getPhotoUri());
                 if (filePart != null) {
                     Response<PhotoUploadResponse> photoResponse = apiService.uploadPhoto(filePart).execute();
@@ -155,8 +157,14 @@ public class SyncWorker extends Worker {
                     "STATUS_CHANGE"
             );
         } else {
-            String errorMsg = ErrorParser.parseError(response);
-            throw new Exception("Complaint submission failed (" + response.code() + "): " + errorMsg);
+            String errorBody = "";
+            try (okhttp3.ResponseBody body = response.errorBody()) {
+                if (body != null) {
+                    errorBody = body.string();
+                }
+            } catch (Exception ignored) {}
+            Log.e(TAG, "Complaint submission failed (" + response.code() + "): " + errorBody);
+            throw new Exception("Complaint submission failed (" + response.code() + "): " + errorBody);
         }
     }
 

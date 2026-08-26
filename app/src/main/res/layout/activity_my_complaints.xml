@@ -163,13 +163,12 @@
         android:padding="32dp"
         android:visibility="gone">
 
-        <com.airbnb.lottie.LottieAnimationView
-            android:layout_width="150dp"
-            android:layout_height="150dp"
-            app:lottie_autoPlay="true"
-            app:lottie_loop="true"
-            app:lottie_url="https://assets9.lottiefiles.com/packages/lf20_gl9c9vga.json"
-            app:lottie_fallbackRes="@android:drawable/ic_menu_edit" />
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:src="@drawable/my_complaints"
+            android:alpha="0.5"
+            android:contentDescription="@null" />
 
         <TextView
             android:layout_width="wrap_content"
