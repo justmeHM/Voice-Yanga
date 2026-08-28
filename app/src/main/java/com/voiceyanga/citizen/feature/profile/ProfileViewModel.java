@@ -62,12 +62,14 @@ public class ProfileViewModel extends ViewModel {
                     UserDto user = response.body();
                     _userProfile.setValue(user);
                     // Update local session
-                    sessionManager.saveUser(
-                        user.getFullName(),
-                        user.getEmail(),
-                        user.getPhone(),
-                        user.getRole()
-                    );
+                    if (user.getEmail() != null) {
+                        sessionManager.saveUser(
+                            user.getFullName(),
+                            user.getEmail(),
+                            user.getPhone(),
+                            user.getRole()
+                        );
+                    }
                 }
             }
 

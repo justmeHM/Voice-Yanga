@@ -85,7 +85,7 @@ public interface ApiService {
     retrofit2.Call<Void> markAllNotificationsRead();
 
     @GET("complaints")
-    retrofit2.Call<List<ComplaintDto>> getComplaints(
+    retrofit2.Call<PaginatedResponse<ComplaintDto>> getComplaints(
             @QueryMap Map<String, String> filters);
 
     @POST("complaints/{serverId}/support")

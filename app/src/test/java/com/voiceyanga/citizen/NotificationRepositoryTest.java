@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 import com.voiceyanga.citizen.data.local.dao.NotificationDao;
+import com.voiceyanga.citizen.data.remote.api.ApiService;
 import com.voiceyanga.citizen.data.repository.NotificationRepository;
 import org.junit.Before;
 import org.junit.Rule;
@@ -21,12 +22,15 @@ public class NotificationRepositoryTest {
     @Mock
     private NotificationDao notificationDao;
 
+    @Mock
+    private ApiService apiService;
+
     private NotificationRepository repository;
 
     @Before
     public void setup() {
         MockitoAnnotations.openMocks(this);
-        repository = new NotificationRepository(notificationDao);
+        repository = new NotificationRepository(notificationDao, apiService);
     }
 
     @Test

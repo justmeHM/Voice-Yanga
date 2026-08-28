@@ -65,9 +65,9 @@ public class ComplaintRepository {
     private void refreshComplaints(Map<String, String> filters) {
         executorService.execute(() -> {
             try {
-                Response<List<ComplaintDto>> response = apiService.getComplaints(filters).execute();
+                Response<PaginatedResponse<ComplaintDto>> response = apiService.getComplaints(filters).execute();
                 if (response.isSuccessful() && response.body() != null) {
-                    List<ComplaintDto> serverComplaints = response.body();
+                    List<ComplaintDto> serverComplaints = response.body().getData();
                     if (serverComplaints != null) {
                         for (ComplaintDto dto : serverComplaints) {
                             Complaint serverComplaint = new Complaint(

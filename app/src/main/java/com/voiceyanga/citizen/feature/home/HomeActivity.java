@@ -1,6 +1,7 @@
 package com.voiceyanga.citizen.feature.home;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -281,8 +282,8 @@ public class HomeActivity extends AppCompatActivity {
             } else if (id == R.id.nav_about) {
                 startActivity(new Intent(this, AboutActivity.class));
             } else if (id == R.id.nav_privacy) {
-                String message = String.format(getString(R.string.coming_soon_format), item.getTitle());
-                Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://voiceyanga.netlify.app/"));
+                startActivity(intent);
             }
             binding.drawerLayout.closeDrawer(GravityCompat.START);
             return true;

@@ -58,6 +58,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
     private double currentLatitude = 0.0;
     private double currentLongitude = 0.0;
     private String detectedAddress = null;
+    private boolean isManualLocation = false;
     private List<CategoryDto> availableCategories;
 
     private FusedLocationProviderClient fusedLocationClient;
@@ -159,7 +160,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
                     .setTitle("Save Draft?")
                     .setMessage("You have unsaved changes. Would you like to save this as a draft?")
                     .setPositiveButton("Save", (dialog, which) -> {
-                        viewModel.saveDraft(title, desc, selectedCategory, customCat, currentLocation);
+                        viewModel.saveDraft(title, desc, selectedCategory, customCat, currentLocation, detectedAddress);
                         finish();
                     })
                     .setNegativeButton("Discard", (dialog, which) -> {
@@ -235,9 +236,12 @@ public class CreateComplaintActivity extends AppCompatActivity {
         viewModel.getMappedLocation().observe(this, location -> {
             if (location != null) {
                 this.currentLocation = location;
-                this.detectedAddress = currentLocation.getDisplayName();
-                binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), detectedAddress));
-                binding.tvDetectedLocation.setVisibility(View.VISIBLE);
+                // Update text ONLY if it's a manual selection or we don't have a good GPS address yet
+                if (isManualLocation || this.detectedAddress == null || this.detectedAddress.matches("^-?\\d+\\.\\d+, -?\\d+\\.\\d+$")) {
+                    this.detectedAddress = currentLocation.getDisplayName();
+                    binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), detectedAddress));
+                    binding.tvDetectedLocation.setVisibility(View.VISIBLE);
+                }
             }
         });
 
@@ -288,7 +292,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
             String customCategory = binding.etCustomCategory.getText().toString().trim();
             
             viewModel.submitComplaint(title, description, selectedCategory, customCategory, currentLocation, 
-                    currentLatitude, currentLongitude);
+                    detectedAddress, currentLatitude, currentLongitude);
         });
 
         binding.btnLocation.setOnClickListener(v -> requestLocationPermissions());
@@ -341,6 +345,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
         }
 
         SearchableLocationDialog dialog = new SearchableLocationDialog(locations, location -> {
+            isManualLocation = true;
             viewModel.setManualLocation(location);
         });
         dialog.show(getSupportFragmentManager(), "search_location");
@@ -422,6 +427,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
     private void updateLocationUI(Location location) {
         this.currentLatitude = location.getLatitude();
         this.currentLongitude = location.getLongitude();
+        this.isManualLocation = false;
         
         new Thread(() -> {
             Geocoder geocoder = new Geocoder(this, Locale.getDefault());
@@ -430,7 +436,22 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     if (addresses != null && !addresses.isEmpty()) {
                         Address address = addresses.get(0);
-                        this.detectedAddress = address.getAddressLine(0);
+                        // Build a more detailed address if possible
+                        StringBuilder sb = new StringBuilder();
+                        if (address.getThoroughfare() != null) {
+                            if (address.getSubThoroughfare() != null) {
+                                sb.append(address.getThoroughfare()).append(" ").append(address.getSubThoroughfare());
+                            } else {
+                                sb.append(address.getThoroughfare());
+                            }
+                            if (address.getLocality() != null) {
+                                sb.append(", ").append(address.getLocality());
+                            }
+                        } else {
+                            sb.append(address.getAddressLine(0));
+                        }
+                        
+                        this.detectedAddress = sb.toString();
                         binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), detectedAddress));
                         binding.tvDetectedLocation.setVisibility(View.VISIBLE);
                         

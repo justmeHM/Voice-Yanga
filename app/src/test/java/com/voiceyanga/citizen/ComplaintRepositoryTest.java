@@ -56,7 +56,7 @@ public class ComplaintRepositoryTest {
         String uuid = UUID.randomUUID().toString();
         Complaint complaint = new Complaint(uuid, "Title", "Desc", "Water", "Loc", "PENDING", System.currentTimeMillis());
         
-        repository.saveComplaint(complaint, Collections.singletonList("photo_uri"));
+        repository.saveComplaint(complaint, Collections.singletonList("photo_uri"), Collections.emptyMap());
         
         // Wait for executor
         Thread.sleep(500);

@@ -188,7 +188,7 @@ public class SyncWorker extends Worker {
         } else if ("COMMENT".equals(action.getActionType())) {
             CommentRequest request = new CommentRequest(action.getData(), true);
             Response<CommentResponse> response = apiService.postComment(complaint.getServerId(), request).execute();
-            if (response.isSuccessful()) {
+            if (response.isSuccessful() && response.body() != null) {
                 complaintDao.deletePendingAction(action.getId());
             } else {
                 throw new Exception("Comment failed: " + response.code());

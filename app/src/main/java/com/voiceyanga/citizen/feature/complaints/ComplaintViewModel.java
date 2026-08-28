@@ -86,17 +86,20 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         }).start();
     }
 
-    public void saveDraft(String title, String description, CategoryDto category, String customCategory, LocationDto location) {
+    public void saveDraft(String title, String description, CategoryDto category, String customCategory, LocationDto location, String addressString) {
         String categoryName = (category != null && !category.getName().equalsIgnoreCase("Other")) 
             ? category.getName() 
             : (customCategory != null && !customCategory.isEmpty() ? customCategory : "Other");
             
+        String finalLocation = (addressString != null && !addressString.isEmpty()) ? addressString : 
+                              (location != null ? location.getDisplayName() : null);
+
         Complaint draft = new Complaint(
                 UUID.randomUUID().toString(),
                 title,
                 description,
                 categoryName,
-                location != null ? location.getDisplayName() : null,
+                finalLocation,
                 "DRAFT",
                 System.currentTimeMillis()
         );
@@ -133,7 +136,7 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         });
     }
 
-    public void submitComplaint(String title, String description, CategoryDto category, String customCategory, LocationDto location, double lat, double lon) {
+    public void submitComplaint(String title, String description, CategoryDto category, String customCategory, LocationDto location, String addressString, double lat, double lon) {
         if (title.isEmpty() || description.length() < 10) {
             _error.setValue(description.isEmpty() ? 
                 getApplication().getString(R.string.error_fill_fields) : 
@@ -157,12 +160,15 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
 
         _loading.setValue(true);
 
+        String finalLocation = (addressString != null && !addressString.isEmpty()) ? addressString : 
+                              (location != null ? location.getDisplayName() : "Lusaka");
+
         Complaint complaint = new Complaint(
                 UUID.randomUUID().toString(),
                 title,
                 description,
                 categoryName != null ? categoryName : "General",
-                location != null ? location.getDisplayName() : "Lusaka",
+                finalLocation,
                 "PENDING",
                 System.currentTimeMillis()
         );

@@ -2,6 +2,7 @@ package com.voiceyanga.citizen.data.repository;
 
 import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
+import com.voiceyanga.citizen.data.remote.dto.BaseResponse;
 import com.voiceyanga.citizen.data.remote.dto.UserDto;
 import java.util.HashMap;
 import java.util.Map;
