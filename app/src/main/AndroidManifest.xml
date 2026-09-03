@@ -108,11 +108,6 @@
             android:exported="false"
             android:theme="@style/Theme.VoiceYanga" />
 
-        <activity
-            android:name=".feature.complaints.ResolvedComplaintsActivity"
-            android:exported="false"
-            android:theme="@style/Theme.VoiceYanga" />
-
         <service
             android:name=".core.notifications.VoiceYangaMessagingService"
             android:exported="false">
