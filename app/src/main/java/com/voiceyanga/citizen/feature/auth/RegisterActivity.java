@@ -1,11 +1,19 @@
 package com.voiceyanga.citizen.feature.auth;
 
 import android.content.Intent;
+import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.TextPaint;
+import android.text.method.LinkMovementMethod;
+import android.text.style.ClickableSpan;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import com.google.android.material.button.MaterialButton;
@@ -21,7 +29,7 @@ public class RegisterActivity extends AppCompatActivity {
     private TextInputEditText etFirstName, etLastName, etPhone, etEmail, etPassword;
     private MaterialButton btnRegister;
     private ProgressBar pbLoading;
-    private TextView tvLogin;
+    private TextView tvLogin, tvTerms;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,6 +46,9 @@ public class RegisterActivity extends AppCompatActivity {
         btnRegister = findViewById(R.id.btnRegister);
         pbLoading = findViewById(R.id.pbLoading);
         tvLogin = findViewById(R.id.tvLogin);
+        tvTerms = findViewById(R.id.tvTerms);
+
+        setupTermsLink();
 
         btnRegister.setOnClickListener(v -> {
             String fName = etFirstName.getText() != null ? etFirstName.getText().toString().trim() : "";
@@ -57,6 +68,37 @@ public class RegisterActivity extends AppCompatActivity {
         });
 
         observeViewModel();
+    }
+
+    private void setupTermsLink() {
+        String fullText = getString(R.string.register_terms_consent);
+        String tos = getString(R.string.terms_of_service_title);
+        
+        SpannableString ss = new SpannableString(fullText);
+        
+        int start = fullText.indexOf(tos);
+        if (start != -1) {
+            ClickableSpan clickableSpan = new ClickableSpan() {
+                @Override
+                public void onClick(@NonNull View textView) {
+                    String url = getString(R.string.terms_of_service_url);
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setData(Uri.parse(url));
+                    startActivity(intent);
+                }
+
+                @Override
+                public void updateDrawState(@NonNull TextPaint ds) {
+                    super.updateDrawState(ds);
+                    ds.setUnderlineText(true);
+                    ds.setColor(Color.BLUE);
+                }
+            };
+            ss.setSpan(clickableSpan, start, start + tos.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        
+        tvTerms.setText(ss);
+        tvTerms.setMovementMethod(LinkMovementMethod.getInstance());
     }
 
     private boolean validate(String fName, String lName, String phone, String email, String password) {

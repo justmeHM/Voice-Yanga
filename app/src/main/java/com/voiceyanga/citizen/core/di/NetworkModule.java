@@ -1,5 +1,6 @@
 package com.voiceyanga.citizen.core.di;
 
+import com.voiceyanga.citizen.core.network.ApiConstants;
 import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
 import com.voiceyanga.citizen.data.remote.dto.AuthResponse;
@@ -27,9 +28,6 @@ import retrofit2.converter.gson.GsonConverterFactory;
 @InstallIn(SingletonComponent.class)
 public class NetworkModule {
 
-    // Use your computer's IP address for physical device testing
-    private static final String BASE_URL = "http://10.214.122.10:3000/api/v1/";
-
     @Provides
     @Singleton
     public HttpLoggingInterceptor provideLoggingInterceptor() {
@@ -47,22 +45,28 @@ public class NetworkModule {
         return new OkHttpClient.Builder()
                 .addInterceptor(loggingInterceptor)
                 .addInterceptor(chain -> {
-                    String rawToken = sessionManager.getAccessToken();
-                    String cleanToken = (rawToken == null) ? null : rawToken.replace("\"", "")
-                                     .replace("Bearer ", "")
-                                     .trim();
+                    String token = sessionManager.getAccessToken();
+                    if (token != null) {
+                        token = token.trim().replace("\"", "");
+                    }
 
                     Request originalRequest = chain.request();
                     
-                    android.util.Log.d("NetworkModule", "Request URL: " + originalRequest.url());
-                    android.util.Log.d("NetworkModule", "Authorization header exists: " + (cleanToken != null && !cleanToken.isEmpty()));
-
-                    if (cleanToken != null && !cleanToken.isEmpty() && !cleanToken.equals("null")) {
+                    if (token != null && !token.isEmpty() && !token.equals("null")) {
+                        // Instruction 6: Trim stored token and avoid adding Bearer twice
+                        String authHeader = token.startsWith("Bearer ") ? token : "Bearer " + token;
+                        
                         Request authenticatedRequest = originalRequest.newBuilder()
-                                .header("Authorization", "Bearer " + cleanToken)
+                                .header("Authorization", authHeader)
                                 .build();
+                        
+                        // Safe logging as requested
+                        android.util.Log.d("NetworkModule", "Request URL: " + authenticatedRequest.url());
+                        android.util.Log.d("NetworkModule", "Authorization header added: Bearer [REDACTED]");
+                        
                         return chain.proceed(authenticatedRequest);
                     }
+                    
                     android.util.Log.w("NetworkModule", "No valid token available for request: " + originalRequest.url());
                     return chain.proceed(originalRequest);
                 })
@@ -99,7 +103,7 @@ public class NetworkModule {
     @Singleton
     public Retrofit provideRetrofit(OkHttpClient okHttpClient) {
         return new Retrofit.Builder()
-                .baseUrl(BASE_URL)
+                .baseUrl(ApiConstants.BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(okHttpClient)
                 .build();

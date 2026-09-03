@@ -12,6 +12,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.GravityCompat;
 import androidx.core.view.ViewCompat;
@@ -32,6 +33,7 @@ import com.voiceyanga.citizen.feature.notifications.NotificationCenterActivity;
 import com.voiceyanga.citizen.feature.profile.ProfileActivity;
 import com.voiceyanga.citizen.ui.common.AboutActivity;
 import com.voiceyanga.citizen.ui.common.SupportActivity;
+import com.voiceyanga.citizen.feature.complaints.OutboxActivity;
 import java.util.Calendar;
 import java.util.Locale;
 import javax.inject.Inject;
@@ -77,8 +79,21 @@ public class HomeActivity extends AppCompatActivity {
         setupObservers();
         setupListeners();
         setupGestures();
+        setupScrollListener();
         handleDeepLink();
         setupNetworkListener();
+        setupSwipeRefresh();
+    }
+
+    private void setupSwipeRefresh() {
+        binding.swipeRefresh.setColorSchemeColors(
+                ContextCompat.getColor(this, R.color.primary_green),
+                ContextCompat.getColor(this, R.color.primary_red),
+                ContextCompat.getColor(this, R.color.status_pending_text)
+        );
+        binding.swipeRefresh.setProgressBackgroundColorSchemeColor(
+                ContextCompat.getColor(this, R.color.primary_green_light)
+        );
     }
 
     private void setupGestures() {
@@ -111,6 +126,12 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void setupNetworkListener() {
+        binding.tvOfflineBanner.setOnClickListener(v -> {
+            com.google.android.material.snackbar.Snackbar.make(binding.getRoot(), 
+                    "Reports are queued and will upload automatically when you're back online.", 
+                    com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show();
+        });
+        
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         networkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
@@ -176,7 +197,7 @@ public class HomeActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         adapter = new ComplaintAdapter(new ComplaintAdapter.OnComplaintClickListener() {
             @Override
-            public void onComplaintClick(Complaint complaint) {
+            public void onComplaintClick(Complaint complaint, android.view.View sharedElement) {
                 Intent intent = new Intent(HomeActivity.this, ComplaintDetailActivity.class);
                 intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaint.getClientUuid());
                 startActivity(intent);
@@ -186,6 +207,112 @@ public class HomeActivity extends AppCompatActivity {
             public void onSupportClick(Complaint complaint) {
                 viewModel.supportComplaint(complaint.getClientUuid());
                 Toast.makeText(HomeActivity.this, R.string.support_thanks, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onShareClick(Complaint complaint) {
+                String photoUri = complaint.getFirstPhotoUri();
+                String shareText = String.format("Help me get this issue noticed! %s in %s. Reported via Voice Yanga app.", 
+                        complaint.getTitle(), complaint.getLocation());
+
+                if (photoUri != null && !photoUri.isEmpty()) {
+                    if (photoUri.startsWith("http")) {
+                        // For server images, we must load via Glide
+                        shareWithGlide(photoUri, shareText);
+                    } else {
+                        // For local images, try to access directly or copy to shareable location
+                        try {
+                            java.io.File cachePath = new java.io.File(getCacheDir(), "images");
+                            cachePath.mkdirs();
+                            java.io.File shareFile = new java.io.File(cachePath, "share_image.png");
+                            
+                            java.io.InputStream is;
+                            if (photoUri.startsWith("content://")) {
+                                is = getContentResolver().openInputStream(android.net.Uri.parse(photoUri));
+                            } else {
+                                is = new java.io.FileInputStream(photoUri);
+                            }
+                            
+                            if (is != null) {
+                                java.io.FileOutputStream os = new java.io.FileOutputStream(shareFile);
+                                byte[] buffer = new byte[8192];
+                                int read;
+                                while ((read = is.read(buffer)) != -1) os.write(buffer, 0, read);
+                                is.close();
+                                os.close();
+                                
+                                triggerShare(shareFile, shareText);
+                            } else {
+                                shareWithGlide(photoUri, shareText);
+                            }
+                        } catch (Exception e) {
+                            android.util.Log.e("HomeActivity", "Direct share failed, falling back to Glide", e);
+                            shareWithGlide(photoUri, shareText);
+                        }
+                    }
+                } else {
+                    shareAsText(shareText);
+                }
+            }
+
+            private void shareWithGlide(String url, String shareText) {
+                String fullUrl = url;
+                if (!url.startsWith("http") && !url.startsWith("content://") && !url.startsWith("file://") && !url.startsWith("/")) {
+                    fullUrl = com.voiceyanga.citizen.core.network.ApiConstants.API_HOST + "/" + url;
+                }
+
+                com.bumptech.glide.Glide.with(HomeActivity.this)
+                    .asBitmap()
+                    .load(fullUrl)
+                    .into(new com.bumptech.glide.request.target.CustomTarget<android.graphics.Bitmap>() {
+                        @Override
+                        public void onResourceReady(@androidx.annotation.NonNull android.graphics.Bitmap resource, @androidx.annotation.Nullable com.bumptech.glide.request.transition.Transition<? super android.graphics.Bitmap> transition) {
+                            try {
+                                java.io.File cachePath = new java.io.File(getCacheDir(), "images");
+                                cachePath.mkdirs();
+                                java.io.File imageFile = new java.io.File(cachePath, "share_image.png");
+                                java.io.FileOutputStream stream = new java.io.FileOutputStream(imageFile);
+                                resource.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, stream);
+                                stream.close();
+                                triggerShare(imageFile, shareText);
+                            } catch (java.io.IOException e) {
+                                shareAsText(shareText);
+                            }
+                        }
+
+                        @Override
+                        public void onLoadCleared(@androidx.annotation.Nullable android.graphics.drawable.Drawable placeholder) {}
+
+                        @Override
+                        public void onLoadFailed(@androidx.annotation.Nullable android.graphics.drawable.Drawable errorDrawable) {
+                            shareAsText(shareText);
+                        }
+                    });
+            }
+
+            private void triggerShare(java.io.File imageFile, String text) {
+                runOnUiThread(() -> {
+                    android.net.Uri contentUri = androidx.core.content.FileProvider.getUriForFile(HomeActivity.this, getPackageName() + ".provider", imageFile);
+                    Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                    shareIntent.setType("image/png");
+                    shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
+                    shareIntent.putExtra(Intent.EXTRA_TEXT, text);
+                    startActivity(Intent.createChooser(shareIntent, "Share Report"));
+                });
+            }
+
+            private void shareAsText(String text) {
+                Intent intent = new Intent(Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(Intent.EXTRA_TEXT, text);
+                startActivity(Intent.createChooser(intent, "Share via"));
+            }
+
+            @Override
+            public void onRetryClick(Complaint complaint) {
+                viewModel.retryComplaint(complaint.getClientUuid());
+                Toast.makeText(HomeActivity.this, "Retrying sync...", Toast.LENGTH_SHORT).show();
             }
         }, sessionManager.getUserEmail());
         binding.rvComplaints.setLayoutManager(new LinearLayoutManager(this));
@@ -254,20 +381,24 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
 
-        viewModel.getDraft().observe(this, draft -> {
-            if (draft != null) {
-                binding.cardResumeDraft.setVisibility(View.VISIBLE);
-                binding.btnResume.setOnClickListener(v -> {
-                    startActivity(new Intent(this, CreateComplaintActivity.class));
+        viewModel.getOutboxComplaints().observe(this, outbox -> {
+            if (outbox != null && !outbox.isEmpty()) {
+                binding.cardOutbox.setVisibility(View.VISIBLE);
+                binding.tvOutboxCount.setText(String.format(Locale.getDefault(), 
+                        "You have %d report%s waiting to sync", 
+                        outbox.size(), outbox.size() == 1 ? "" : "s"));
+                binding.btnViewOutbox.setOnClickListener(v -> {
+                    startActivity(new Intent(this, OutboxActivity.class));
                 });
             } else {
-                binding.cardResumeDraft.setVisibility(View.GONE);
+                binding.cardOutbox.setVisibility(View.GONE);
             }
         });
     }
 
     private void setupListeners() {
         binding.btnMenu.setOnClickListener(v -> binding.drawerLayout.openDrawer(GravityCompat.START));
+        binding.fabMenuScrim.setOnClickListener(v -> toggleFabMenu());
 
         binding.navView.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
@@ -298,6 +429,9 @@ public class HomeActivity extends AppCompatActivity {
             startActivity(new Intent(this, CreateComplaintActivity.class));
         });
 
+        binding.btnExploreNearby.setOnClickListener(v -> 
+            startActivity(new Intent(this, NearbyIssuesActivity.class)));
+
         binding.fabNearbyIssues.setOnClickListener(v -> {
             toggleFabMenu();
             startActivity(new Intent(this, NearbyIssuesActivity.class));
@@ -312,7 +446,10 @@ public class HomeActivity extends AppCompatActivity {
         binding.btnNotifications.setOnClickListener(v -> 
             startActivity(new Intent(this, NotificationCenterActivity.class)));
 
-        binding.btnSort.setOnClickListener(this::showSortMenu);
+        binding.btnFilter.setOnClickListener(v -> {
+            FilterBottomSheet filterSheet = new FilterBottomSheet();
+            filterSheet.show(getSupportFragmentManager(), "filter_sheet");
+        });
 
         binding.btnSeeMore.setOnClickListener(v -> 
             startActivity(new Intent(this, MyComplaintsActivity.class)));
@@ -320,32 +457,73 @@ public class HomeActivity extends AppCompatActivity {
         binding.layoutError.btnRetry.setOnClickListener(v -> viewModel.retrySync());
     }
 
-    private void showSortMenu(View v) {
-        android.widget.PopupMenu popup = new android.widget.PopupMenu(this, v);
-        popup.getMenu().add(0, 1, 0, "Newest First");
-        popup.getMenu().add(0, 2, 1, "Most Supported");
-        
-        popup.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == 1) {
-                viewModel.setSortOrder("NEWEST");
-            } else if (item.getItemId() == 2) {
-                viewModel.setSortOrder("SUPPORT");
+    private void setupScrollListener() {
+        binding.rvComplaints.addOnScrollListener(new androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@androidx.annotation.NonNull androidx.recyclerview.widget.RecyclerView recyclerView, int dx, int dy) {
+                // Keep hide/show logic primarily in onScrollStateChanged for maximum stability
             }
-            return true;
+
+            @Override
+            public void onScrollStateChanged(@androidx.annotation.NonNull androidx.recyclerview.widget.RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                if (isFabExpanded) return;
+
+                if (newState == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_DRAGGING || 
+                    newState == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_SETTLING) {
+                    binding.fabReport.hide();
+                } else if (newState == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
+                    binding.fabReport.show();
+                }
+            }
         });
-        popup.show();
     }
 
     private void toggleFabMenu() {
         isFabExpanded = !isFabExpanded;
+        
+        com.voiceyanga.citizen.core.utils.HapticHelper.selection(binding.fabReport);
+
         if (isFabExpanded) {
-            binding.fabReportProblem.show();
-            binding.fabNearbyIssues.show();
-            binding.fabReport.animate().rotation(45f).setDuration(200).start();
+            // Background Dimming
+            binding.fabMenuScrim.setVisibility(View.VISIBLE);
+            binding.fabMenuScrim.setAlpha(0f);
+            binding.fabMenuScrim.animate().alpha(1f).setDuration(200).start();
+
+            // Rotate main FAB icon
+            binding.fabReport.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
+            
+            // Cascading Animation for Rows
+            binding.llReportProblemRow.setVisibility(View.VISIBLE);
+            binding.llReportProblemRow.setAlpha(0f);
+            binding.llReportProblemRow.setTranslationY(20f);
+            binding.llReportProblemRow.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setDuration(200)
+                    .start();
+
+            binding.llNearbyIssuesRow.setVisibility(View.VISIBLE);
+            binding.llNearbyIssuesRow.setAlpha(0f);
+            binding.llNearbyIssuesRow.setTranslationY(20f);
+            binding.llNearbyIssuesRow.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setDuration(200)
+                    .setStartDelay(100)
+                    .start();
+            
         } else {
-            binding.fabReportProblem.hide();
-            binding.fabNearbyIssues.hide();
-            binding.fabReport.animate().rotation(0f).setDuration(200).start();
+            // Background Brightening
+            binding.fabMenuScrim.animate().alpha(0f).setDuration(200).withEndAction(() -> 
+                binding.fabMenuScrim.setVisibility(View.GONE)).start();
+
+            // Revert main FAB icon
+            binding.fabReport.setImageResource(android.R.drawable.ic_input_add);
+            
+            // Hide Rows
+            binding.llReportProblemRow.setVisibility(View.GONE);
+            binding.llNearbyIssuesRow.setVisibility(View.GONE);
         }
     }
 

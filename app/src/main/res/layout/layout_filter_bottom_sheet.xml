@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/bg_bottom_sheet">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="24dp"
+        android:background="@color/neutral_200" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/filter_title"
+        android:textColor="?android:attr/textColorPrimary"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/filter_location_label"
+        android:textColor="?android:attr/textColorSecondary"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilProvince"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="@string/filter_province_hint">
+
+        <AutoCompleteTextView
+            android:id="@+id/actProvince"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="none" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilDistrict"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="@string/filter_district_hint">
+
+        <AutoCompleteTextView
+            android:id="@+id/actDistrict"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="none" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilWard"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="@string/filter_ward_hint">
+
+        <AutoCompleteTextView
+            android:id="@+id/actWard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="none" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnClear"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:text="@string/filter_clear_all"
+            android:textColor="@color/primary_red" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnApply"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="16dp"
+            android:layout_weight="2"
+            android:text="@string/filter_apply"
+            app:backgroundTint="@color/primary_green"
+            app:cornerRadius="12dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -37,12 +37,18 @@ public class SuccessDialogFragment extends DialogFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         
-        // Auto-dismiss after 3 seconds
+        View icon = view.findViewById(R.id.ivSuccessIcon);
+        if (icon != null) {
+            android.view.animation.Animation anim = android.view.animation.AnimationUtils.loadAnimation(getContext(), R.anim.scale_in);
+            icon.startAnimation(anim);
+        }
+
+        // Auto-dismiss after animation (approx 2s)
         view.postDelayed(() -> {
             if (isAdded()) {
                 dismiss();
                 if (listener != null) listener.onDismissed();
             }
-        }, 3000);
+        }, 2500);
     }
 }

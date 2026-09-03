@@ -26,18 +26,22 @@ public class RealReferenceRepository implements ReferenceRepository {
 
     @Override
     public void getCategories(ReferenceCallback<List<CategoryDto>> callback) {
-        apiService.getCategories().enqueue(new Callback<List<CategoryDto>>() {
+        apiService.getCategories().enqueue(new Callback<BaseResponse<List<CategoryDto>>>() {
             @Override
-            public void onResponse(Call<List<CategoryDto>> call, Response<List<CategoryDto>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    callback.onSuccess(response.body());
+            public void onResponse(Call<BaseResponse<List<CategoryDto>>> call, Response<BaseResponse<List<CategoryDto>>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    callback.onSuccess(response.body().getData());
                 } else {
-                    callback.onError("Failed to fetch categories: " + response.code());
+                    String msg = "Failed to fetch categories";
+                    if (response.body() != null && response.body().getMessage() != null) {
+                        msg = response.body().getMessage();
+                    }
+                    callback.onError(msg + " (" + response.code() + ")");
                 }
             }
 
             @Override
-            public void onFailure(Call<List<CategoryDto>> call, Throwable t) {
+            public void onFailure(Call<BaseResponse<List<CategoryDto>>> call, Throwable t) {
                 callback.onError(t.getMessage());
             }
         });
@@ -45,18 +49,22 @@ public class RealReferenceRepository implements ReferenceRepository {
 
     @Override
     public void getLocations(ReferenceCallback<List<LocationDto>> callback) {
-        apiService.getLocations().enqueue(new Callback<List<LocationDto>>() {
+        apiService.getLocations().enqueue(new Callback<BaseResponse<List<LocationDto>>>() {
             @Override
-            public void onResponse(Call<List<LocationDto>> call, Response<List<LocationDto>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    callback.onSuccess(response.body());
+            public void onResponse(Call<BaseResponse<List<LocationDto>>> call, Response<BaseResponse<List<LocationDto>>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    callback.onSuccess(response.body().getData());
                 } else {
-                    callback.onError("Failed to fetch locations: " + response.code());
+                    String msg = "Failed to fetch locations";
+                    if (response.body() != null && response.body().getMessage() != null) {
+                        msg = response.body().getMessage();
+                    }
+                    callback.onError(msg + " (" + response.code() + ")");
                 }
             }
 
             @Override
-            public void onFailure(Call<List<LocationDto>> call, Throwable t) {
+            public void onFailure(Call<BaseResponse<List<LocationDto>>> call, Throwable t) {
                 callback.onError(t.getMessage());
             }
         });

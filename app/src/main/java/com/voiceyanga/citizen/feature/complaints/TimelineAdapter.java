@@ -35,7 +35,20 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         boolean nextCompleted = (position + 1 < points.size()) && points.get(position + 1).isCompleted;
-        holder.bind(points.get(position), position == 0, position == getItemCount() - 1, nextCompleted);
+        
+        // Active logic: The first point that is NOT completed is the active one.
+        // If all are completed, the last one is active.
+        int activeIndex = -1;
+        for (int i = 0; i < points.size(); i++) {
+            if (!points.get(i).isCompleted) {
+                activeIndex = i;
+                break;
+            }
+        }
+        if (activeIndex == -1) activeIndex = points.size() - 1;
+
+        holder.bind(points.get(position), position == 0, position == getItemCount() - 1, 
+                nextCompleted, position == activeIndex);
     }
 
     @Override
@@ -51,7 +64,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
             this.binding = binding;
         }
 
-        void bind(StatusPoint point, boolean isFirst, boolean isLast, boolean isNextCompleted) {
+        void bind(StatusPoint point, boolean isFirst, boolean isLast, boolean isNextCompleted, boolean isActive) {
             String labelText = point.label;
             if (point.subLabel != null) {
                 labelText += " (" + point.subLabel + ")";
@@ -76,6 +89,17 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHo
                 binding.tvStatusName.setTextColor(ContextCompat.getColor(context, R.color.neutral_500));
                 binding.tvStatusName.setAlpha(0.6f);
                 binding.vLineTop.setBackgroundColor(neutral);
+            }
+
+            if (isActive) {
+                binding.tvActiveBadge.setVisibility(View.VISIBLE);
+                binding.ivDot.setScaleX(1.5f);
+                binding.ivDot.setScaleY(1.5f);
+                binding.tvStatusName.setAlpha(1.0f);
+            } else {
+                binding.tvActiveBadge.setVisibility(View.GONE);
+                binding.ivDot.setScaleX(1.0f);
+                binding.ivDot.setScaleY(1.0f);
             }
 
             // The line leading to the NEXT point is green only if the NEXT point is completed

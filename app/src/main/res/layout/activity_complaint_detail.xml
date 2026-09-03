@@ -25,207 +25,220 @@
             android:background="?attr/colorOutline" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <androidx.core.widget.NestedScrollView
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <LinearLayout
+        <include
+            android:id="@+id/layoutShimmer"
+            layout="@layout/shimmer_complaint_detail"
+            android:visibility="visible" />
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/scrollContent"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="24dp">
-
-            <TextView
-                android:id="@+id/tvRefCode"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="?android:attr/textColorSecondary"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.1" />
-
-            <TextView
-                android:id="@+id/tvTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:textColor="?android:attr/textColorPrimary"
-                android:textSize="24sp"
-                android:textStyle="bold" />
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            tools:visibility="visible">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="vertical"
+                android:padding="24dp">
 
                 <TextView
-                    android:id="@+id/tvCategory"
+                    android:id="@+id/tvRefCode"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/bg_status_chip"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="6dp"
-                    android:textColor="?attr/colorPrimary"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvPriority"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:textColor="@color/primary_red"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_location_vector"
-                    app:tint="?android:attr/textColorSecondary" />
-
-                <TextView
-                    android:id="@+id/tvLocation"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_weight="1"
                     android:textColor="?android:attr/textColorSecondary"
-                    android:textSize="16sp" />
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
 
-            </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="24dp"
-                android:background="@color/neutral_200" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/section_description"
-                android:textColor="?android:attr/textColorSecondary"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.1" />
-
-            <TextView
-                android:id="@+id/tvDescription"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:textColor="?android:attr/textColorPrimary"
-                android:textSize="16sp"
-                android:lineSpacingExtra="4dp" />
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvPhotos"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:orientation="horizontal"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                tools:listitem="@layout/item_photo" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="24dp"
-                android:background="@color/neutral_200" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/section_timeline"
-                android:textColor="?android:attr/textColorSecondary"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.1" />
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvTimeline"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:nestedScrollingEnabled="false" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="24dp"
-                android:background="@color/neutral_200" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/section_comments"
-                android:textColor="?android:attr/textColorSecondary"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.1" />
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvComments"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:nestedScrollingEnabled="false"
-                tools:listitem="@layout/item_comment" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etComment"
+                <TextView
+                    android:id="@+id/tvTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/comment_hint"
-                    android:inputType="textMultiLine"
-                    android:minLines="1" />
+                    android:layout_marginTop="8dp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
 
-            </com.google.android.material.textfield.TextInputLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnPostComment"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:text="@string/btn_post_comment"
-                app:rippleColor="@color/primary_green_light" />
+                    <TextView
+                        android:id="@+id/tvCategory"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_status_chip"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="6dp"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSupport"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="32dp"
-                android:layout_marginBottom="48dp"
-                android:text="@string/support_button_label"
-                android:textColor="@android:color/white"
-                app:backgroundTint="@color/primary_green"
-                app:icon="@drawable/people_support_icon"
-                app:iconTint="@android:color/white" />
+                    <TextView
+                        android:id="@+id/tvPriority"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:textColor="@color/primary_red"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
 
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_location_vector"
+                        app:tint="?android:attr/textColorSecondary" />
+
+                    <TextView
+                        android:id="@+id/tvLocation"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:textSize="16sp" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="24dp"
+                    android:background="@color/neutral_200" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/section_description"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
+
+                <TextView
+                    android:id="@+id/tvDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="16sp"
+                    android:lineSpacingExtra="4dp" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvPhotos"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:listitem="@layout/item_photo" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="24dp"
+                    android:background="@color/neutral_200" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/section_timeline"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvTimeline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:nestedScrollingEnabled="false" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="24dp"
+                    android:background="@color/neutral_200" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/section_comments"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvComments"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:nestedScrollingEnabled="false"
+                    tools:listitem="@layout/item_comment" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etComment"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/comment_hint"
+                        android:inputType="textMultiLine"
+                        android:minLines="1" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPostComment"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:text="@string/btn_post_comment"
+                    app:rippleColor="@color/primary_green_light" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSupport"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="32dp"
+                    android:layout_marginBottom="48dp"
+                    android:text="@string/support_button_label"
+                    android:textColor="@android:color/white"
+                    app:backgroundTint="@color/primary_green"
+                    app:icon="@drawable/people_support_icon"
+                    app:iconTint="@android:color/white" />
+
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </FrameLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

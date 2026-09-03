@@ -14,9 +14,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel;
 @HiltViewModel
 public class MyComplaintsViewModel extends ViewModel {
 
+    public enum Tab {
+        ACTIVE, RESOLVED, SUPPORTED
+    }
+
     private final ComplaintRepository repository;
     private final SessionManager sessionManager;
-    private final MutableLiveData<Boolean> showResolved = new MutableLiveData<>(false);
+    private final MutableLiveData<Tab> selectedTab = new MutableLiveData<>(Tab.ACTIVE);
     private final LiveData<List<Complaint>> complaints;
     private final MutableLiveData<Boolean> _loading = new MutableLiveData<>(false);
     public LiveData<Boolean> getLoading() { return _loading; }
@@ -25,13 +29,17 @@ public class MyComplaintsViewModel extends ViewModel {
     public MyComplaintsViewModel(ComplaintRepository repository, SessionManager sessionManager) {
         this.repository = repository;
         this.sessionManager = sessionManager;
-        this.complaints = Transformations.switchMap(showResolved, resolved -> {
+        this.complaints = Transformations.switchMap(selectedTab, tab -> {
             _loading.setValue(true);
             String email = sessionManager.getUserEmail();
-            if (resolved) {
-                return repository.getMyResolvedComplaints(email);
-            } else {
-                return repository.getMyActiveComplaints(email);
+            switch (tab) {
+                case RESOLVED:
+                    return repository.getMyResolvedComplaints(email);
+                case SUPPORTED:
+                    return repository.getMySupportedComplaints(email);
+                case ACTIVE:
+                default:
+                    return repository.getMyActiveComplaints(email);
             }
         });
     }
@@ -40,8 +48,12 @@ public class MyComplaintsViewModel extends ViewModel {
         return complaints;
     }
 
-    public void setShowResolved(boolean resolved) {
-        showResolved.setValue(resolved);
+    public void setSelectedTab(Tab tab) {
+        selectedTab.setValue(tab);
+    }
+
+    public void retrySync(String uuid) {
+        repository.retryComplaint(uuid);
     }
 
     public void setLoading(boolean loading) {

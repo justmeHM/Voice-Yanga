@@ -4,32 +4,35 @@
     android:layout_height="wrap_content"
     android:gravity="center"
     android:orientation="vertical"
-    android:padding="32dp"
-    android:background="@android:color/white">
+    android:padding="48dp"
+    android:background="@drawable/bg_dialog_white"
+    android:elevation="8dp">
 
     <ImageView
-        android:id="@+id/lottieSuccess"
+        android:id="@+id/ivSuccessIcon"
         android:layout_width="120dp"
         android:layout_height="120dp"
-        android:src="@drawable/vote_icon"
+        android:src="@mipmap/ic_voice_yanga"
         android:contentDescription="@null" />
 
     <TextView
+        android:id="@+id/tvSuccessTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Report Submitted!"
+        android:layout_marginTop="32dp"
+        android:text="Report Submitted"
         android:textColor="@color/primary_green"
-        android:textSize="20sp"
+        android:textSize="24sp"
         android:textStyle="bold" />
 
     <TextView
+        android:id="@+id/tvSuccessMessage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="16dp"
         android:gravity="center"
-        android:text="Thank you for making Yanga better."
-        android:textColor="?android:attr/textColorSecondary"
-        android:textSize="14sp" />
+        android:text="Thank you for helping build a better community."
+        android:textColor="@color/neutral_600"
+        android:textSize="16sp" />
 
 </LinearLayout>

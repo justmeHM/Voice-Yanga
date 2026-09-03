@@ -89,7 +89,17 @@ public class MyComplaintsActivity extends AppCompatActivity {
         binding.tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
-                viewModel.setShowResolved(tab.getPosition() == 1);
+                switch (tab.getPosition()) {
+                    case 0:
+                        viewModel.setSelectedTab(MyComplaintsViewModel.Tab.ACTIVE);
+                        break;
+                    case 1:
+                        viewModel.setSelectedTab(MyComplaintsViewModel.Tab.RESOLVED);
+                        break;
+                    case 2:
+                        viewModel.setSelectedTab(MyComplaintsViewModel.Tab.SUPPORTED);
+                        break;
+                }
             }
 
             @Override
@@ -103,10 +113,23 @@ public class MyComplaintsActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         adapter = new ComplaintAdapter(new ComplaintAdapter.OnComplaintClickListener() {
             @Override
-            public void onComplaintClick(Complaint complaint) {
+            public void onComplaintClick(Complaint complaint, View sharedElement) {
                 Intent intent = new Intent(MyComplaintsActivity.this, ComplaintDetailActivity.class);
                 intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaint.getClientUuid());
-                startActivity(intent);
+                
+                if (sharedElement != null && sharedElement.getVisibility() == View.VISIBLE) {
+                    androidx.core.app.ActivityOptionsCompat options = androidx.core.app.ActivityOptionsCompat.makeSceneTransitionAnimation(
+                            MyComplaintsActivity.this, sharedElement, sharedElement.getTransitionName());
+                    startActivity(intent, options.toBundle());
+                } else {
+                    startActivity(intent);
+                }
+            }
+
+            @Override
+            public void onRetryClick(Complaint complaint) {
+                viewModel.retrySync(complaint.getClientUuid());
+                android.widget.Toast.makeText(MyComplaintsActivity.this, "Retrying sync...", android.widget.Toast.LENGTH_SHORT).show();
             }
         }, sessionManager.getUserEmail());
         binding.rvMyComplaints.setLayoutManager(new LinearLayoutManager(this));

@@ -32,7 +32,7 @@ public class NearbyIssuesViewModel extends ViewModel {
 
     public LiveData<List<Complaint>> getNearbyComplaints() {
         return Transformations.switchMap(userLocation, location -> 
-            Transformations.map(repository.getCommunityComplaints(sessionManager.getUserEmail()), complaints -> {
+            Transformations.map(repository.getCommunityComplaints(null, null, null, null, null, null), complaints -> {
                 if (location == null || complaints == null) return complaints;
                 
                 final float MAX_DISTANCE_METERS = 20000; // 20km
@@ -59,6 +59,10 @@ public class NearbyIssuesViewModel extends ViewModel {
 
     public void supportComplaint(String uuid) {
         repository.supportComplaint(uuid);
+    }
+
+    public void retryComplaint(String uuid) {
+        repository.retryComplaint(uuid);
     }
 
     public void retrySync() {

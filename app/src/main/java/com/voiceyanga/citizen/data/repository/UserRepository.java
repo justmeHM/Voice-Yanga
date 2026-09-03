@@ -39,4 +39,8 @@ public class UserRepository {
             }
         });
     }
+
+    public void getProfile(Callback<UserDto> callback) {
+        apiService.getProfile().enqueue(callback);
+    }
 }

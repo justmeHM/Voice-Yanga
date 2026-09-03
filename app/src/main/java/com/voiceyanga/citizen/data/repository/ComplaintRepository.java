@@ -70,8 +70,23 @@ public class ComplaintRepository {
                     List<ComplaintDto> serverComplaints = response.body().getData();
                     if (serverComplaints != null) {
                         for (ComplaintDto dto : serverComplaints) {
+                            String targetUuid = dto.getClientUuid();
+                            
+                            // Reconciliation: If server didn't return clientUuid, try to find the local record by title/author
+                            if (targetUuid == null || targetUuid.isEmpty()) {
+                                Complaint localMatch = complaintDao.findLocalPendingMatch(dto.getTitle(), dto.getAuthorEmail());
+                                if (localMatch != null) {
+                                    targetUuid = localMatch.getClientUuid();
+                                } else {
+                                    targetUuid = dto.getServerId();
+                                }
+                            }
+
+                            // First, try to find if we have local photos for this server ID
+                            String localPreview = complaintDao.getFirstPhotoUri(targetUuid);
+
                             Complaint serverComplaint = new Complaint(
-                                    dto.getClientUuid() != null ? dto.getClientUuid() : dto.getServerId(),
+                                    targetUuid,
                                     dto.getTitle(),
                                     dto.getDescription(),
                                     dto.getCategory() != null ? dto.getCategory().getName() : "General",
@@ -79,20 +94,18 @@ public class ComplaintRepository {
                                     "SYNCED",
                                     dto.getCreatedAt()
                             );
-                            serverComplaint.setServerId(dto.getServerId());
-                            serverComplaint.setReferenceCode(dto.getReferenceCode());
-                            serverComplaint.setStatus(dto.getStatus());
-                            serverComplaint.setPriority(dto.getPriority());
-                            serverComplaint.setSupportCount(dto.getSupportCount());
-                            serverComplaint.setUpdatedAt(dto.getUpdatedAt());
-                            serverComplaint.setLatitude(dto.getLatitude());
-                            serverComplaint.setLongitude(dto.getLongitude());
-                            serverComplaint.setAuthorEmail(dto.getAuthorEmail());
                             
-                            if (dto.getCategory() != null) {
-                                serverComplaint.setCategoryId(dto.getCategory().getId());
+                            // POPULATE PHOTO PREVIEW
+                            if (dto.getPhotos() != null && !dto.getPhotos().isEmpty()) {
+                                serverComplaint.setFirstPhotoUri(dto.getPhotos().get(0));
+                            } else {
+                                serverComplaint.setFirstPhotoUri(localPreview);
                             }
+                            
                             if (dto.getLocation() != null) {
+                                serverComplaint.setWard(dto.getLocation().getWard());
+                                serverComplaint.setDistrict(dto.getLocation().getDistrict());
+                                serverComplaint.setProvince(dto.getLocation().getProvince());
                                 serverComplaint.setLocationId(dto.getLocation().getId());
                             }
 
@@ -101,6 +114,11 @@ public class ComplaintRepository {
                             if (existing != null) {
                                 serverComplaint.setSupportedByMe(existing.isSupportedByMe());
                                 serverComplaint.setCommentCount(existing.getCommentCount());
+                                
+                                // FAILSAFE: If server has no photos, keep local cached photo
+                                if (serverComplaint.getFirstPhotoUri() == null || serverComplaint.getFirstPhotoUri().isEmpty()) {
+                                    serverComplaint.setFirstPhotoUri(existing.getFirstPhotoUri());
+                                }
                             }
                             
                             complaintDao.insert(serverComplaint);
@@ -124,9 +142,9 @@ public class ComplaintRepository {
     public void refreshComments(String serverId, String complaintUuid) {
         executorService.execute(() -> {
             try {
-                Response<List<CommentResponse>> response = apiService.getComments(serverId).execute();
-                if (response.isSuccessful() && response.body() != null) {
-                    for (CommentResponse dto : response.body()) {
+                Response<BaseResponse<List<CommentResponse>>> response = apiService.getComments(serverId).execute();
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    for (CommentResponse dto : response.body().getData()) {
                         // RECONCILIATION: Delete local duplicate if it exists
                         complaintDao.deleteLocalComment(complaintUuid, dto.getAuthorName(), dto.getMessage());
                         
@@ -179,6 +197,10 @@ public class ComplaintRepository {
         return complaintDao.getMyResolvedComplaints(email);
     }
 
+    public LiveData<List<Complaint>> getMySupportedComplaints(String email) {
+        return complaintDao.getMySupportedComplaints(email);
+    }
+
     public LiveData<Complaint> getLatestMyComplaint(String email) {
         return complaintDao.getLatestMyComplaint(email);
     }
@@ -191,19 +213,26 @@ public class ComplaintRepository {
         return complaintDao.getSupportedCount();
     }
 
-    public LiveData<List<Complaint>> getCommunityComplaints(String email) {
-        return complaintDao.getCommunityComplaints(email);
+    public LiveData<List<Complaint>> getOutboxComplaints() {
+        return complaintDao.getOutboxComplaints();
     }
 
-    public LiveData<List<Complaint>> getCommunityComplaints(String email, String status, String category, String query) {
+    public LiveData<List<Complaint>> getCommunityComplaints(String email) {
+        return getCommunityComplaints(null, null, null, null, null, null);
+    }
+
+    public LiveData<List<Complaint>> getCommunityComplaints(String status, String category, String query, String ward, String district, String province) {
         // Refresh from server too
         Map<String, String> filters = new HashMap<>();
         if (status != null) filters.put("status", status);
         if (category != null) filters.put("category", category);
         if (query != null && !query.isEmpty()) filters.put("search", query);
+        if (ward != null) filters.put("ward", ward);
+        if (district != null) filters.put("district", district);
+        if (province != null) filters.put("province", province);
         refreshComplaints(filters);
 
-        return complaintDao.getFilteredCommunityComplaints(email, status, category, query);
+        return complaintDao.getFilteredCommunityComplaints(status, category, query, ward, district, province);
     }
 
     public LiveData<Complaint> getComplaint(String uuid) {
@@ -243,6 +272,11 @@ public class ComplaintRepository {
     public void saveComplaint(Complaint complaint, List<String> photoUris, Map<String, String> photoLabels) {
         executorService.execute(() -> {
             complaint.setAuthorEmail(sessionManager.getUserEmail());
+            
+            if (photoUris != null && !photoUris.isEmpty()) {
+                complaint.setFirstPhotoUri(photoUris.get(0));
+            }
+            
             complaintDao.insert(complaint);
             
             if (photoUris != null) {
@@ -305,6 +339,17 @@ public class ComplaintRepository {
 
     public Complaint getDraftSync() {
         return complaintDao.getDraft();
+    }
+
+    public void retryComplaint(String uuid) {
+        executorService.execute(() -> {
+            Complaint complaint = complaintDao.getComplaintByUuid(uuid);
+            if (complaint != null) {
+                complaint.setSyncStatus("PENDING");
+                complaintDao.update(complaint);
+                scheduleSync();
+            }
+        });
     }
 
     public void deleteDraft() {

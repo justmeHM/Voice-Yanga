@@ -31,12 +31,17 @@
             <com.google.android.material.tabs.TabItem
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Active" />
+                android:text="@string/tab_active" />
 
             <com.google.android.material.tabs.TabItem
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Resolved" />
+                android:text="@string/tab_resolved" />
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/tab_supported" />
         </com.google.android.material.tabs.TabLayout>
 
         <!-- Personal Impact Dashboard -->

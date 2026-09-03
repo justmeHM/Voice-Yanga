@@ -6,8 +6,12 @@ import com.voiceyanga.citizen.data.remote.dto.CategoryDto;
 import com.voiceyanga.citizen.data.remote.dto.LocationDto;
 import com.voiceyanga.citizen.data.repository.ComplaintRepository;
 import com.voiceyanga.citizen.domain.repository.ReferenceRepository;
+import com.voiceyanga.citizen.core.audio.VoiceNoteRecorder;
+import com.voiceyanga.citizen.core.audio.VoiceNotePlayer;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import javax.inject.Inject;
 import android.app.Application;
@@ -19,8 +23,23 @@ import dagger.hilt.android.lifecycle.HiltViewModel;
 @HiltViewModel
 public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
 
+    public static class VoiceNoteState {
+        public File localFile = null;
+        public boolean isRecording = false;
+        public boolean isPlaying = false;
+        public int elapsedSeconds = 0;
+        public int durationSeconds = 0;
+        public int amplitude = 0;
+        public String error = null;
+    }
+
     private final ComplaintRepository repository;
     private final ReferenceRepository referenceRepository;
+    private final VoiceNoteRecorder recorder = new VoiceNoteRecorder();
+    private final VoiceNotePlayer player = new VoiceNotePlayer();
+
+    private final MutableLiveData<VoiceNoteState> _voiceNoteState = new MutableLiveData<>(new VoiceNoteState());
+    public LiveData<VoiceNoteState> getVoiceNoteState() { return _voiceNoteState; }
 
     private final MutableLiveData<List<CategoryDto>> _categories = new MutableLiveData<>();
     public LiveData<List<CategoryDto>> getCategories() { return _categories; }
@@ -48,6 +67,12 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
 
     private final MutableLiveData<Complaint> _draft = new MutableLiveData<>();
     public LiveData<Complaint> getDraft() { return _draft; }
+    
+    private String currentClientUuid = UUID.randomUUID().toString();
+    private String lastSavedTitle = "";
+    private String lastSavedDesc = "";
+    private String lastSavedCategory = "";
+    private String lastSavedLocation = "";
 
     private final MutableLiveData<LocationDto> _mappedLocation = new MutableLiveData<>();
     public LiveData<LocationDto> getMappedLocation() { return _mappedLocation; }
@@ -73,31 +98,190 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         super(application);
         this.repository = repository;
         this.referenceRepository = referenceRepository;
+        setupVoiceNoteComponents();
         loadReferenceData();
         loadDraft();
+    }
+
+    private void setupVoiceNoteComponents() {
+        recorder.setListener(new VoiceNoteRecorder.RecorderListener() {
+            @Override
+            public void onTimerTick(int seconds) {
+                VoiceNoteState state = _voiceNoteState.getValue();
+                if (state != null) {
+                    state.elapsedSeconds = seconds;
+                    _voiceNoteState.postValue(state);
+                }
+            }
+
+            @Override
+            public void onAmplitudeUpdate(int amplitude) {
+                VoiceNoteState state = _voiceNoteState.getValue();
+                if (state != null) {
+                    state.amplitude = amplitude;
+                    _voiceNoteState.postValue(state);
+                }
+            }
+
+            @Override
+            public void onAutoStop() {
+                stopRecording();
+            }
+
+            @Override
+            public void onError(String message) {
+                VoiceNoteState state = _voiceNoteState.getValue();
+                if (state != null) {
+                    state.error = message;
+                    state.isRecording = false;
+                    _voiceNoteState.postValue(state);
+                }
+            }
+        });
+
+        player.setListener(new VoiceNotePlayer.PlayerListener() {
+            @Override
+            public void onCompletion() {
+                VoiceNoteState state = _voiceNoteState.getValue();
+                if (state != null) {
+                    state.isPlaying = false;
+                    _voiceNoteState.postValue(state);
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                VoiceNoteState state = _voiceNoteState.getValue();
+                if (state != null) {
+                    state.error = message;
+                    state.isPlaying = false;
+                    _voiceNoteState.postValue(state);
+                }
+            }
+        });
+    }
+
+    private File currentRecordingFile;
+
+    public void startRecording() {
+        File cacheDir = getApplication().getCacheDir();
+        currentRecordingFile = new File(cacheDir, "voice_note_" + UUID.randomUUID() + ".m4a");
+        
+        VoiceNoteState state = _voiceNoteState.getValue();
+        if (state != null) {
+            state.isRecording = true;
+            state.elapsedSeconds = 0;
+            state.localFile = null;
+            state.error = null;
+            _voiceNoteState.setValue(state);
+        }
+        
+        recorder.start(currentRecordingFile);
+    }
+
+    public void stopRecording() {
+        recorder.stop();
+        VoiceNoteState state = _voiceNoteState.getValue();
+        if (state != null) {
+            state.isRecording = false;
+            state.durationSeconds = state.elapsedSeconds;
+            
+            // Check if recording is long enough (min 2s)
+            if (state.elapsedSeconds < 2) {
+                state.error = getApplication().getString(R.string.error_recording_too_short);
+                state.localFile = null;
+                if (currentRecordingFile != null && currentRecordingFile.exists()) {
+                    currentRecordingFile.delete();
+                }
+            } else {
+                state.localFile = currentRecordingFile;
+            }
+            _voiceNoteState.postValue(state);
+        }
+    }
+
+    public void playRecording() {
+        VoiceNoteState state = _voiceNoteState.getValue();
+        if (state != null && state.localFile != null && state.localFile.exists()) {
+            state.isPlaying = true;
+            state.error = null;
+            _voiceNoteState.setValue(state);
+            player.play(state.localFile.getAbsolutePath());
+        } else if (state != null) {
+            state.error = getApplication().getString(R.string.error_file_not_found);
+            _voiceNoteState.setValue(state);
+        }
+    }
+
+    public void pauseRecording() {
+        VoiceNoteState state = _voiceNoteState.getValue();
+        if (state != null) {
+            state.isPlaying = false;
+            _voiceNoteState.setValue(state);
+            player.pause();
+        }
+    }
+
+    public void deleteRecording() {
+        VoiceNoteState state = _voiceNoteState.getValue();
+        if (state != null && state.localFile != null) {
+            if (state.localFile.exists()) {
+                state.localFile.delete();
+            }
+            state.localFile = null;
+            state.durationSeconds = 0;
+            state.elapsedSeconds = 0;
+            state.isPlaying = false;
+            _voiceNoteState.setValue(state);
+            player.stop();
+        }
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        recorder.release();
+        player.release();
     }
 
     private void loadDraft() {
         new Thread(() -> {
             Complaint draft = repository.getDraftSync();
             if (draft != null) {
+                currentClientUuid = draft.getClientUuid();
                 _draft.postValue(draft);
+            } else {
+                // Keep the initial random UUID
             }
         }).start();
     }
 
     public void saveDraft(String title, String description, CategoryDto category, String customCategory, LocationDto location, String addressString) {
-        String categoryName = (category != null && !category.getName().equalsIgnoreCase("Other")) 
+        String otherCategory = getApplication().getString(R.string.category_other);
+        String categoryName = (category != null && !category.getName().equalsIgnoreCase(otherCategory)) 
             ? category.getName() 
-            : (customCategory != null && !customCategory.isEmpty() ? customCategory : "Other");
+            : (customCategory != null && !customCategory.isEmpty() ? customCategory : otherCategory);
             
         String finalLocation = (addressString != null && !addressString.isEmpty()) ? addressString : 
                               (location != null ? location.getDisplayName() : null);
 
+        // Dirty check
+        if (Objects.equals(title, lastSavedTitle) && 
+            Objects.equals(description, lastSavedDesc) &&
+            Objects.equals(categoryName, lastSavedCategory) &&
+            Objects.equals(finalLocation, lastSavedLocation)) {
+            return;
+        }
+
+        lastSavedTitle = title;
+        lastSavedDesc = description;
+        lastSavedCategory = categoryName;
+        lastSavedLocation = finalLocation;
+
         Complaint draft = new Complaint(
-                UUID.randomUUID().toString(),
-                title,
-                description,
+                currentClientUuid,
+                title != null ? title : "",
+                description != null ? description : "",
                 categoryName,
                 finalLocation,
                 "DRAFT",
@@ -137,37 +321,53 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
     }
 
     public void submitComplaint(String title, String description, CategoryDto category, String customCategory, LocationDto location, String addressString, double lat, double lon) {
-        if (title.isEmpty() || description.length() < 10) {
-            _error.setValue(description.isEmpty() ? 
-                getApplication().getString(R.string.error_fill_fields) : 
-                "Description must be at least 10 characters");
+        VoiceNoteState vnState = _voiceNoteState.getValue();
+        boolean hasVoiceNote = vnState != null && vnState.localFile != null;
+        
+        if (title == null || title.trim().length() < 5) {
+            _error.setValue("Title must be at least 5 characters");
             return;
         }
 
-        String categoryName = (category != null && !category.getName().equalsIgnoreCase("Other")) 
+        if ((description == null || description.trim().length() < 10) && !hasVoiceNote) {
+            _error.setValue("Description must be at least 10 characters or include a voice note");
+            return;
+        }
+
+        List<String> photos = _selectedPhotos.getValue();
+        if (photos != null && photos.size() > 5) {
+            _error.setValue("Maximum 5 photos allowed");
+            return;
+        }
+
+        String otherCategory = getApplication().getString(R.string.category_other);
+        String categoryName = (category != null && !category.getName().equalsIgnoreCase(otherCategory)) 
             ? category.getName() 
             : (customCategory != null && !customCategory.isEmpty() ? customCategory : null);
             
         if (category == null && (customCategory == null || customCategory.isEmpty())) {
-            _error.setValue("Please select a category or specify one under 'Other'");
+            _error.setValue(getApplication().getString(R.string.error_select_problem_type));
             return;
         }
         
-        if (category != null && category.getName().equalsIgnoreCase("Other") && (customCategory == null || customCategory.isEmpty())) {
-             _error.setValue("Please specify the problem type for 'Other'");
+        if (category != null && category.getName().equalsIgnoreCase(otherCategory) && (customCategory == null || customCategory.isEmpty())) {
+             _error.setValue(getApplication().getString(R.string.error_specify_other));
              return;
         }
 
         _loading.setValue(true);
 
-        String finalLocation = (addressString != null && !addressString.isEmpty()) ? addressString : 
-                              (location != null ? location.getDisplayName() : "Lusaka");
+        String finalLocation = (addressString != null && !addressString.trim().isEmpty()) ? addressString : 
+                              (location != null ? location.getDisplayName() : getApplication().getString(R.string.default_location));
+        
+        // Remove common numeric debris if found at the start of string
+        finalLocation = finalLocation.replaceAll("^[A-Z0-9]{4}\\+[A-Z0-9]{2,3}\\s*,*\\s*", "");
 
         Complaint complaint = new Complaint(
-                UUID.randomUUID().toString(),
+                currentClientUuid,
                 title,
-                description,
-                categoryName != null ? categoryName : "General",
+                description != null ? description : "",
+                categoryName != null ? categoryName : getApplication().getString(R.string.default_category),
                 finalLocation,
                 "PENDING",
                 System.currentTimeMillis()
@@ -175,27 +375,57 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         complaint.setLatitude(lat);
         complaint.setLongitude(lon);
         
-        if (category != null && !category.getName().equalsIgnoreCase("Other")) {
+        if (category != null && !category.getName().equalsIgnoreCase(otherCategory)) {
             complaint.setCategoryId(category.getId());
         }
+
+        if (hasVoiceNote) {
+            complaint.setVoiceNoteLocalPath(vnState.localFile.getAbsolutePath());
+            complaint.setVoiceNoteDuration(vnState.durationSeconds);
+        }
         
+        repository.deleteDraft(); // Clear any existing draft before promoting
         repository.saveComplaint(complaint, _selectedPhotos.getValue(), photoLabels);
         
-        // Simulate a slight delay for UI feedback
-        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-            _loading.setValue(false);
-            _submissionSuccess.setValue(true);
-        }, 800);
+        // Immediate feedback [UX-FIX]
+        _loading.setValue(false);
+        _submissionSuccess.setValue(true);
         
         // Clear mapped location after success
         _mappedLocation.setValue(null);
     }
 
-    public void addPhoto(String uri) {
+    public void addPhoto(String uriString) {
         List<String> current = _selectedPhotos.getValue();
         if (current != null && current.size() < 5) {
-            current.add(uri);
-            _selectedPhotos.setValue(current);
+            try {
+                android.net.Uri uri = android.net.Uri.parse(uriString);
+                if (uriString.startsWith("content://")) {
+                    // Copy to internal storage to ensure permanent access for sync and sharing
+                    java.io.File storageDir = new java.io.File(getApplication().getFilesDir(), "photos");
+                    if (!storageDir.exists()) storageDir.mkdirs();
+                    
+                    java.io.File localFile = new java.io.File(storageDir, "IMG_" + UUID.randomUUID() + ".jpg");
+                    java.io.InputStream is = getApplication().getContentResolver().openInputStream(uri);
+                    java.io.FileOutputStream os = new java.io.FileOutputStream(localFile);
+                    
+                    byte[] buffer = new byte[8192];
+                    int read;
+                    while ((read = is.read(buffer)) != -1) {
+                        os.write(buffer, 0, read);
+                    }
+                    is.close();
+                    os.close();
+                    
+                    current.add(localFile.getAbsolutePath());
+                } else {
+                    current.add(uriString);
+                }
+                _selectedPhotos.setValue(current);
+            } catch (java.io.IOException e) {
+                android.util.Log.e("ComplaintVM", "Failed to copy photo", e);
+                _error.setValue("Failed to process photo selection.");
+            }
         } else {
             _error.setValue(getApplication().getString(R.string.error_max_photos));
         }

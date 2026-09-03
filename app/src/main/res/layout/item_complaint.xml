@@ -4,68 +4,66 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="8dp"
     app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
-    app:strokeColor="?attr/colorOutline"
+    app:cardElevation="3dp"
+    app:strokeColor="@color/neutral_200"
     app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:background="?attr/colorSurface">
 
-        <TextView
-            android:id="@+id/tvCategory"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="?android:attr/textColorSecondary"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.1" />
-
+        <!-- Header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="8dp">
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="8dp">
 
-            <TextView
-                android:id="@+id/tvTitle"
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivUserAvatar"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@color/neutral_100"
+                android:padding="8dp"
+                android:src="@drawable/profile"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                app:tint="@color/primary_green" />
+
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:textColor="?android:attr/textColorPrimary"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/tvTime"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:textColor="?android:attr/textColorSecondary"
-                android:textSize="12sp"
-                tools:text="2h ago" />
+                <TextView
+                    android:id="@+id/tvTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    tools:text="Severe Potholes on Great East Road" />
 
-        </LinearLayout>
+                <TextView
+                    android:id="@+id/tvHeaderSub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="11sp"
+                    tools:text="ROADS • 2 hours ago • Lusaka Central" />
 
-        <TextView
-            android:id="@+id/tvLocation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textColor="?android:attr/textColorSecondary"
-            android:textSize="14sp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tvStatus"
@@ -73,10 +71,107 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_status_chip"
                 android:paddingHorizontal="8dp"
-                android:paddingVertical="4dp"
+                android:paddingVertical="3dp"
                 android:textColor="?attr/colorPrimary"
-                android:textSize="12sp"
-                android:textStyle="bold" />
+                android:textSize="11sp"
+                android:textStyle="bold"
+                tools:text="SUBMITTED" />
+
+            <TextView
+                android:id="@+id/tvUserBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_status_chip"
+                android:backgroundTint="@color/primary_green_light"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp"
+                android:textColor="@color/primary_green"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:text="YOU"
+                tools:visibility="visible" />
+
+        </LinearLayout>
+
+        <!-- Description -->
+        <TextView
+            android:id="@+id/tvDescriptionSnippet"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="12dp"
+            android:paddingBottom="10dp"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="15sp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            tools:text="The road has become completely impassable for small cars after the heavy rains." />
+
+        <!-- Media Section (Large Image) -->
+        <FrameLayout
+            android:id="@+id/flPhotoContainer"
+            android:layout_width="match_parent"
+            android:layout_height="280dp"
+            android:background="@color/neutral_100"
+            android:visibility="visible">
+
+            <ImageView
+                android:id="@+id/ivComplaintPreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@color/neutral_200"
+                android:contentDescription="Complaint photo" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_gravity="bottom"
+                android:background="@drawable/bg_gradient_bottom" />
+
+            <TextView
+                android:id="@+id/tvPhotoCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_margin="16dp"
+                android:background="@drawable/bg_status_chip"
+                android:backgroundTint="#CC000000"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:textColor="@android:color/white"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:text="+2 Photos"
+                tools:visibility="visible" />
+
+        </FrameLayout>
+
+        <!-- Stats Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="14dp">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/people_support_icon"
+                app:tint="@color/primary_green" />
+
+            <TextView
+                android:id="@+id/tvSupportCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textSize="14sp"
+                tools:text="24 supports" />
 
             <View
                 android:layout_width="0dp"
@@ -84,28 +179,86 @@
                 android:layout_weight="1" />
 
             <TextView
-                android:id="@+id/tvSyncStatus"
+                android:id="@+id/tvCommentCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="?android:attr/textColorSecondary"
-                android:textSize="11sp" />
+                android:textSize="14sp"
+                tools:text="12 comments" />
 
         </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSupport"
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="16dp"
+            android:background="@color/neutral_200" />
+
+        <!-- Quick Actions -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:orientation="horizontal"
+            android:weightSum="3"
+            android:paddingHorizontal="4dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSupport"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:textColor="@color/neutral_600"
+                android:contentDescription="@string/action_support"
+                app:icon="@drawable/people_support_icon"
+                app:iconGravity="textStart"
+                app:iconSize="24dp"
+                app:iconTint="@color/neutral_600"
+                app:rippleColor="@color/primary_green_light"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnComment"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:textColor="@color/neutral_600"
+                android:contentDescription="@string/action_comment"
+                app:icon="@drawable/ic_comment_vector"
+                app:iconGravity="textStart"
+                app:iconSize="24dp"
+                app:iconTint="@color/neutral_600"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnShare"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:textColor="@color/neutral_600"
+                android:contentDescription="@string/action_share"
+                app:icon="@android:drawable/ic_menu_share"
+                app:iconGravity="textStart"
+                app:iconSize="24dp"
+                app:iconTint="@color/neutral_600"
+                android:insetTop="0dp"
+                android:insetBottom="0dp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvSyncStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/support_button_label"
-            android:textSize="13sp"
-            app:icon="@drawable/people_support_icon"
-            app:iconSize="18dp"
-            app:backgroundTint="@color/primary_green"
-            android:textColor="@android:color/white"
-            app:iconTint="@android:color/white"
-            android:paddingVertical="4dp"
-            app:cornerRadius="8dp" />
+            android:gravity="center"
+            android:paddingBottom="10dp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="10sp"
+            tools:text="REF-12345" />
 
     </LinearLayout>
 

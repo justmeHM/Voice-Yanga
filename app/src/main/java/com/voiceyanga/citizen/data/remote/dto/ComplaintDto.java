@@ -48,6 +48,9 @@ public class ComplaintDto {
     @SerializedName("authorEmail")
     private String authorEmail;
 
+    @SerializedName("photos")
+    private java.util.List<String> photos;
+
     public String getClientUuid() { return clientUuid; }
     public String getServerId() { return serverId; }
     public String getReferenceCode() { return referenceCode; }
@@ -63,4 +66,5 @@ public class ComplaintDto {
     public double getLatitude() { return latitude; }
     public double getLongitude() { return longitude; }
     public String getAuthorEmail() { return authorEmail; }
+    public java.util.List<String> getPhotos() { return photos; }
 }

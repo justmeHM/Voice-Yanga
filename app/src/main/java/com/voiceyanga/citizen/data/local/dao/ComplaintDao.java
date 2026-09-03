@@ -25,11 +25,14 @@ public interface ComplaintDao {
     @Query("SELECT * FROM complaints ORDER BY createdAt DESC")
     LiveData<List<Complaint>> getAllComplaints();
 
-    @Query("SELECT * FROM complaints WHERE (authorEmail = :email OR supportedByMe = 1) AND status != 'RESOLVED' ORDER BY createdAt DESC")
+    @Query("SELECT * FROM complaints WHERE authorEmail = :email AND status != 'RESOLVED' ORDER BY createdAt DESC")
     LiveData<List<Complaint>> getMyActiveComplaints(String email);
 
-    @Query("SELECT * FROM complaints WHERE (authorEmail = :email OR supportedByMe = 1) AND status = 'RESOLVED' ORDER BY createdAt DESC")
+    @Query("SELECT * FROM complaints WHERE authorEmail = :email AND status = 'RESOLVED' ORDER BY createdAt DESC")
     LiveData<List<Complaint>> getMyResolvedComplaints(String email);
+
+    @Query("SELECT * FROM complaints WHERE authorEmail != :email AND supportedByMe = 1 ORDER BY createdAt DESC")
+    LiveData<List<Complaint>> getMySupportedComplaints(String email);
 
     @Query("SELECT * FROM complaints WHERE authorEmail = :email ORDER BY createdAt DESC LIMIT 1")
     LiveData<Complaint> getLatestMyComplaint(String email);
@@ -46,15 +49,24 @@ public interface ComplaintDao {
     @Query("SELECT COUNT(*) FROM complaints WHERE supportedByMe = 1")
     LiveData<Integer> getSupportedCount();
 
-    @Query("SELECT * FROM complaints WHERE authorEmail != :email ORDER BY createdAt DESC")
+    @Query("SELECT * FROM complaints WHERE authorEmail != :email AND syncStatus = 'SYNCED' ORDER BY createdAt DESC")
     LiveData<List<Complaint>> getCommunityComplaints(String email);
 
-    @Query("SELECT * FROM complaints WHERE authorEmail != :email " +
+    @Query("SELECT * FROM complaints WHERE " +
+           "syncStatus = 'SYNCED' " +
            "AND (:status IS NULL OR status = :status) " +
            "AND (:category IS NULL OR category = :category) " +
-           "AND (:query IS NULL OR title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%') " +
+           "AND (:query IS NULL OR title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' OR location LIKE '%' || :query || '%') " +
+           "AND (" +
+           "   (:ward IS NULL OR ward = '' OR location LIKE '%' || :ward || '%') " +
+           "   OR (:district IS NULL OR district = '' OR location LIKE '%' || :district || '%') " +
+           "   OR (:province IS NULL OR province = '' OR location LIKE '%' || :province || '%')" +
+           ") " +
            "ORDER BY createdAt DESC")
-    LiveData<List<Complaint>> getFilteredCommunityComplaints(String email, String status, String category, String query);
+    LiveData<List<Complaint>> getFilteredCommunityComplaints(String status, String category, String query, String ward, String district, String province);
+
+    @Query("SELECT * FROM complaints WHERE syncStatus IN ('DRAFT', 'PENDING', 'FAILED') ORDER BY createdAt DESC")
+    LiveData<List<Complaint>> getOutboxComplaints();
 
     @Query("SELECT * FROM complaints WHERE syncStatus = 'PENDING'")
     List<Complaint> getPendingComplaints();
@@ -64,6 +76,12 @@ public interface ComplaintDao {
 
     @Query("SELECT * FROM complaints WHERE clientUuid = :uuid")
     LiveData<Complaint> getComplaintByUuidLiveData(String uuid);
+
+    @Query("SELECT * FROM complaints WHERE title = :title AND authorEmail = :email AND syncStatus != 'SYNCED' LIMIT 1")
+    Complaint findLocalPendingMatch(String title, String email);
+
+    @Query("SELECT photoUri FROM complaint_photos WHERE complaintUuid = :complaintUuid LIMIT 1")
+    String getFirstPhotoUri(String complaintUuid);
 
     @Query("SELECT * FROM complaints WHERE status = 'RESOLVED' ORDER BY updatedAt DESC")
     LiveData<List<Complaint>> getResolvedComplaints();

@@ -37,81 +37,352 @@
             android:orientation="vertical"
             android:padding="24dp">
 
+            <!-- System Status -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_status_chip"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:gravity="center_vertical">
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/bg_status_chip"
+                    app:backgroundTint="@color/primary_green" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/support_status_online"
+                    android:textColor="@color/primary_green"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="160dp"
+                android:layout_marginTop="24dp"
+                android:src="@drawable/support"
+                android:scaleType="centerInside"
+                android:contentDescription="@string/menu_help" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
                 android:text="@string/support_contact_label"
-                android:textColor="@color/primary_green"
-                android:textSize="24sp"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="22sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="8dp"
                 android:text="@string/support_description"
-                android:textColor="?attr/colorOnSurface"
-                android:textSize="16sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="14sp"
                 android:lineSpacingExtra="4dp" />
 
+            <!-- Contact Cards -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:orientation="vertical">
+
+                <!-- Email Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="?attr/colorOutline"
+                    app:strokeWidth="1dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:rippleColor="@color/primary_green_light">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="20dp"
+                        android:gravity="center_vertical">
+                        <ImageView
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:src="@drawable/ic_mail"
+                            app:tint="@color/primary_green"
+                            android:background="@drawable/bg_status_chip"
+                            android:padding="8dp" />
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="16dp"
+                            android:orientation="vertical">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/label_email"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:textColor="?attr/colorOnSurfaceVariant" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/support_email"
+                                android:textSize="15sp"
+                                android:textColor="?attr/colorOnSurface" />
+                        </LinearLayout>
+                        <com.google.android.material.button.MaterialButton
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:text="@string/btn_send_email"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Phone Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardPhone"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="?attr/colorOutline"
+                    app:strokeWidth="1dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:rippleColor="@color/primary_green_light">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="20dp"
+                        android:gravity="center_vertical">
+                        <ImageView
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:src="@drawable/ic_call"
+                            app:tint="@color/primary_green"
+                            android:background="@drawable/bg_status_chip"
+                            android:padding="8dp" />
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="16dp"
+                            android:orientation="vertical">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/label_phone"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:textColor="?attr/colorOnSurfaceVariant" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/support_phone"
+                                android:textSize="15sp"
+                                android:textColor="?attr/colorOnSurface" />
+                        </LinearLayout>
+                        <com.google.android.material.button.MaterialButton
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:text="@string/btn_call_now"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- Community Card -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardCommunity"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:strokeColor="?attr/colorOutline"
-                app:strokeWidth="1dp">
-
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/primary_green">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
-
+                    android:padding="24dp">
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/label_email"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="12sp"
-                        android:letterSpacing="0.1"
+                        android:text="@string/support_community_title"
+                        android:textColor="@color/white"
+                        android:textSize="18sp"
                         android:textStyle="bold" />
-
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/support_email"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/support_community_desc"
+                        android:textColor="@color/white"
+                        android:alpha="0.9"
+                        android:textSize="14sp" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnJoinWhatsApp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/btn_join_whatsapp"
                         android:textColor="@color/primary_green"
-                        android:textSize="16sp" />
+                        app:backgroundTint="@color/white"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
+            <!-- FAQ Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="40dp"
+                android:text="@string/support_faq_title"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="vertical">
+
+                <!-- FAQ 1 -->
+                <LinearLayout
+                    android:id="@+id/layoutFaq1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingVertical="12dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/faq1_q"
+                            android:textStyle="bold"
+                            android:textSize="15sp" />
+                        <ImageView
+                            android:id="@+id/ivFaqArrow1"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_chevron_down" />
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/tvFaqAnswer1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/faq1_a"
+                        android:textSize="14sp"
+                        android:visibility="gone"
+                        android:alpha="0.8" />
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginTop="16dp"
-                        android:layout_marginBottom="16dp"
+                        android:layout_marginTop="12dp"
                         android:background="?attr/colorOutline" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/label_phone"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="12sp"
-                        android:letterSpacing="0.1"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/support_phone"
-                        android:textColor="@color/primary_green"
-                        android:textSize="16sp" />
-
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+
+                <!-- FAQ 2 -->
+                <LinearLayout
+                    android:id="@+id/layoutFaq2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingVertical="12dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/faq2_q"
+                            android:textStyle="bold"
+                            android:textSize="15sp" />
+                        <ImageView
+                            android:id="@+id/ivFaqArrow2"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_chevron_down" />
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/tvFaqAnswer2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/faq2_a"
+                        android:textSize="14sp"
+                        android:visibility="gone"
+                        android:alpha="0.8" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="12dp"
+                        android:background="?attr/colorOutline" />
+                </LinearLayout>
+
+                <!-- FAQ 3 -->
+                <LinearLayout
+                    android:id="@+id/layoutFaq3"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingVertical="12dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/faq3_q"
+                            android:textStyle="bold"
+                            android:textSize="15sp" />
+                        <ImageView
+                            android:id="@+id/ivFaqArrow3"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_chevron_down" />
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/tvFaqAnswer3"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/faq3_a"
+                        android:textSize="14sp"
+                        android:visibility="gone"
+                        android:alpha="0.8" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="48dp" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

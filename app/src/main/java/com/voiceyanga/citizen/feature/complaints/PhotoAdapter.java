@@ -6,6 +6,7 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
+import com.voiceyanga.citizen.core.network.ApiConstants;
 import com.voiceyanga.citizen.databinding.ItemPhotoBinding;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,9 +18,14 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
     private final List<String> photoUris = new ArrayList<>();
     private final Map<String, String> photoLabels = new HashMap<>();
     private final OnRemoveListener listener;
+    
+    private static final String[] QUICK_LABELS = {
+            "General", "Close-up", "Wide View", "Damage Detail", "Location Marker"
+    };
 
     public interface OnRemoveListener {
         void onRemove(String uri);
+        default void onPhotoClick(String uri) {}
         default void onLabelChanged(String uri, String label) {}
     }
 
@@ -64,8 +70,13 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         }
 
         void bind(String uri) {
+            String fullUrl = uri;
+            if (uri != null && !uri.startsWith("http") && !uri.startsWith("content://") && !uri.startsWith("file://")) {
+                fullUrl = ApiConstants.API_HOST + (uri.startsWith("/") ? uri : "/" + uri);
+            }
+
             Glide.with(itemView.getContext())
-                    .load(uri)
+                    .load(fullUrl)
                     .centerCrop()
                     .into(binding.ivPhoto);
 
@@ -75,7 +86,22 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
 
             binding.getRoot().setOnClickListener(v -> {
                 if (listener != null) {
-                    String nextLabel = "General".equals(label) ? "Close-up" : "General";
+                    listener.onPhotoClick(uri);
+                }
+            });
+
+            binding.tvLabel.setOnClickListener(v -> {
+                if (listener != null) {
+                    String currentLabel = photoLabels.getOrDefault(uri, "General");
+                    String nextLabel = QUICK_LABELS[0];
+                    
+                    for (int i = 0; i < QUICK_LABELS.length; i++) {
+                        if (QUICK_LABELS[i].equals(currentLabel)) {
+                            nextLabel = QUICK_LABELS[(i + 1) % QUICK_LABELS.length];
+                            break;
+                        }
+                    }
+                    
                     photoLabels.put(uri, nextLabel);
                     listener.onLabelChanged(uri, nextLabel);
                     notifyItemChanged(getBindingAdapterPosition());

@@ -22,7 +22,8 @@ public class Complaint {
     private String priority;
     private String status;
     private int supportCount;
-    private String syncStatus; // PENDING, SYNCING, SYNCED, FAILED
+    private String syncStatus; // PENDING, SYNCING, SYNCED, FAILED, NEEDS_ACTION
+    private String syncProgress; // e.g. "Compressing Photos..."
     private String authorEmail;
     private long createdAt;
     private long updatedAt;
@@ -31,6 +32,13 @@ public class Complaint {
     private boolean supportedByMe;
     private int commentCount;
     private String assignedTo;
+    private String ward;
+    private String district;
+    private String province;
+    private String firstPhotoUri;
+    private String voiceNoteLocalPath;
+    private String voiceNoteUrl;
+    private int voiceNoteDuration;
 
     public Complaint(@NonNull String clientUuid, String title, String description, String category, String location, String syncStatus, long createdAt) {
         this.clientUuid = clientUuid;
@@ -86,6 +94,9 @@ public class Complaint {
     public String getSyncStatus() { return syncStatus; }
     public void setSyncStatus(String syncStatus) { this.syncStatus = syncStatus; }
 
+    public String getSyncProgress() { return syncProgress; }
+    public void setSyncProgress(String syncProgress) { this.syncProgress = syncProgress; }
+
     public String getAuthorEmail() { return authorEmail; }
     public void setAuthorEmail(String authorEmail) { this.authorEmail = authorEmail; }
 
@@ -109,6 +120,27 @@ public class Complaint {
 
     public String getAssignedTo() { return assignedTo; }
     public void setAssignedTo(String assignedTo) { this.assignedTo = assignedTo; }
+
+    public String getWard() { return ward; }
+    public void setWard(String ward) { this.ward = ward; }
+
+    public String getDistrict() { return district; }
+    public void setDistrict(String district) { this.district = district; }
+
+    public String getProvince() { return province; }
+    public void setProvince(String province) { this.province = province; }
+
+    public String getFirstPhotoUri() { return firstPhotoUri; }
+    public void setFirstPhotoUri(String firstPhotoUri) { this.firstPhotoUri = firstPhotoUri; }
+
+    public String getVoiceNoteLocalPath() { return voiceNoteLocalPath; }
+    public void setVoiceNoteLocalPath(String voiceNoteLocalPath) { this.voiceNoteLocalPath = voiceNoteLocalPath; }
+
+    public String getVoiceNoteUrl() { return voiceNoteUrl; }
+    public void setVoiceNoteUrl(String voiceNoteUrl) { this.voiceNoteUrl = voiceNoteUrl; }
+
+    public int getVoiceNoteDuration() { return voiceNoteDuration; }
+    public void setVoiceNoteDuration(int voiceNoteDuration) { this.voiceNoteDuration = voiceNoteDuration; }
 
     public String getCalculatedPriority() {
         int engagementScore = supportCount + (commentCount * 2); // Comments carry more weight

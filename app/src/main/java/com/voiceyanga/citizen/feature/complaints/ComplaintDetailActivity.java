@@ -81,17 +81,98 @@ public class ComplaintDetailActivity extends AppCompatActivity {
     private void shareComplaint() {
         if (currentComplaint == null) return;
         
-        String shareBody = String.format(
-            "Help me get this issue noticed! %s in %s. Ref: %s. Reported via Voice Yanga.",
-            currentComplaint.getTitle(),
-            currentComplaint.getLocation(),
-            currentComplaint.getReferenceCode() != null ? currentComplaint.getReferenceCode() : "Pending"
-        );
+        String photoUri = currentComplaint.getFirstPhotoUri();
+        String shareText = String.format("Help me get this issue noticed! %s in %s. Reported via Voice Yanga app.", 
+                currentComplaint.getTitle(), currentComplaint.getLocation());
 
+        if (photoUri != null && !photoUri.isEmpty()) {
+            if (photoUri.startsWith("http")) {
+                shareWithGlide(photoUri, shareText);
+            } else {
+                try {
+                    java.io.File cachePath = new java.io.File(getCacheDir(), "images");
+                    cachePath.mkdirs();
+                    java.io.File shareFile = new java.io.File(cachePath, "share_image_detail.png");
+                    
+                    java.io.InputStream is;
+                    if (photoUri.startsWith("content://")) {
+                        is = getContentResolver().openInputStream(android.net.Uri.parse(photoUri));
+                    } else {
+                        is = new java.io.FileInputStream(photoUri);
+                    }
+                    
+                    if (is != null) {
+                        java.io.FileOutputStream os = new java.io.FileOutputStream(shareFile);
+                        byte[] buffer = new byte[8192];
+                        int read;
+                        while ((read = is.read(buffer)) != -1) os.write(buffer, 0, read);
+                        is.close();
+                        os.close();
+                        
+                        triggerShare(shareFile, shareText);
+                    } else {
+                        shareWithGlide(photoUri, shareText);
+                    }
+                } catch (Exception e) {
+                    shareWithGlide(photoUri, shareText);
+                }
+            }
+        } else {
+            shareAsText(shareText);
+        }
+    }
+
+    private void shareWithGlide(String url, String shareText) {
+        String fullUrl = url;
+        if (!url.startsWith("http") && !url.startsWith("content://") && !url.startsWith("file://") && !url.startsWith("/")) {
+            fullUrl = com.voiceyanga.citizen.core.network.ApiConstants.API_HOST + "/" + url;
+        }
+
+        com.bumptech.glide.Glide.with(this)
+            .asBitmap()
+            .load(fullUrl)
+            .into(new com.bumptech.glide.request.target.CustomTarget<android.graphics.Bitmap>() {
+                @Override
+                public void onResourceReady(@androidx.annotation.NonNull android.graphics.Bitmap resource, @androidx.annotation.Nullable com.bumptech.glide.request.transition.Transition<? super android.graphics.Bitmap> transition) {
+                    try {
+                        java.io.File cachePath = new java.io.File(getCacheDir(), "images");
+                        cachePath.mkdirs();
+                        java.io.File imageFile = new java.io.File(cachePath, "share_image_detail.png");
+                        java.io.FileOutputStream stream = new java.io.FileOutputStream(imageFile);
+                        resource.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, stream);
+                        stream.close();
+                        triggerShare(imageFile, shareText);
+                    } catch (java.io.IOException e) {
+                        shareAsText(shareText);
+                    }
+                }
+
+                @Override
+                public void onLoadCleared(@androidx.annotation.Nullable android.graphics.drawable.Drawable placeholder) {}
+
+                @Override
+                public void onLoadFailed(@androidx.annotation.Nullable android.graphics.drawable.Drawable errorDrawable) {
+                    shareAsText(shareText);
+                }
+            });
+    }
+
+    private void triggerShare(java.io.File imageFile, String text) {
+        runOnUiThread(() -> {
+            android.net.Uri contentUri = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".provider", imageFile);
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("image/png");
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
+            shareIntent.putExtra(Intent.EXTRA_TEXT, text);
+            startActivity(Intent.createChooser(shareIntent, "Share Report"));
+        });
+    }
+
+    private void shareAsText(String text) {
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType("text/plain");
-        intent.putExtra(Intent.EXTRA_SUBJECT, "Voice Yanga Report");
-        intent.putExtra(Intent.EXTRA_TEXT, shareBody);
+        intent.putExtra(Intent.EXTRA_TEXT, text);
         startActivity(Intent.createChooser(intent, "Share via"));
     }
 
@@ -116,6 +197,10 @@ public class ComplaintDetailActivity extends AppCompatActivity {
             if (complaint != null) {
                 this.currentComplaint = complaint;
                 displayComplaint(complaint);
+                
+                // Hide shimmer once main data is loaded
+                binding.layoutShimmer.getRoot().setVisibility(View.GONE);
+                binding.scrollContent.setVisibility(View.VISIBLE);
             }
         });
 
@@ -155,14 +240,17 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         binding.tvDescription.setText(complaint.getDescription());
         
         String priority = complaint.getCalculatedPriority();
-        binding.tvPriority.setText(String.format(getString(R.string.priority_format), priority));
-        
-        if ("CRITICAL".equals(priority)) {
-            binding.tvPriority.setTextColor(ContextCompat.getColor(this, R.color.primary_red));
-        } else if ("HIGH".equals(priority)) {
-            binding.tvPriority.setTextColor(ContextCompat.getColor(this, R.color.status_pending_text));
+        if ("HIGH".equals(priority) || "CRITICAL".equals(priority)) {
+            binding.tvPriority.setVisibility(View.VISIBLE);
+            binding.tvPriority.setText(String.format(getString(R.string.priority_format), priority));
+            
+            if ("CRITICAL".equals(priority)) {
+                binding.tvPriority.setTextColor(ContextCompat.getColor(this, R.color.primary_red));
+            } else {
+                binding.tvPriority.setTextColor(ContextCompat.getColor(this, R.color.status_pending_text));
+            }
         } else {
-            binding.tvPriority.setTextColor(ContextCompat.getColor(this, R.color.primary_green));
+            binding.tvPriority.setVisibility(View.GONE);
         }
         
         binding.btnSupport.setText(String.format(Locale.getDefault(), getString(R.string.support_count_format), complaint.getSupportCount()));

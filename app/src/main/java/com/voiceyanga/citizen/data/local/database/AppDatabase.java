@@ -13,10 +13,42 @@ import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
 import com.voiceyanga.citizen.data.local.entity.Notification;
 import com.voiceyanga.citizen.data.local.entity.PendingAction;
 
-@Database(entities = {Complaint.class, Comment.class, ComplaintPhoto.class, Notification.class, PendingAction.class}, version = 12, exportSchema = false)
+@Database(entities = {Complaint.class, Comment.class, ComplaintPhoto.class, Notification.class, PendingAction.class}, version = 16, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract ComplaintDao complaintDao();
     public abstract NotificationDao notificationDao();
+
+    public static final Migration MIGRATION_15_16 = new Migration(15, 16) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE complaints ADD COLUMN syncProgress TEXT");
+        }
+    };
+
+    public static final Migration MIGRATION_14_15 = new Migration(14, 15) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE complaints ADD COLUMN voiceNoteLocalPath TEXT");
+            database.execSQL("ALTER TABLE complaints ADD COLUMN voiceNoteUrl TEXT");
+            database.execSQL("ALTER TABLE complaints ADD COLUMN voiceNoteDuration INTEGER NOT NULL DEFAULT 0");
+        }
+    };
+
+    public static final Migration MIGRATION_13_14 = new Migration(13, 14) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE complaints ADD COLUMN firstPhotoUri TEXT");
+        }
+    };
+
+    public static final Migration MIGRATION_12_13 = new Migration(12, 13) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE complaints ADD COLUMN ward TEXT");
+            database.execSQL("ALTER TABLE complaints ADD COLUMN district TEXT");
+            database.execSQL("ALTER TABLE complaints ADD COLUMN province TEXT");
+        }
+    };
 
     public static final Migration MIGRATION_6_7 = new Migration(6, 7) {
         @Override

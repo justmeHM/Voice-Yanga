@@ -16,6 +16,7 @@ import com.voiceyanga.citizen.data.remote.dto.PaginatedResponse;
 import com.voiceyanga.citizen.data.remote.dto.PhotoUploadResponse;
 import com.voiceyanga.citizen.data.remote.dto.RegisterRequest;
 import com.voiceyanga.citizen.data.remote.dto.UserDto;
+import com.voiceyanga.citizen.data.remote.dto.VoiceNoteUploadResponse;
 import com.voiceyanga.citizen.data.local.entity.Notification;
 
 import java.util.List;
@@ -29,6 +30,7 @@ import retrofit2.http.Multipart;
 import retrofit2.http.PATCH;
 import retrofit2.http.POST;
 import retrofit2.http.Part;
+import retrofit2.http.PartMap;
 import retrofit2.http.Path;
 import retrofit2.http.QueryMap;
 
@@ -54,10 +56,10 @@ public interface ApiService {
 
     // Reference Data
     @GET("categories")
-    retrofit2.Call<List<CategoryDto>> getCategories();
+    retrofit2.Call<BaseResponse<List<CategoryDto>>> getCategories();
 
     @GET("locations")
-    retrofit2.Call<List<LocationDto>> getLocations();
+    retrofit2.Call<BaseResponse<List<LocationDto>>> getLocations();
 
     // Users
     @GET("users/profile")
@@ -67,16 +69,34 @@ public interface ApiService {
     retrofit2.Call<UserDto> updateProfile(@Body Map<String, Object> body);
 
     // Complaints
+    @Multipart
     @POST("complaints")
-    retrofit2.Call<ComplaintResponse> createComplaint(@Body ComplaintRequest request);
+    retrofit2.Call<ComplaintResponse> createComplaint(
+            @Part("title") RequestBody title,
+            @Part("description") RequestBody description,
+            @Part("category") RequestBody category,
+            @Part("location") RequestBody location,
+            @Part("priority") RequestBody priority,
+            @Part("clientUuid") RequestBody clientUuid,
+            @Part("voiceNoteUrl") RequestBody voiceNoteUrl,
+            @Part("voiceNoteDurationSeconds") RequestBody voiceNoteDurationSeconds,
+            @Part List<MultipartBody.Part> photos
+    );
 
     @Multipart
     @POST("photos/upload")
     retrofit2.Call<PhotoUploadResponse> uploadPhoto(@Part MultipartBody.Part file);
 
+    @Multipart
+    @POST("voice-notes")
+    retrofit2.Call<VoiceNoteUploadResponse> uploadVoiceNote(
+            @Part MultipartBody.Part file,
+            @Part("durationSeconds") RequestBody durationSeconds
+    );
+
     // Notifications
     @GET("notifications")
-    retrofit2.Call<List<NotificationDto>> getNotifications();
+    retrofit2.Call<BaseResponse<List<NotificationDto>>> getNotifications();
 
     @PATCH("notifications/{id}/read")
     retrofit2.Call<Void> markNotificationRead(@Path("id") String id);
@@ -93,7 +113,7 @@ public interface ApiService {
 
     // Comments
     @GET("complaints/{serverId}/comments")
-    retrofit2.Call<List<CommentResponse>> getComments(@Path("serverId") String serverId);
+    retrofit2.Call<BaseResponse<List<CommentResponse>>> getComments(@Path("serverId") String serverId);
 
     @POST("complaints/{serverId}/comments")
     retrofit2.Call<CommentResponse> postComment(

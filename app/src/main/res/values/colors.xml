@@ -39,4 +39,9 @@
     <color name="status_pending_text">#EA580C</color>
     <color name="status_resolved_bg">#F0FDF4</color>
     <color name="status_resolved_text">#16A34A</color>
+
+    <!-- Stepper Colors -->
+    <color name="stepper_active">@color/primary_green</color>
+    <color name="stepper_inactive">@color/neutral_300</color>
+    <color name="stepper_completed">@color/primary_green</color>
 </resources>

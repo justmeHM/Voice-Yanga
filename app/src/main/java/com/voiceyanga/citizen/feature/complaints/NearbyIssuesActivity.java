@@ -74,16 +74,29 @@ public class NearbyIssuesActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         adapter = new ComplaintAdapter(new ComplaintAdapter.OnComplaintClickListener() {
             @Override
-            public void onComplaintClick(Complaint complaint) {
+            public void onComplaintClick(Complaint complaint, View sharedElement) {
                 Intent intent = new Intent(NearbyIssuesActivity.this, ComplaintDetailActivity.class);
                 intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaint.getClientUuid());
-                startActivity(intent);
+                
+                if (sharedElement != null && sharedElement.getVisibility() == View.VISIBLE) {
+                    androidx.core.app.ActivityOptionsCompat options = androidx.core.app.ActivityOptionsCompat.makeSceneTransitionAnimation(
+                            NearbyIssuesActivity.this, sharedElement, sharedElement.getTransitionName());
+                    startActivity(intent, options.toBundle());
+                } else {
+                    startActivity(intent);
+                }
             }
 
             @Override
             public void onSupportClick(Complaint complaint) {
                 viewModel.supportComplaint(complaint.getClientUuid());
                 Toast.makeText(NearbyIssuesActivity.this, R.string.support_thanks, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onRetryClick(Complaint complaint) {
+                viewModel.retryComplaint(complaint.getClientUuid());
+                Toast.makeText(NearbyIssuesActivity.this, "Retrying sync...", Toast.LENGTH_SHORT).show();
             }
         }, sessionManager.getUserEmail());
         binding.rvComplaints.setLayoutManager(new LinearLayoutManager(this));

@@ -32,6 +32,7 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.material.card.MaterialCardView;
 import com.voiceyanga.citizen.R;
+import com.voiceyanga.citizen.core.utils.HapticHelper;
 import com.voiceyanga.citizen.data.remote.dto.CategoryDto;
 import com.voiceyanga.citizen.data.remote.dto.LocationDto;
 import com.voiceyanga.citizen.databinding.ActivityCreateComplaintBinding;
@@ -43,9 +44,7 @@ import dagger.hilt.android.AndroidEntryPoint;
 
 /**
  * Screen for creating a new citizen complaint.
- * [FR-COMP-01] Complaint creation.
- * [FR-COMP-03] Photo attachments.
- * [FR-COMP-04] GPS location integration.
+ * Refined to a single-screen Smart Composer for enterprise efficiency.
  */
 @AndroidEntryPoint
 public class CreateComplaintActivity extends AppCompatActivity {
@@ -64,10 +63,21 @@ public class CreateComplaintActivity extends AppCompatActivity {
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
     private ActivityResultLauncher<String[]> locationPermissionLauncher;
+    private ActivityResultLauncher<String> voicePermissionLauncher;
     private ActivityResultLauncher<String> galleryLauncher;
     private ActivityResultLauncher<String> cameraPermissionLauncher;
     private ActivityResultLauncher<android.net.Uri> cameraLauncher;
     private android.net.Uri cameraImageUri;
+    private boolean isSubmitted = false;
+
+    private final android.os.Handler autoSaveHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable autoSaveRunnable = new Runnable() {
+        @Override
+        public void run() {
+            triggerAutoSave();
+            autoSaveHandler.postDelayed(this, 30000); // 30 seconds
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,7 +100,11 @@ public class CreateComplaintActivity extends AppCompatActivity {
         setupRecyclerView();
         setupObservers();
         setupListeners();
-        setupCategorySelection();
+        
+        requestLocationPermissions();
+        populateSummary();
+        
+        autoSaveHandler.postDelayed(autoSaveRunnable, 30000);
 
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override
@@ -106,12 +120,23 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 result -> {
                     Boolean fineLocationGranted = result.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false);
                     Boolean coarseLocationGranted = result.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false);
-                    if (fineLocationGranted != null && fineLocationGranted) {
-                        getLastLocation();
-                    } else if (coarseLocationGranted != null && coarseLocationGranted) {
+                    if ((fineLocationGranted != null && fineLocationGranted) || 
+                        (coarseLocationGranted != null && coarseLocationGranted)) {
                         getLastLocation();
                     } else {
                         Toast.makeText(this, R.string.error_permission_denied, Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
+
+        voicePermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                isGranted -> {
+                    if (isGranted) {
+                        HapticHelper.selection(binding.btnRecord);
+                        viewModel.startRecording();
+                    } else {
+                        Toast.makeText(this, R.string.error_microphone_permission, Toast.LENGTH_SHORT).show();
                     }
                 }
         );
@@ -120,6 +145,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 new ActivityResultContracts.GetContent(),
                 uri -> {
                     if (uri != null) {
+                        HapticHelper.success(this);
                         viewModel.addPhoto(uri.toString());
                     }
                 }
@@ -129,6 +155,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 new ActivityResultContracts.TakePicture(),
                 success -> {
                     if (success && cameraImageUri != null) {
+                        HapticHelper.success(this);
                         viewModel.addPhoto(cameraImageUri.toString());
                     }
                 }
@@ -140,34 +167,56 @@ public class CreateComplaintActivity extends AppCompatActivity {
                     if (isGranted) {
                         launchCamera();
                     } else {
-                        Toast.makeText(this, "Camera permission is required to take photos", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.error_camera_permission, Toast.LENGTH_SHORT).show();
                     }
                 }
         );
     }
 
     private void setupToolbar() {
-        binding.btnBack.setOnClickListener(v -> handleBackPress());
+        binding.toolbar.setNavigationOnClickListener(v -> handleBackPress());
+    }
+
+    private void triggerAutoSave() {
+        if (binding == null || isSubmitted) return;
+        
+        String title = binding.etTitle.getText().toString().trim();
+        String desc = binding.etDescription.getText().toString().trim();
+        String customCat = binding.etCustomCategory.getText().toString().trim();
+
+        if (!title.isEmpty() || !desc.isEmpty()) {
+            viewModel.saveDraft(title, desc, selectedCategory, customCat, currentLocation, detectedAddress);
+        }
     }
 
     private void handleBackPress() {
+        if (binding == null) {
+            finish();
+            return;
+        }
+
+        if (isSubmitted) {
+            finish();
+            return;
+        }
+        
         String title = binding.etTitle.getText().toString().trim();
         String desc = binding.etDescription.getText().toString().trim();
         String customCat = binding.etCustomCategory.getText().toString().trim();
 
         if (!title.isEmpty() || !desc.isEmpty()) {
             new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                    .setTitle("Save Draft?")
-                    .setMessage("You have unsaved changes. Would you like to save this as a draft?")
-                    .setPositiveButton("Save", (dialog, which) -> {
+                    .setTitle(R.string.dialog_save_draft_title)
+                    .setMessage(R.string.dialog_save_draft_message)
+                    .setPositiveButton(R.string.btn_save, (dialog, which) -> {
                         viewModel.saveDraft(title, desc, selectedCategory, customCat, currentLocation, detectedAddress);
                         finish();
                     })
-                    .setNegativeButton("Discard", (dialog, which) -> {
+                    .setNegativeButton(R.string.btn_discard, (dialog, which) -> {
                         viewModel.deleteDraft();
                         finish();
                     })
-                    .setNeutralButton("Cancel", null)
+                    .setNeutralButton(R.string.btn_cancel, null)
                     .show();
         } else {
             finish();
@@ -178,12 +227,17 @@ public class CreateComplaintActivity extends AppCompatActivity {
         photoAdapter = new PhotoAdapter(new PhotoAdapter.OnRemoveListener() {
             @Override
             public void onRemove(String uri) {
-                viewModel.removePhoto(uri);
+                if (uri != null) viewModel.removePhoto(uri);
+            }
+
+            @Override
+            public void onPhotoClick(String uri) {
+                showPhotoPreview(uri);
             }
 
             @Override
             public void onLabelChanged(String uri, String label) {
-                viewModel.updatePhotoLabel(uri, label);
+                if (uri != null) viewModel.updatePhotoLabel(uri, label);
             }
         });
         binding.rvPhotos.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
@@ -192,24 +246,19 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
     private void setupObservers() {
         viewModel.getCategories().observe(this, categories -> {
-            android.util.Log.d("CreateComplaint", "Categories loaded: " + (categories != null ? categories.size() : "null"));
             if (categories != null) {
-                for (CategoryDto c : categories) {
-                    android.util.Log.d("CreateComplaint", "Category: " + c.getName() + " [" + c.getId() + "]");
-                }
+                this.availableCategories = categories;
             }
-            this.availableCategories = categories;
         });
 
         viewModel.getLocations().observe(this, locations -> {
-            android.util.Log.d("CreateComplaint", "Locations loaded: " + (locations != null ? locations.size() : "null"));
             if (locations != null && !locations.isEmpty()) {
                 this.currentLocation = locations.get(0);
             }
         });
 
         viewModel.getSubmissionSuccess().observe(this, success -> {
-            if (success != null && success) {
+            if (Boolean.TRUE.equals(success)) {
                 com.voiceyanga.citizen.ui.common.SuccessDialogFragment dialog = new com.voiceyanga.citizen.ui.common.SuccessDialogFragment();
                 dialog.setOnDismissListener(this::finish);
                 dialog.show(getSupportFragmentManager(), "success");
@@ -219,55 +268,74 @@ public class CreateComplaintActivity extends AppCompatActivity {
         viewModel.getError().observe(this, error -> {
             if (error != null) {
                 Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+                binding.btnSubmit.setEnabled(true);
             }
         });
 
         viewModel.getLoading().observe(this, isLoading -> {
-            if (isLoading != null) {
+            if (isLoading != null && binding != null) {
                 binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
                 binding.btnSubmit.setEnabled(!isLoading);
             }
         });
 
         viewModel.getSelectedPhotos().observe(this, photos -> {
-            photoAdapter.setPhotos(photos);
+            if (photos != null) {
+                photoAdapter.setPhotos(photos);
+                populateSummary();
+            }
         });
 
         viewModel.getMappedLocation().observe(this, location -> {
-            if (location != null) {
+            if (location != null && binding != null) {
                 this.currentLocation = location;
-                // Update text ONLY if it's a manual selection or we don't have a good GPS address yet
-                if (isManualLocation || this.detectedAddress == null || this.detectedAddress.matches("^-?\\d+\\.\\d+, -?\\d+\\.\\d+$")) {
-                    this.detectedAddress = currentLocation.getDisplayName();
-                    binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), detectedAddress));
-                    binding.tvDetectedLocation.setVisibility(View.VISIBLE);
-                }
+                this.detectedAddress = currentLocation.getDisplayName();
+                binding.tvDetectedLocation.setText(detectedAddress);
+                binding.tvDetectedLocation.setVisibility(View.VISIBLE);
+                binding.pbLocationLoading.setVisibility(View.GONE);
+                populateSummary();
             }
         });
 
         viewModel.getDraft().observe(this, draft -> {
-            if (draft != null) {
+            if (draft != null && binding != null) {
                 binding.etTitle.setText(draft.getTitle());
                 binding.etDescription.setText(draft.getDescription());
                 
                 String draftCategory = draft.getCategory();
                 if (draftCategory != null) {
-                    if (draftCategory.equalsIgnoreCase(getString(R.string.category_water))) {
-                        selectCategory(draftCategory, binding.cardWater);
-                    } else if (draftCategory.equalsIgnoreCase(getString(R.string.category_sanitation))) {
-                        selectCategory(draftCategory, binding.cardSanitation);
-                    } else if (draftCategory.equalsIgnoreCase(getString(R.string.category_roads))) {
-                        selectCategory(draftCategory, binding.cardRoads);
-                    } else if (draftCategory.equalsIgnoreCase(getString(R.string.category_electricity))) {
-                        selectCategory(draftCategory, binding.cardElectricity);
-                    } else if (draftCategory.equalsIgnoreCase(getString(R.string.category_security))) {
-                        selectCategory(draftCategory, binding.cardSecurity);
-                    } else {
-                        // It's a custom category
-                        selectCategory(getString(R.string.category_other), binding.cardOther);
-                        binding.etCustomCategory.setText(draftCategory);
-                    }
+                    selectCategory(draftCategory);
                 }
+                populateSummary();
+            }
+        });
+
+        viewModel.getVoiceNoteState().observe(this, state -> {
+            if (state == null || binding == null) return;
+            
+            if (state.error != null) {
+                Toast.makeText(this, state.error, Toast.LENGTH_SHORT).show();
+            }
+            
+            binding.cardVoiceNote.setVisibility(state.isRecording || state.localFile != null ? View.VISIBLE : View.GONE);
+            binding.llRecordControls.setVisibility(state.isRecording ? View.VISIBLE : View.GONE);
+            binding.llPlaybackControls.setVisibility(state.localFile != null ? View.VISIBLE : View.GONE);
+            
+            if (state.isRecording) {
+                int minutes = state.elapsedSeconds / 60;
+                int seconds = state.elapsedSeconds % 60;
+                binding.tvRecordingTimer.setText(String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds));
+                binding.visualizer.addAmplitude(state.amplitude);
+            } else if (state.localFile != null) {
+                binding.visualizer.clear();
+                binding.btnPlay.setVisibility(state.isPlaying ? View.GONE : View.VISIBLE);
+                binding.btnPause.setVisibility(state.isPlaying ? View.VISIBLE : View.GONE);
+                
+                int duration = state.durationSeconds;
+                int minutes = duration / 60;
+                int seconds = duration % 60;
+                binding.tvVoiceDuration.setText(String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds));
+                populateSummary();
             }
         });
     }
@@ -279,27 +347,62 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                suggestCategory(s.toString());
+                if (s != null) suggestCategory(s.toString());
+                populateSummary();
             }
 
             @Override
             public void afterTextChanged(android.text.Editable s) {}
         });
 
+        binding.etDescription.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) { populateSummary(); }
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        });
+
         binding.btnSubmit.setOnClickListener(v -> {
+            if (isSubmitted) return;
+            
             String title = binding.etTitle.getText().toString().trim();
             String description = binding.etDescription.getText().toString().trim();
             String customCategory = binding.etCustomCategory.getText().toString().trim();
             
+            binding.btnSubmit.setEnabled(false);
             viewModel.submitComplaint(title, description, selectedCategory, customCategory, currentLocation, 
                     detectedAddress, currentLatitude, currentLongitude);
+            isSubmitted = true;
         });
 
-        binding.btnLocation.setOnClickListener(v -> requestLocationPermissions());
-
         binding.btnManualLocation.setOnClickListener(v -> showManualLocationDialog());
-
         binding.btnAddPhotos.setOnClickListener(v -> showPhotoSourceDialog());
+        binding.cardCategorySelector.setOnClickListener(v -> showCategoryDialog());
+        binding.cardReviewSummary.setOnClickListener(v -> showFullReviewDialog());
+
+        binding.btnRecord.setOnClickListener(v -> checkVoicePermission());
+        binding.btnStop.setOnClickListener(v -> {
+            HapticHelper.selection(v);
+            viewModel.stopRecording();
+        });
+        binding.btnPlay.setOnClickListener(v -> viewModel.playRecording());
+        binding.btnPause.setOnClickListener(v -> viewModel.pauseRecording());
+        binding.btnDeleteVoice.setOnClickListener(v -> {
+            HapticHelper.longPress(v);
+            viewModel.deleteRecording();
+            populateSummary();
+        });
+    }
+
+    private void checkVoicePermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            HapticHelper.selection(binding.btnRecord);
+            viewModel.startRecording();
+        } else {
+            voicePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+        }
     }
 
     private void showPhotoSourceDialog() {
@@ -340,7 +443,25 @@ public class CreateComplaintActivity extends AppCompatActivity {
     private void showManualLocationDialog() {
         List<LocationDto> locations = viewModel.getLocations().getValue();
         if (locations == null || locations.isEmpty()) {
-            Toast.makeText(this, "Locations not loaded yet", Toast.LENGTH_SHORT).show();
+            android.widget.EditText etLocation = new android.widget.EditText(this);
+            etLocation.setHint("e.g. Matero, Ward 24");
+            etLocation.setPadding(48, 48, 48, 48);
+            
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.title_select_location)
+                    .setView(etLocation)
+                    .setPositiveButton(R.string.btn_save, (dialog, which) -> {
+                        String manualName = etLocation.getText().toString().trim();
+                        if (!manualName.isEmpty()) {
+                            this.detectedAddress = manualName;
+                            this.isManualLocation = true;
+                            binding.tvDetectedLocation.setText(detectedAddress);
+                            binding.tvDetectedLocation.setVisibility(View.VISIBLE);
+                            populateSummary();
+                        }
+                    })
+                    .setNegativeButton(R.string.btn_cancel, null)
+                    .show();
             return;
         }
 
@@ -353,7 +474,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
     private void requestLocationPermissions() {
         if (!isGpsEnabled()) {
-            Toast.makeText(this, "Please turn on your GPS location", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.error_gps_off, Toast.LENGTH_LONG).show();
             startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
             return;
         }
@@ -375,19 +496,19 @@ public class CreateComplaintActivity extends AppCompatActivity {
     }
 
     private void getLastLocation() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
         
         binding.pbLocationLoading.setVisibility(View.VISIBLE);
-        binding.tvDetectedLocation.setText("Searching for GPS...");
+        binding.tvDetectedLocation.setText(R.string.status_searching_gps);
         binding.tvDetectedLocation.setVisibility(View.VISIBLE);
 
         fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
             if (location != null) {
                 updateLocationUI(location);
             } else {
-                // Request a fresh location if last known is null
                 requestFreshLocation();
             }
         }).addOnFailureListener(e -> {
@@ -436,59 +557,66 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     if (addresses != null && !addresses.isEmpty()) {
                         Address address = addresses.get(0);
-                        // Build a more detailed address if possible
                         StringBuilder sb = new StringBuilder();
-                        if (address.getThoroughfare() != null) {
-                            if (address.getSubThoroughfare() != null) {
-                                sb.append(address.getThoroughfare()).append(" ").append(address.getSubThoroughfare());
-                            } else {
-                                sb.append(address.getThoroughfare());
-                            }
-                            if (address.getLocality() != null) {
-                                sb.append(", ").append(address.getLocality());
-                            }
+                        String neighborhood = address.getSubLocality();
+                        String city = address.getLocality();
+                        String province = address.getAdminArea();
+                        
+                        if (neighborhood != null && !neighborhood.isEmpty() && !neighborhood.contains("+")) {
+                            sb.append(neighborhood);
+                            if (city != null) sb.append(", ").append(city);
+                        } else if (city != null && !city.isEmpty()) {
+                            sb.append(city);
+                            if (province != null) sb.append(", ").append(province);
                         } else {
-                            sb.append(address.getAddressLine(0));
+                            String line = address.getAddressLine(0);
+                            if (line != null && line.contains("+")) {
+                                String clean = line.replaceAll("^[A-Z0-9]{4}\\+[A-Z0-9]{2,3}\\s*", "");
+                                sb.append(clean.isEmpty() ? "Unknown Location" : clean);
+                            } else {
+                                sb.append(line != null ? line : "Unknown Location");
+                            }
                         }
                         
                         this.detectedAddress = sb.toString();
-                        binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), detectedAddress));
+                        binding.tvDetectedLocation.setText(detectedAddress);
                         binding.tvDetectedLocation.setVisibility(View.VISIBLE);
-                        
-                        // Map to API location
                         viewModel.mapToApiLocation(address.getLocality(), address.getSubLocality());
                     }
                     binding.pbLocationLoading.setVisibility(View.GONE);
+                    populateSummary();
                 });
             } catch (IOException e) {
                 runOnUiThread(() -> {
-                    String locationName = location.getLatitude() + ", " + location.getLongitude();
-                    binding.tvDetectedLocation.setText(String.format(getString(R.string.location_not_detected), locationName));
+                    String coords = String.format(Locale.getDefault(), "%.5f, %.5f", location.getLatitude(), location.getLongitude());
+                    binding.tvDetectedLocation.setText(coords);
                     binding.tvDetectedLocation.setVisibility(View.VISIBLE);
                     binding.pbLocationLoading.setVisibility(View.GONE);
+                    populateSummary();
                 });
             }
         }).start();
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (fusedLocationClient != null && locationCallback != null) {
-            fusedLocationClient.removeLocationUpdates(locationCallback);
-        }
+    private void showCategoryDialog() {
+        String[] items = {
+            getString(R.string.category_water),
+            getString(R.string.category_sanitation),
+            getString(R.string.category_roads),
+            getString(R.string.category_electricity),
+            getString(R.string.category_security),
+            getString(R.string.category_other)
+        };
+        
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.category_label)
+                .setItems(items, (dialog, which) -> {
+                    selectCategory(items[which]);
+                })
+                .show();
     }
 
-    private void setupCategorySelection() {
-        binding.cardWater.setOnClickListener(v -> selectCategory(getString(R.string.category_water), binding.cardWater));
-        binding.cardSanitation.setOnClickListener(v -> selectCategory(getString(R.string.category_sanitation), binding.cardSanitation));
-        binding.cardRoads.setOnClickListener(v -> selectCategory(getString(R.string.category_roads), binding.cardRoads));
-        binding.cardElectricity.setOnClickListener(v -> selectCategory(getString(R.string.category_electricity), binding.cardElectricity));
-        binding.cardSecurity.setOnClickListener(v -> selectCategory(getString(R.string.category_security), binding.cardSecurity));
-        binding.cardOther.setOnClickListener(v -> selectCategory(getString(R.string.category_other), binding.cardOther));
-    }
-
-    private void selectCategory(String categoryName, MaterialCardView card) {
+    private void selectCategory(String categoryName) {
         boolean isOther = categoryName.equalsIgnoreCase(getString(R.string.category_other));
         binding.tilCustomCategory.setVisibility(isOther ? View.VISIBLE : View.GONE);
         
@@ -503,45 +631,140 @@ public class CreateComplaintActivity extends AppCompatActivity {
             }
         }
         
-        // Fallback for cases where categories aren't loaded or it's a known static category
         if (selectedCategory == null && !isOther) {
             selectedCategory = new CategoryDto(null, categoryName);
         }
         
-        resetCard(binding.cardWater);
-        resetCard(binding.cardSanitation);
-        resetCard(binding.cardRoads);
-        resetCard(binding.cardElectricity);
-        resetCard(binding.cardSecurity);
-        resetCard(binding.cardOther);
+        binding.tvCategoryName.setText(categoryName);
         
-        card.setStrokeColor(ContextCompat.getColor(this, R.color.primary_green));
-        card.setStrokeWidth(6);
-        card.setCardBackgroundColor(ContextCompat.getColor(this, R.color.primary_green_light));
-    }
-
-    private void resetCard(MaterialCardView card) {
-        card.setStrokeColor(ContextCompat.getColor(this, R.color.neutral_200));
-        card.setStrokeWidth(2);
+        int iconRes = R.drawable.about;
+        if (categoryName.equalsIgnoreCase(getString(R.string.category_water))) iconRes = R.drawable.water;
+        else if (categoryName.equalsIgnoreCase(getString(R.string.category_sanitation))) iconRes = R.drawable.sanitary;
+        else if (categoryName.equalsIgnoreCase(getString(R.string.category_roads))) iconRes = R.drawable.road;
+        else if (categoryName.equalsIgnoreCase(getString(R.string.category_electricity))) iconRes = R.drawable.electricity;
+        else if (categoryName.equalsIgnoreCase(getString(R.string.category_security))) iconRes = R.drawable.security;
         
-        // Use TypedValue to get colorSurface attribute
-        android.util.TypedValue typedValue = new android.util.TypedValue();
-        getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true);
-        card.setCardBackgroundColor(typedValue.data);
+        binding.ivCategoryIcon.setImageResource(iconRes);
+        populateSummary();
     }
 
     private void suggestCategory(String title) {
         String lowerTitle = title.toLowerCase();
+        binding.badgeSuggestion.setVisibility(View.GONE);
+
+        String suggested = null;
         if (lowerTitle.contains("water") || lowerTitle.contains("leak") || lowerTitle.contains("pipe") || lowerTitle.contains("burst")) {
-            selectCategory(getString(R.string.category_water), binding.cardWater);
+            suggested = getString(R.string.category_water);
         } else if (lowerTitle.contains("sanitation") || lowerTitle.contains("sewer") || lowerTitle.contains("drainage") || lowerTitle.contains("waste") || lowerTitle.contains("garbage")) {
-            selectCategory(getString(R.string.category_sanitation), binding.cardSanitation);
+            suggested = getString(R.string.category_sanitation);
         } else if (lowerTitle.contains("road") || lowerTitle.contains("street") || lowerTitle.contains("pothole") || lowerTitle.contains("bridge")) {
-            selectCategory(getString(R.string.category_roads), binding.cardRoads);
+            suggested = getString(R.string.category_roads);
         } else if (lowerTitle.contains("electric") || lowerTitle.contains("power") || lowerTitle.contains("light") || lowerTitle.contains("cable") || lowerTitle.contains("transformer")) {
-            selectCategory(getString(R.string.category_electricity), binding.cardElectricity);
+            suggested = getString(R.string.category_electricity);
         } else if (lowerTitle.contains("security") || lowerTitle.contains("crime") || lowerTitle.contains("police") || lowerTitle.contains("danger") || lowerTitle.contains("safety")) {
-            selectCategory(getString(R.string.category_security), binding.cardSecurity);
+            suggested = getString(R.string.category_security);
         }
+        
+        if (suggested != null) {
+            selectCategory(suggested);
+            binding.badgeSuggestion.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void populateSummary() {
+        if (binding == null) return;
+        
+        String title = binding.etTitle.getText().toString().trim();
+        binding.tvSummaryTitle.setText(title.isEmpty() ? "---" : title);
+        binding.tvSummaryCategory.setText(String.format(getString(R.string.label_category_format), 
+                selectedCategory != null ? selectedCategory.getName() : getString(R.string.default_category)));
+        
+        List<String> photos = viewModel.getSelectedPhotos().getValue();
+        int photoCount = photos != null ? photos.size() : 0;
+        ComplaintViewModel.VoiceNoteState vnState = viewModel.getVoiceNoteState().getValue();
+        boolean hasVoice = vnState != null && vnState.localFile != null;
+        
+        String mediaText = String.format(Locale.getDefault(), "Evidence: %d Photos • %s", 
+                photoCount, hasVoice ? getString(R.string.label_voice_note_present) : getString(R.string.label_voice_note_absent));
+        binding.tvSummaryMedia.setText(mediaText);
+        
+        binding.tvSummaryLocation.setText(String.format(getString(R.string.label_location_format), 
+                detectedAddress != null ? detectedAddress : getString(R.string.status_searching_gps)));
+    }
+
+    private void showPhotoPreview(String uri) {
+        android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        dialog.setContentView(R.layout.shimmer_complaint_detail); // Using a placeholder or creating a simple layout
+        
+        // Better: create a quick layout for full screen image
+        android.widget.ImageView iv = new android.widget.ImageView(this);
+        iv.setLayoutParams(new android.view.ViewGroup.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT, 
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT));
+        iv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        iv.setBackgroundColor(android.graphics.Color.BLACK);
+        
+        com.bumptech.glide.Glide.with(this).load(uri).into(iv);
+        
+        dialog.setContentView(iv);
+        iv.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
+    }
+
+    private void showFullReviewDialog() {
+        com.google.android.material.bottomsheet.BottomSheetDialog dialog = new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.layout_report_review_bottom_sheet, null);
+        dialog.setContentView(view);
+        
+        android.widget.TextView tvTitle = view.findViewById(R.id.tvReviewTitle);
+        android.widget.TextView tvCategory = view.findViewById(R.id.tvReviewCategory);
+        android.widget.TextView tvDescription = view.findViewById(R.id.tvReviewDescription);
+        android.widget.TextView tvLocation = view.findViewById(R.id.tvReviewLocation);
+        
+        tvTitle.setText(binding.etTitle.getText().toString().trim());
+        tvCategory.setText(selectedCategory != null ? selectedCategory.getName().toUpperCase() : "GENERAL");
+        tvDescription.setText(binding.etDescription.getText().toString().trim());
+        tvLocation.setText(detectedAddress != null ? detectedAddress : "No location detected");
+        
+        // Photos
+        List<String> photos = viewModel.getSelectedPhotos().getValue();
+        if (photos != null && !photos.isEmpty()) {
+            androidx.recyclerview.widget.RecyclerView rv = view.findViewById(R.id.rvReviewPhotos);
+            PhotoAdapter previewAdapter = new PhotoAdapter(null); // No removal in preview
+            previewAdapter.setPhotos(photos);
+            rv.setAdapter(previewAdapter);
+        } else {
+            view.findViewById(R.id.tvMediaLabel).setVisibility(View.GONE);
+            view.findViewById(R.id.rvReviewPhotos).setVisibility(View.GONE);
+        }
+
+        // Voice Note
+        ComplaintViewModel.VoiceNoteState vnState = viewModel.getVoiceNoteState().getValue();
+        if (vnState != null && vnState.localFile != null) {
+            view.findViewById(R.id.cardReviewVoice).setVisibility(View.VISIBLE);
+            android.widget.TextView tvDuration = view.findViewById(R.id.tvReviewVoiceDuration);
+            int duration = vnState.durationSeconds;
+            tvDuration.setText(String.format(Locale.getDefault(), "%02d:%02d", duration / 60, duration % 60));
+        }
+        
+        view.findViewById(R.id.btnCloseReview).setOnClickListener(v -> dialog.dismiss());
+        
+        dialog.show();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (fusedLocationClient != null && locationCallback != null) {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
+        }
+        autoSaveHandler.removeCallbacks(autoSaveRunnable);
+        triggerAutoSave();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        autoSaveHandler.postDelayed(autoSaveRunnable, 30000);
     }
 }

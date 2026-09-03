@@ -68,12 +68,8 @@ public class SplashActivity extends AppCompatActivity {
                 }
             } else {
                 if (sessionManager.isFirstLaunch()) {
-                    // Stay on Splash screen to show "Get Started" UI
-                    findViewById(R.id.btnGetStarted).setOnClickListener(v -> {
-                        sessionManager.setFirstLaunch(false);
-                        startActivity(new Intent(SplashActivity.this, RegisterActivity.class));
-                        finish();
-                    });
+                    startActivity(new Intent(SplashActivity.this, OnboardingActivity.class));
+                    finish();
                 } else {
                     startActivity(new Intent(SplashActivity.this, LoginActivity.class));
                     finish();

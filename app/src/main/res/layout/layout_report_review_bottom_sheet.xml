@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/colorSurface"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <View
+            android:layout_width="48dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="24dp"
+            android:background="@color/neutral_200"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_review_summary"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1" />
+
+        <TextView
+            android:id="@+id/tvReviewTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            tools:text="Broken Water Pipe in Matero" />
+
+        <TextView
+            android:id="@+id/tvReviewCategory"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_status_chip"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="4dp"
+            android:textColor="@color/primary_green"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            tools:text="WATER" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/section_description"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1" />
+
+        <TextView
+            android:id="@+id/tvReviewDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="16sp"
+            android:lineSpacingExtra="4dp"
+            tools:text="There is a major pipe burst near the market. Water has been leaking for over 24 hours." />
+
+        <!-- Media Section -->
+        <TextView
+            android:id="@+id/tvMediaLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/section_photos"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvReviewPhotos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:listitem="@layout/item_photo" />
+
+        <!-- Voice Note Preview -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardReviewVoice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutline"
+            app:strokeWidth="1dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="12dp"
+                android:gravity="center_vertical">
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_mic"
+                    app:tint="@color/primary_green" />
+                <TextView
+                    android:id="@+id/tvReviewVoiceDuration"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:text="00:45"
+                    android:textStyle="bold"
+                    android:textColor="@color/primary_green" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/label_voice_note_present"
+                    android:textSize="12sp"
+                    android:alpha="0.6" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Location Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/section_where"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_location_vector"
+                app:tint="@color/primary_green" />
+            <TextView
+                android:id="@+id/tvReviewLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                tools:text="Matero East, Ward 24, Lusaka" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCloseReview"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="32dp"
+            android:layout_marginBottom="16dp"
+            android:text="Back to Composer"
+            app:cornerRadius="12dp" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

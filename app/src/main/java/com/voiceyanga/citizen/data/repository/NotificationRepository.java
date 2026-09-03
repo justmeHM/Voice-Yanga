@@ -36,9 +36,9 @@ public class NotificationRepository {
     private void refreshNotifications() {
         executorService.execute(() -> {
             try {
-                Response<List<NotificationDto>> response = apiService.getNotifications().execute();
-                if (response.isSuccessful() && response.body() != null) {
-                    List<NotificationDto> serverNotifications = response.body();
+                Response<BaseResponse<List<NotificationDto>>> response = apiService.getNotifications().execute();
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    List<NotificationDto> serverNotifications = response.body().getData();
                     if (serverNotifications != null) {
                         for (NotificationDto dto : serverNotifications) {
                             Notification notification = new Notification(

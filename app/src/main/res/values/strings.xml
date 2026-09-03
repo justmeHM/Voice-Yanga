@@ -137,7 +137,7 @@
     <string name="about_version_label">Version %1$s</string>
     <string name="support_contact_label">Contact Support</string>
     <string name="support_email">support@voiceyanga.com</string>
-    <string name="support_phone">+260 971 000 000</string>
+    <string name="support_phone">0770435328,077004980,0771209570</string>
     <string name="support_description">For urgent issues or feedback regarding the Voice Yanga platform, please contact our support team.</string>
     <string name="label_email">EMAIL</string>
     <string name="label_phone">PHONE</string>
@@ -148,6 +148,22 @@
     <string name="label_first_name">First Name</string>
     <string name="label_last_name">Last Name</string>
     <string name="label_email_hint">Email (Read-only)</string>
+
+    <string name="filter_title">Filter Complaints</string>
+    <string name="filter_location_label">Location</string>
+    <string name="filter_ward_hint">Ward</string>
+    <string name="filter_district_hint">Council / District</string>
+    <string name="filter_province_hint">Province</string>
+    <string name="filter_clear_all">Clear All</string>
+    <string name="filter_apply">Apply Filter</string>
+    <string name="desc_filter_feed">Filter complaints by location</string>
+
+    <string name="action_support">Support</string>
+    <string name="action_comment">Comment</string>
+    <string name="action_share">Share</string>
+    <string name="your_report_label">Your Report</string>
+    <string name="support_count_format_simple">%d supports</string>
+    <string name="comment_count_format_simple">%d comments</string>
     <string name="label_phone_hint">Phone</string>
     <string name="btn_update_profile">UPDATE PROFILE</string>
     <string name="profile_updated">Profile updated successfully</string>
@@ -162,10 +178,105 @@
     <string name="btn_see_more">See More</string>
     <string name="stat_my_reports">My Reports</string>
     <string name="stat_community_support">Community Support</string>
+    <string name="tab_active">My Reports</string>
+    <string name="tab_resolved">Resolved</string>
+    <string name="tab_supported">Supported</string>
     <string name="label_enable_biometric">Enable Biometric Login</string>
     <string name="title_select_location">Select Location</string>
     <string name="hint_search_locations">Search wards or districts...</string>
     <string name="desc_sort_feed">Sort community feed</string>
     <string name="option_take_photo">Take Photo</string>
     <string name="option_choose_gallery">Choose from Gallery</string>
+
+    <string name="dialog_save_draft_title">Save Draft?</string>
+    <string name="dialog_save_draft_message">You have unsaved changes. Would you like to save this as a draft?</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_discard">Discard</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="error_camera_permission">Camera permission is required to take photos</string>
+    <string name="error_locations_not_loaded">Locations not loaded yet</string>
+    <string name="error_gps_off">Please turn on your GPS location</string>
+    <string name="status_searching_gps">Searching for GPS...</string>
+    <string name="error_file_not_found">Recording file not found</string>
+
+    <string name="error_description_or_voice">Please provide a description (min 10 chars) or a voice note</string>
+    <string name="error_select_problem_type">Please select a category or specify one under \'Other\'</string>
+    <string name="error_specify_other">Please specify the problem type for \'Other\'</string>
+
+    <string name="default_category">General</string>
+    <string name="default_location">Lusaka</string>
+
+    <string name="success_title">Success!</string>
+    <string name="success_message">Thank you for making Yanga better.</string>
+
+    <!-- Voice Note Recording -->
+    <string name="section_voice_note">VOICE NOTE</string>
+    <string name="label_record_voice_note">Record Voice Note</string>
+    <string name="label_stop_recording">Stop Recording</string>
+    <string name="label_play_recording">Play Recording</string>
+    <string name="label_pause_recording">Pause Recording</string>
+    <string name="label_delete_recording">Delete</string>
+    <string name="label_recording_time">Recording: %1$02d:%2$02d</string>
+    <string name="label_voice_note_privacy_notice">Your voice note will be shared with authorized officials handling this complaint.</string>
+    <string name="error_microphone_permission">Microphone permission is required to record voice notes.</string>
+    <string name="error_recording_too_short">Recording must be at least 2 seconds.</string>
+    <string name="error_recording_too_long">Recording cannot exceed 2 minutes.</string>
+    <string name="error_upload_voice_note">Failed to upload voice note. Please try again.</string>
+    <string name="status_uploading_voice_note">Uploading voice note…</string>
+    <string name="status_submitting_complaint">Submitting complaint…</string>
+    <string name="content_desc_record">Start recording voice note</string>
+    <string name="content_desc_stop">Stop recording voice note</string>
+    <string name="content_desc_play">Play voice note</string>
+    <string name="content_desc_pause">Pause voice note</string>
+    <string name="content_desc_delete">Delete voice note</string>
+    <string name="btn_retry_upload">Retry Upload</string>
+
+    <!-- Terms of Service -->
+    <string name="terms_of_service_title">Terms of Service</string>
+    <string name="register_terms_consent">By creating an account, you agree to our Terms of Service.</string>
+    <string name="terms_of_service_url">https://voiceyangatermsofservice.netlify.app/</string>
+
+    <!-- About & Support Overhaul -->
+    <string name="about_step1_title">Report</string>
+    <string name="about_step1_desc">Share what\'s happening in your neighborhood.</string>
+    <string name="about_step2_title">Track</string>
+    <string name="about_step2_desc">Watch the status change from submission to resolution.</string>
+    <string name="about_step3_title">Resolve</string>
+    <string name="about_step3_desc">Enjoy a cleaner, safer, and better community.</string>
+    <string name="social_follow_us">FOLLOW US</string>
+    <string name="website_label">Website</string>
+
+    <string name="support_status_online">System Status: Online</string>
+    <string name="support_faq_title">Frequently Asked Questions</string>
+    <string name="faq1_q">How long does it take to resolve an issue?</string>
+    <string name="faq1_a">Resolution time varies depending on the category and urgency, but we aim for initial review within 48 hours.</string>
+    <string name="faq2_q">Can I report issues anonymously?</string>
+    <string name="faq2_a">While your contact info is needed for accountability, you can choose how your name appears to the community.</string>
+    <string name="faq3_q">Who receives my reports?</string>
+    <string name="faq3_a">Reports are sent directly to the relevant local authorities and service providers responsible for your area.</string>
+    <string name="support_community_title">Join Our Community</string>
+    <string name="support_community_desc">Connect with other citizens and stay updated on community initiatives.</string>
+    <string name="btn_send_email">SEND EMAIL</string>
+    <string name="btn_call_now">CALL NOW</string>
+    <string name="btn_join_whatsapp">JOIN WHATSAPP</string>
+    <string name="community_whatsapp_url">https://chat.whatsapp.com/voiceyanga</string>
+
+    <!-- Create Complaint Stepper -->
+    <string name="step_details">Issue Details</string>
+    <string name="step_evidence">Evidence</string>
+    <string name="step_review">Location &amp; Review</string>
+    <string name="btn_next">Next</string>
+    <string name="btn_previous">Back</string>
+    <string name="label_review_summary">Confirm Report Details</string>
+    <string name="label_media_attached">Media Attached</string>
+    <string name="label_photos_count">%d Photos</string>
+    <string name="label_voice_note_present">Voice Note Included</string>
+    <string name="label_voice_note_absent">No Voice Note</string>
+    <string name="label_category_format">Category: %s</string>
+    <string name="label_location_format">Location: %s</string>
+    <string name="suggestion_badge">Suggested</string>
+    <string name="label_select_category">Category: %s</string>
+    <string name="label_tap_to_change">Tap to change</string>
+    <string name="label_voice_note">Voice Note</string>
+    <string name="btn_change_location">Change</string>
 </resources>

@@ -84,14 +84,14 @@
                                 </LinearLayout>
 
                                 <ImageButton
-                                    android:id="@+id/btnSort"
+                                    android:id="@+id/btnFilter"
                                     android:layout_width="40dp"
                                     android:layout_height="40dp"
                                     android:layout_marginEnd="8dp"
                                     android:background="?attr/selectableItemBackgroundBorderless"
-                                    android:contentDescription="@string/desc_sort_feed"
+                                    android:contentDescription="@string/desc_filter_feed"
                                     android:scaleType="centerInside"
-                                    android:src="@drawable/ic_sort_vector"
+                                    android:src="@drawable/ic_location_vector"
                                     app:tint="@color/primary_green" />
 
                                 <ImageButton
@@ -140,52 +140,59 @@
 
                         </LinearLayout>
 
-                        <!-- Resume Draft Card -->
+                        <!-- Outbox / Pending Card -->
                         <com.google.android.material.card.MaterialCardView
-                            android:id="@+id/cardResumeDraft"
+                            android:id="@+id/cardOutbox"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginHorizontal="24dp"
                             android:layout_marginTop="16dp"
                             android:visibility="gone"
-                            app:cardCornerRadius="12dp"
-                            app:cardElevation="2dp"
-                            app:strokeColor="?attr/colorPrimary"
-                            app:strokeWidth="1dp"
-                            app:cardBackgroundColor="?attr/colorSurfaceVariant">
-
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="4dp"
+                            app:cardBackgroundColor="@color/primary_green_light"
+                            app:strokeColor="@color/primary_green"
+                            app:strokeWidth="1dp">
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:gravity="center_vertical"
                                 android:orientation="horizontal"
-                                android:padding="16dp">
-
+                                android:padding="16dp"
+                                android:gravity="center_vertical">
                                 <ImageView
-                                    android:layout_width="24dp"
-                                    android:layout_height="24dp"
-                                    android:src="@android:drawable/ic_menu_edit"
-                                    android:contentDescription="@null"
-                                    app:tint="@color/primary_green" />
-
-                                <TextView
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
+                                    android:src="@drawable/ic_mic"
+                                    app:tint="@color/primary_green"
+                                    android:alpha="0.8" />
+                                <LinearLayout
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginStart="12dp"
                                     android:layout_weight="1"
-                                    android:text="@string/resume_draft_title"
-                                    android:textColor="@color/primary_green"
-                                    android:textStyle="bold" />
-
+                                    android:layout_marginStart="16dp"
+                                    android:orientation="vertical">
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Pending Submissions"
+                                        android:textStyle="bold"
+                                        android:textColor="@color/primary_green"
+                                        android:textSize="16sp" />
+                                    <TextView
+                                        android:id="@+id/tvOutboxCount"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="You have reports waiting to sync"
+                                        android:textSize="12sp"
+                                        android:alpha="0.7" />
+                                </LinearLayout>
                                 <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btnResume"
-                                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                                    android:id="@+id/btnViewOutbox"
+                                    style="@style/Widget.Material3.Button.TonalButton"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="@string/btn_resume"
-                                    android:textColor="@color/primary_green"
+                                    android:text="View"
                                     android:textSize="12sp" />
-
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
 
@@ -411,9 +418,28 @@
                             android:text="@string/empty_reports_subtitle"
                             android:textColor="?android:attr/textColorSecondary"
                             android:textSize="14sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnExploreNearby"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="24dp"
+                            android:text="Explore Nearby Issues"
+                            app:icon="@drawable/ic_location_vector" />
                     </LinearLayout>
                 </FrameLayout>
             </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+            <!-- Background Scrim for FAB Menu -->
+            <View
+                android:id="@+id/fabMenuScrim"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#99000000"
+                android:visibility="gone"
+                android:clickable="true"
+                android:focusable="true" />
 
             <LinearLayout
                 android:id="@+id/fabMenuContainer"
@@ -424,38 +450,86 @@
                 android:gravity="end"
                 android:orientation="vertical">
 
-                <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-                    android:id="@+id/fabNearbyIssues"
+                <!-- Nearby Issues Row -->
+                <LinearLayout
+                    android:id="@+id/llNearbyIssuesRow"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:text="@string/nearby_issues_title"
-                    android:textColor="@android:color/white"
-                    android:visibility="gone"
-                    app:backgroundTint="@color/primary_green"
-                    app:icon="@drawable/ic_location_vector"
-                    app:iconTint="@android:color/white" />
+                    android:layout_marginBottom="16dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="4dp"
+                        app:cardBackgroundColor="@color/primary_green">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="6dp"
+                            android:text="@string/nearby_issues_title"
+                            android:textColor="@color/white"
+                            android:textStyle="bold"
+                            android:textSize="14sp" />
+                    </com.google.android.material.card.MaterialCardView>
+                    <com.google.android.material.floatingactionbutton.FloatingActionButton
+                        android:id="@+id/fabNearbyIssues"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:backgroundTint="@color/primary_green"
+                        app:srcCompat="@drawable/ic_location_vector"
+                        app:tint="@color/white"
+                        app:fabSize="mini" />
+                </LinearLayout>
 
-                <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-                    android:id="@+id/fabReportProblem"
+                <!-- Report Problem Row -->
+                <LinearLayout
+                    android:id="@+id/llReportProblemRow"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:text="@string/report_problem_desc"
-                    android:textColor="@android:color/white"
-                    android:visibility="gone"
-                    app:backgroundTint="@color/primary_red"
-                    app:icon="@android:drawable/ic_menu_edit"
-                    app:iconTint="@android:color/white" />
+                    android:layout_marginBottom="16dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="4dp"
+                        app:cardBackgroundColor="@color/primary_red">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="6dp"
+                            android:text="@string/report_problem_desc"
+                            android:textColor="@color/white"
+                            android:textStyle="bold"
+                            android:textSize="14sp" />
+                    </com.google.android.material.card.MaterialCardView>
+                    <com.google.android.material.floatingactionbutton.FloatingActionButton
+                        android:id="@+id/fabReportProblem"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:backgroundTint="@color/primary_red"
+                        app:srcCompat="@android:drawable/ic_menu_edit"
+                        app:tint="@color/white"
+                        app:fabSize="mini" />
+                </LinearLayout>
 
                 <com.google.android.material.floatingactionbutton.FloatingActionButton
                     android:id="@+id/fabReport"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:contentDescription="@string/report_problem_desc"
                     app:backgroundTint="@color/primary_green"
                     app:srcCompat="@android:drawable/ic_input_add"
-                    app:tint="@android:color/white" />
+                    app:tint="@android:color/white"
+                    app:fabSize="mini" />
 
             </LinearLayout>
 
