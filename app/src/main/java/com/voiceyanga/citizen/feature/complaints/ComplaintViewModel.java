@@ -35,7 +35,7 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
 
     private final ComplaintRepository repository;
     private final ReferenceRepository referenceRepository;
-    private final VoiceNoteRecorder recorder = new VoiceNoteRecorder();
+    private final VoiceNoteRecorder recorder;
     private final VoiceNotePlayer player = new VoiceNotePlayer();
 
     private final MutableLiveData<VoiceNoteState> _voiceNoteState = new MutableLiveData<>(new VoiceNoteState());
@@ -68,7 +68,7 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
     private final MutableLiveData<Complaint> _draft = new MutableLiveData<>();
     public LiveData<Complaint> getDraft() { return _draft; }
     
-    private String currentClientUuid = UUID.randomUUID().toString();
+    private String currentClientUuid = null;
     private String lastSavedTitle = "";
     private String lastSavedDesc = "";
     private String lastSavedCategory = "";
@@ -80,12 +80,21 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
     public void mapToApiLocation(String district, String ward) {
         List<LocationDto> locations = _locations.getValue();
         if (locations == null) return;
+        LocationDto fallback = null;
         for (LocationDto dto : locations) {
-            if ((district != null && dto.getDistrict().equalsIgnoreCase(district)) || 
-                (ward != null && dto.getWard().equalsIgnoreCase(ward))) {
+            boolean wardMatch = ward != null && dto.getWard() != null && dto.getWard().equalsIgnoreCase(ward);
+            boolean districtMatch = district != null && dto.getDistrict() != null && dto.getDistrict().equalsIgnoreCase(district);
+            if (wardMatch && districtMatch) {
                 _mappedLocation.setValue(dto);
-                break;
+                return;
+            } else if (wardMatch && fallback == null) {
+                fallback = dto;
+            } else if (districtMatch && fallback == null) {
+                fallback = dto;
             }
+        }
+        if (fallback != null) {
+            _mappedLocation.setValue(fallback);
         }
     }
 
@@ -98,6 +107,7 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         super(application);
         this.repository = repository;
         this.referenceRepository = referenceRepository;
+        this.recorder = new VoiceNoteRecorder(application);
         setupVoiceNoteComponents();
         loadReferenceData();
         loadDraft();
@@ -191,7 +201,8 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
                 state.error = getApplication().getString(R.string.error_recording_too_short);
                 state.localFile = null;
                 if (currentRecordingFile != null && currentRecordingFile.exists()) {
-                    currentRecordingFile.delete();
+                    boolean deleted = currentRecordingFile.delete();
+                    if (!deleted) android.util.Log.w("ComplaintVM", "Could not delete short recording file");
                 }
             } else {
                 state.localFile = currentRecordingFile;
@@ -244,16 +255,50 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         player.release();
     }
 
-    private void loadDraft() {
+    public void loadDraft() {
         new Thread(() -> {
             Complaint draft = repository.getDraftSync();
             if (draft != null) {
                 currentClientUuid = draft.getClientUuid();
                 _draft.postValue(draft);
+                loadMediaForComplaint(draft);
             } else {
-                // Keep the initial random UUID
+                currentClientUuid = UUID.randomUUID().toString();
             }
         }).start();
+    }
+
+    public void loadComplaintForEdit(String uuid) {
+        this.currentClientUuid = uuid;
+        new Thread(() -> {
+            Complaint complaint = repository.getComplaintSync(uuid);
+            if (complaint != null) {
+                _draft.postValue(complaint);
+                loadMediaForComplaint(complaint);
+            }
+        }).start();
+    }
+
+    private void loadMediaForComplaint(Complaint complaint) {
+        if (complaint.getVoiceNoteLocalPath() != null) {
+            File file = new File(complaint.getVoiceNoteLocalPath());
+            if (file.exists()) {
+                VoiceNoteState state = new VoiceNoteState();
+                state.localFile = file;
+                state.durationSeconds = complaint.getVoiceNoteDuration();
+                _voiceNoteState.postValue(state);
+            }
+        }
+        
+        List<com.voiceyanga.citizen.data.local.entity.ComplaintPhoto> photos = repository.getPhotosSync(complaint.getClientUuid());
+        if (photos != null) {
+            java.util.List<String> uris = new java.util.ArrayList<>();
+            for (com.voiceyanga.citizen.data.local.entity.ComplaintPhoto p : photos) {
+                uris.add(p.getPhotoUri());
+                if (p.getLabel() != null) photoLabels.put(p.getPhotoUri(), p.getLabel());
+            }
+            _selectedPhotos.postValue(uris);
+        }
     }
 
     public void saveDraft(String title, String description, CategoryDto category, String customCategory, LocationDto location, String addressString) {
@@ -324,13 +369,45 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         VoiceNoteState vnState = _voiceNoteState.getValue();
         boolean hasVoiceNote = vnState != null && vnState.localFile != null;
         
-        if (title == null || title.trim().length() < 5) {
-            _error.setValue("Title must be at least 5 characters");
-            return;
+        String otherCategory = getApplication().getString(R.string.category_other);
+        String categoryName = (category != null && !category.getName().equalsIgnoreCase(otherCategory)) 
+            ? category.getName() 
+            : (customCategory != null && !customCategory.isEmpty() ? customCategory : null);
+
+        String finalLocation = (addressString != null && !addressString.trim().isEmpty()) ? addressString : 
+                              (location != null ? location.getDisplayName() : getApplication().getString(R.string.default_location));
+
+        if (currentClientUuid == null) {
+            currentClientUuid = UUID.randomUUID().toString();
         }
 
-        if ((description == null || description.trim().length() < 10) && !hasVoiceNote) {
-            _error.setValue("Description must be at least 10 characters or include a voice note");
+        // Use the same validation logic as the request model
+        com.voiceyanga.citizen.data.remote.dto.ComplaintRequest validationRequest = 
+            new com.voiceyanga.citizen.data.remote.dto.ComplaintRequest(
+                title,
+                description,
+                categoryName,
+                finalLocation,
+                "MEDIUM",
+                currentClientUuid
+            );
+        
+        if (hasVoiceNote) {
+            validationRequest.voiceNoteUrl = "temp"; // Placeholder for validation
+        }
+
+        if (!validationRequest.isValid()) {
+            if (title == null || title.trim().length() < 5) {
+                _error.setValue("Title must be at least 5 characters");
+            } else if (title.length() > 150) {
+                _error.setValue("Title must not exceed 150 characters");
+            } else if (categoryName == null || categoryName.isEmpty()) {
+                _error.setValue(getApplication().getString(R.string.error_select_problem_type));
+            } else if (!hasVoiceNote && (description == null || description.trim().length() < 10)) {
+                _error.setValue("Description must be at least 10 characters or include a voice note");
+            } else {
+                _error.setValue("Invalid complaint data. Please check all fields.");
+            }
             return;
         }
 
@@ -340,25 +417,7 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
             return;
         }
 
-        String otherCategory = getApplication().getString(R.string.category_other);
-        String categoryName = (category != null && !category.getName().equalsIgnoreCase(otherCategory)) 
-            ? category.getName() 
-            : (customCategory != null && !customCategory.isEmpty() ? customCategory : null);
-            
-        if (category == null && (customCategory == null || customCategory.isEmpty())) {
-            _error.setValue(getApplication().getString(R.string.error_select_problem_type));
-            return;
-        }
-        
-        if (category != null && category.getName().equalsIgnoreCase(otherCategory) && (customCategory == null || customCategory.isEmpty())) {
-             _error.setValue(getApplication().getString(R.string.error_specify_other));
-             return;
-        }
-
         _loading.setValue(true);
-
-        String finalLocation = (addressString != null && !addressString.trim().isEmpty()) ? addressString : 
-                              (location != null ? location.getDisplayName() : getApplication().getString(R.string.default_location));
         
         // Remove common numeric debris if found at the start of string
         finalLocation = finalLocation.replaceAll("^[A-Z0-9]{4}\\+[A-Z0-9]{2,3}\\s*,*\\s*", "");
@@ -374,6 +433,7 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         );
         complaint.setLatitude(lat);
         complaint.setLongitude(lon);
+        complaint.setUserId(repository.getUserId());
         
         if (category != null && !category.getName().equalsIgnoreCase(otherCategory)) {
             complaint.setCategoryId(category.getId());
@@ -383,6 +443,8 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
             complaint.setVoiceNoteLocalPath(vnState.localFile.getAbsolutePath());
             complaint.setVoiceNoteDuration(vnState.durationSeconds);
         }
+        
+        complaint.setFailureReason(null); // Clear previous errors if any
         
         repository.deleteDraft(); // Clear any existing draft before promoting
         repository.saveComplaint(complaint, _selectedPhotos.getValue(), photoLabels);
@@ -403,7 +465,9 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
                 if (uriString.startsWith("content://")) {
                     // Copy to internal storage to ensure permanent access for sync and sharing
                     java.io.File storageDir = new java.io.File(getApplication().getFilesDir(), "photos");
-                    if (!storageDir.exists()) storageDir.mkdirs();
+                    if (!storageDir.exists() && !storageDir.mkdirs()) {
+                        android.util.Log.w("ComplaintVM", "Could not create photos directory");
+                    }
                     
                     java.io.File localFile = new java.io.File(storageDir, "IMG_" + UUID.randomUUID() + ".jpg");
                     java.io.InputStream is = getApplication().getContentResolver().openInputStream(uri);

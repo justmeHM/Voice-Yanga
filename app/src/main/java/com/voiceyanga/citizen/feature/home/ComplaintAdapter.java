@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.voiceyanga.citizen.R;
-import com.voiceyanga.citizen.core.network.ApiConstants;
+import com.voiceyanga.citizen.BuildConfig;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.databinding.ItemComplaintBinding;
 
@@ -49,9 +49,9 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
 
             @Override
             public boolean areContentsTheSame(@NonNull Complaint oldItem, @NonNull Complaint newItem) {
-                return oldItem.getSyncStatus().equals(newItem.getSyncStatus()) &&
-                        oldItem.getStatus().equals(newItem.getStatus()) &&
-                        oldItem.getTitle().equals(newItem.getTitle()) &&
+                return Objects.equals(oldItem.getSyncStatus(), newItem.getSyncStatus()) &&
+                        Objects.equals(oldItem.getStatus(), newItem.getStatus()) &&
+                        Objects.equals(oldItem.getTitle(), newItem.getTitle()) &&
                         oldItem.getSupportCount() == newItem.getSupportCount() &&
                         oldItem.getCommentCount() == newItem.getCommentCount() &&
                         Objects.equals(oldItem.getFirstPhotoUri(), newItem.getFirstPhotoUri()) &&
@@ -83,49 +83,67 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
     static class ViewHolder extends RecyclerView.ViewHolder {
         private final ItemComplaintBinding binding;
         private final OnComplaintClickListener listener;
+        
+        // Cache colors to reduce Context lookup in bind()
+        private final int colorResolvedBg;
+        private final int colorResolvedText;
+        private final int colorWhite;
+        private final int colorNeutral100;
+        private final int colorPrimaryGreen;
+        private final int colorPrimaryRed;
+        private final int colorNeutral200;
+        private final int colorNeutral500;
+        private final int colorNeutral600;
+        private final int colorPrimaryGreenLight;
+        private final int colorPrimaryRedLight;
 
         ViewHolder(ItemComplaintBinding binding, OnComplaintClickListener listener) {
             super(binding.getRoot());
             this.binding = binding;
             this.listener = listener;
+            
+            Context context = itemView.getContext();
+            colorResolvedBg = ContextCompat.getColor(context, R.color.status_resolved_bg);
+            colorResolvedText = ContextCompat.getColor(context, R.color.status_resolved_text);
+            colorWhite = ContextCompat.getColor(context, R.color.white);
+            colorNeutral100 = ContextCompat.getColor(context, R.color.neutral_100);
+            colorPrimaryGreen = ContextCompat.getColor(context, R.color.primary_green);
+            colorPrimaryRed = ContextCompat.getColor(context, R.color.primary_red);
+            colorNeutral200 = ContextCompat.getColor(context, R.color.neutral_200);
+            colorNeutral500 = ContextCompat.getColor(context, R.color.neutral_500);
+            colorNeutral600 = ContextCompat.getColor(context, R.color.neutral_600);
+            colorPrimaryGreenLight = ContextCompat.getColor(context, R.color.primary_green_light);
+            colorPrimaryRedLight = ContextCompat.getColor(context, R.color.primary_red_light);
         }
 
         void bind(Complaint complaint, String currentUserEmail) {
             binding.tvTitle.setText(complaint.getTitle());
             binding.tvDescriptionSnippet.setText(complaint.getDescription());
             
-            Context context = itemView.getContext();
-
             // Dynamic Branding based on Status/Priority
             String status = complaint.getStatus() != null ? complaint.getStatus() : "SUBMITTED";
             String priority = complaint.getCalculatedPriority();
             
             if ("RESOLVED".equals(status)) {
-                binding.getRoot().setCardBackgroundColor(ContextCompat.getColor(context, R.color.status_resolved_bg));
-                binding.tvStatus.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(context, R.color.status_resolved_text)));
-                binding.tvStatus.setTextColor(ContextCompat.getColor(context, R.color.white));
+                binding.getRoot().setCardBackgroundColor(colorResolvedBg);
+                binding.tvStatus.setBackgroundTintList(ColorStateList.valueOf(colorResolvedText));
+                binding.tvStatus.setTextColor(colorWhite);
             } else {
-                binding.getRoot().setCardBackgroundColor(ContextCompat.getColor(context, R.color.white));
-                binding.tvStatus.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(context, R.color.neutral_100)));
-                binding.tvStatus.setTextColor(ContextCompat.getColor(context, R.color.primary_green));
+                binding.getRoot().setCardBackgroundColor(colorWhite);
+                binding.tvStatus.setBackgroundTintList(ColorStateList.valueOf(colorNeutral100));
+                binding.tvStatus.setTextColor(colorPrimaryGreen);
             }
 
             if ("CRITICAL".equals(priority)) {
-                binding.getRoot().setStrokeColor(ContextCompat.getColor(context, R.color.primary_red));
+                binding.getRoot().setStrokeColor(colorPrimaryRed);
                 binding.getRoot().setStrokeWidth(4);
             } else {
-                binding.getRoot().setStrokeColor(ContextCompat.getColor(context, R.color.neutral_200));
+                binding.getRoot().setStrokeColor(colorNeutral200);
                 binding.getRoot().setStrokeWidth(2);
             }
 
             // Sub-header: CATEGORY • TIME • LOCATION
-            long diff = System.currentTimeMillis() - complaint.getCreatedAt();
-            String timeStr;
-            if (diff < 60000) timeStr = "Just now";
-            else if (diff < 3600000) timeStr = (diff / 60000) + "m ago";
-            else if (diff < 86400000) timeStr = (diff / 3600000) + "h ago";
-            else timeStr = (diff / 86400000) + "d ago";
-
+            String timeStr = getRelativeTime(complaint.getCreatedAt());
             String cat = complaint.getCategory() != null ? complaint.getCategory().toUpperCase() : "GENERAL";
             String loc = complaint.getLocation() != null ? complaint.getLocation() : "Unknown";
             
@@ -154,7 +172,7 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
                 } else if (photoUri.startsWith("/data/") || photoUri.startsWith("/storage/") || photoUri.startsWith("/emulated/")) {
                     fullUrl = photoUri;
                 } else {
-                    fullUrl = ApiConstants.API_HOST + (photoUri.startsWith("/") ? "" : "/") + photoUri;
+                    fullUrl = BuildConfig.API_ORIGIN + (photoUri.startsWith("/") ? "" : "/") + photoUri;
                 }
 
                 com.bumptech.glide.Glide.with(itemView.getContext())
@@ -198,16 +216,16 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
             String syncStatus = complaint.getSyncStatus();
             if ("SYNCED".equals(syncStatus)) {
                 binding.tvSyncStatus.setText(complaint.getReferenceCode());
-                binding.tvSyncStatus.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.neutral_500));
+                binding.tvSyncStatus.setTextColor(colorNeutral500);
             } else if ("FAILED".equals(syncStatus)) {
                 binding.tvSyncStatus.setText(R.string.sync_failed_hint);
-                binding.tvSyncStatus.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.primary_red));
+                binding.tvSyncStatus.setTextColor(colorPrimaryRed);
             } else if ("SYNCING".equals(syncStatus)) {
                 binding.tvSyncStatus.setText(R.string.syncing_hint);
-                binding.tvSyncStatus.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.primary_green));
+                binding.tvSyncStatus.setTextColor(colorPrimaryGreen);
             } else {
                 binding.tvSyncStatus.setText(R.string.pending_sync_hint);
-                binding.tvSyncStatus.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.neutral_500));
+                binding.tvSyncStatus.setTextColor(colorNeutral500);
             }
 
             binding.tvSyncStatus.setOnClickListener(v -> {
@@ -225,28 +243,30 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
             if (isMyComplaint) {
                 binding.tvUserBadge.setVisibility(android.view.View.VISIBLE);
                 binding.tvUserBadge.setText("YOURS");
-                binding.tvUserBadge.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(itemView.getContext(), R.color.primary_green_light)));
-                binding.tvUserBadge.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.primary_green));
+                binding.tvUserBadge.setBackgroundTintList(ColorStateList.valueOf(colorPrimaryGreenLight));
+                binding.tvUserBadge.setTextColor(colorPrimaryGreen);
                 
                 binding.btnSupport.setEnabled(false);
                 binding.btnSupport.setAlpha(0.5f);
             } else if (complaint.isSupportedByMe()) {
                 binding.tvUserBadge.setVisibility(android.view.View.VISIBLE);
                 binding.tvUserBadge.setText("SUPPORTED");
-                binding.tvUserBadge.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(itemView.getContext(), R.color.primary_red_light)));
-                binding.tvUserBadge.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.primary_red));
+                binding.tvUserBadge.setBackgroundTintList(ColorStateList.valueOf(colorPrimaryRedLight));
+                binding.tvUserBadge.setTextColor(colorPrimaryRed);
                 
                 binding.btnSupport.setEnabled(true);
                 binding.btnSupport.setAlpha(1.0f);
-                binding.btnSupport.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.primary_red));
-                binding.btnSupport.setIconTint(ColorStateList.valueOf(ContextCompat.getColor(itemView.getContext(), R.color.primary_red)));
+                binding.btnSupport.setText(R.string.status_supported);
+                binding.btnSupport.setTextColor(colorPrimaryRed);
+                binding.btnSupport.setIconTint(ColorStateList.valueOf(colorPrimaryRed));
             } else {
                 binding.tvUserBadge.setVisibility(android.view.View.GONE);
                 
                 binding.btnSupport.setEnabled(true);
                 binding.btnSupport.setAlpha(1.0f);
-                binding.btnSupport.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.neutral_600));
-                binding.btnSupport.setIconTint(ColorStateList.valueOf(ContextCompat.getColor(itemView.getContext(), R.color.neutral_600)));
+                binding.btnSupport.setText(R.string.action_support);
+                binding.btnSupport.setTextColor(colorNeutral600);
+                binding.btnSupport.setIconTint(ColorStateList.valueOf(colorNeutral600));
             }
 
             binding.btnSupport.setOnClickListener(v -> {
@@ -273,6 +293,14 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
                     listener.onComplaintClick(complaint, binding.ivComplaintPreview);
                 }
             });
+        }
+
+        private String getRelativeTime(long createdAt) {
+            long diff = System.currentTimeMillis() - createdAt;
+            if (diff < 60000) return "Just now";
+            if (diff < 3600000) return (diff / 60000) + "m ago";
+            if (diff < 86400000) return (diff / 3600000) + "h ago";
+            return (diff / 86400000) + "d ago";
         }
     }
 }

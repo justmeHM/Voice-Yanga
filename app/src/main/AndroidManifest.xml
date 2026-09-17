@@ -108,6 +108,11 @@
             android:exported="false"
             android:theme="@style/Theme.VoiceYanga" />
 
+        <activity
+            android:name=".feature.complaints.SuccessGalleryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.VoiceYanga" />
+
         <service
             android:name=".core.notifications.VoiceYangaMessagingService"
             android:exported="false">
@@ -122,6 +127,10 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/primary_green" />
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="voice_yanga_alerts" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

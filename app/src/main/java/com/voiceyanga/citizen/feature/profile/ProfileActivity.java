@@ -1,9 +1,12 @@
 package com.voiceyanga.citizen.feature.profile;
 
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -13,6 +16,8 @@ import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.databinding.ActivityProfileBinding;
 import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
+import android.content.Intent;
+import com.voiceyanga.citizen.feature.auth.SplashActivity;
 
 @AndroidEntryPoint
 public class ProfileActivity extends AppCompatActivity {
@@ -52,7 +57,35 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void setupToolbar() {
+        setSupportActionBar(binding.toolbar);
         binding.toolbar.setNavigationOnClickListener(v -> finish());
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.profile_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_delete_account) {
+            showDeleteConfirmation();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void showDeleteConfirmation() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_delete_account_title)
+                .setMessage(R.string.dialog_delete_account_message)
+                .setPositiveButton(R.string.btn_delete, (dialog, which) -> {
+                    binding.progressBar.setVisibility(View.VISIBLE);
+                    viewModel.deleteAccount();
+                })
+                .setNegativeButton(R.string.btn_cancel, null)
+                .show();
     }
 
     private void setupObservers() {
@@ -69,6 +102,18 @@ public class ProfileActivity extends AppCompatActivity {
             if (success != null && success) {
                 binding.progressBar.setVisibility(View.GONE);
                 Toast.makeText(this, R.string.profile_updated, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        viewModel.getDeleteSuccess().observe(this, success -> {
+            if (success != null && success) {
+                binding.progressBar.setVisibility(View.GONE);
+                Toast.makeText(this, R.string.account_deleted_success, Toast.LENGTH_LONG).show();
+                
+                Intent intent = new Intent(this, SplashActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
             }
         });
 

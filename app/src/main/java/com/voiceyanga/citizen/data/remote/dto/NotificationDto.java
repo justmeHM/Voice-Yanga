@@ -22,7 +22,7 @@ public class NotificationDto {
     private boolean isRead;
 
     @SerializedName("timestamp")
-    private long timestamp;
+    private String timestamp;
 
     public String getId() { return id; }
     public String getComplaintUuid() { return complaintUuid; }
@@ -30,5 +30,5 @@ public class NotificationDto {
     public String getMessage() { return message; }
     public String getType() { return type; }
     public boolean isRead() { return isRead; }
-    public long getTimestamp() { return timestamp; }
+    public String getTimestamp() { return timestamp; }
 }

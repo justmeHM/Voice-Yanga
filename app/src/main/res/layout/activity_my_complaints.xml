@@ -126,38 +126,44 @@
             android:background="@color/neutral_200" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <FrameLayout
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <com.facebook.shimmer.ShimmerFrameLayout
-            android:id="@+id/shimmerMyComplaints"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="gone"
-            app:shimmer_auto_start="true">
+            android:layout_height="match_parent">
 
-            <LinearLayout
+            <com.facebook.shimmer.ShimmerFrameLayout
+                android:id="@+id/shimmerMyComplaints"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-                <include layout="@layout/shimmer_item_complaint" />
-                <include layout="@layout/shimmer_item_complaint" />
-                <include layout="@layout/shimmer_item_complaint" />
-            </LinearLayout>
+                android:layout_height="match_parent"
+                android:visibility="gone"
+                app:shimmer_auto_start="true">
 
-        </com.facebook.shimmer.ShimmerFrameLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <include layout="@layout/shimmer_item_complaint" />
+                    <include layout="@layout/shimmer_item_complaint" />
+                    <include layout="@layout/shimmer_item_complaint" />
+                </LinearLayout>
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvMyComplaints"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:paddingTop="8dp"
-            android:paddingBottom="24dp" />
+            </com.facebook.shimmer.ShimmerFrameLayout>
 
-    </FrameLayout>
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvMyComplaints"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingTop="8dp"
+                android:paddingBottom="24dp" />
+
+        </FrameLayout>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <LinearLayout
         android:id="@+id/llEmptyState"

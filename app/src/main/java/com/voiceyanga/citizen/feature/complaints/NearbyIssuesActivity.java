@@ -38,6 +38,7 @@ public class NearbyIssuesActivity extends AppCompatActivity {
         setupObservers();
         setupListeners();
         fetchUserLocation();
+        viewModel.refreshData();
     }
 
     private void fetchUserLocation() {
@@ -113,6 +114,10 @@ public class NearbyIssuesActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        binding.swipeRefresh.setOnRefreshListener(() -> viewModel.retrySync());
+        binding.swipeRefresh.setOnRefreshListener(() -> {
+            fetchUserLocation();
+            viewModel.refreshData();
+            viewModel.retrySync();
+        });
     }
 }

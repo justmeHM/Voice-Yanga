@@ -101,6 +101,14 @@ public class CreateComplaintActivity extends AppCompatActivity {
         setupObservers();
         setupListeners();
         
+        String existingUuid = getIntent().getStringExtra("extra_complaint_uuid");
+        if (existingUuid != null) {
+            viewModel.loadComplaintForEdit(existingUuid);
+            binding.toolbar.setTitle("Edit Report");
+        } else {
+            viewModel.loadDraft();
+        }
+
         requestLocationPermissions();
         populateSummary();
         
@@ -252,9 +260,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
         });
 
         viewModel.getLocations().observe(this, locations -> {
-            if (locations != null && !locations.isEmpty()) {
-                this.currentLocation = locations.get(0);
-            }
+            // Keep locations referenced for spinner dialog updates
         });
 
         viewModel.getSubmissionSuccess().observe(this, success -> {
@@ -524,6 +530,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
         LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000)
                 .setMaxUpdates(1)
+                .setDurationMillis(15000)
                 .build();
 
         if (locationCallback == null) {
@@ -543,6 +550,16 @@ public class CreateComplaintActivity extends AppCompatActivity {
         }
 
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, android.os.Looper.getMainLooper());
+
+        // Safety timeout to hide progress bar and notify user if GPS takes too long
+        binding.tvDetectedLocation.postDelayed(() -> {
+            if (binding.pbLocationLoading.getVisibility() == View.VISIBLE) {
+                fusedLocationClient.removeLocationUpdates(locationCallback);
+                binding.pbLocationLoading.setVisibility(View.GONE);
+                Toast.makeText(CreateComplaintActivity.this, "GPS tracking timeout. Please select location manually.", Toast.LENGTH_LONG).show();
+                binding.tvDetectedLocation.setText("Location tracking timed out");
+            }
+        }, 15000);
     }
 
     private void updateLocationUI(Location location) {

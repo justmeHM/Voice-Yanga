@@ -1,6 +1,8 @@
 package com.voiceyanga.citizen.core.audio;
 
+import android.content.Context;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -12,10 +14,15 @@ public class VoiceNoteRecorder {
     private static final String TAG = "VoiceNoteRecorder";
     private static final int MAX_DURATION_MS = 120_000; // 2 minutes
 
+    private final Context context;
     private MediaRecorder recorder;
     private File outputFile;
     private boolean isRecording = false;
     private long startTime;
+
+    public VoiceNoteRecorder(Context context) {
+        this.context = context.getApplicationContext();
+    }
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable timerRunnable = new Runnable() {
         @Override
@@ -55,7 +62,13 @@ public class VoiceNoteRecorder {
         
         try {
             release(); // Ensure cleanup before start
-            recorder = new MediaRecorder();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                recorder = new MediaRecorder(context);
+            } else {
+                @SuppressWarnings("deprecation")
+                MediaRecorder legacyRecorder = new MediaRecorder();
+                recorder = legacyRecorder;
+            }
             recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
             recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
@@ -84,7 +97,8 @@ public class VoiceNoteRecorder {
         } catch (RuntimeException e) {
             Log.e(TAG, "stop() failed (usually recording was too short)", e);
             if (outputFile != null && outputFile.exists()) {
-                outputFile.delete();
+                boolean deleted = outputFile.delete();
+                if (!deleted) Log.w(TAG, "Could not delete corrupted recording file");
             }
         } finally {
             release();
@@ -104,9 +118,5 @@ public class VoiceNoteRecorder {
         } finally {
             recorder = null;
         }
-    }
-
-    public boolean isRecording() {
-        return isRecording;
     }
 }

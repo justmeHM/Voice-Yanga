@@ -20,6 +20,7 @@ public class SessionManager {
     private static final String PREF_NAME = "voice_yanga_secure_session";
     private static final String KEY_TOKEN = "token";
     private static final String KEY_REFRESH_TOKEN = "refresh_token";
+    private static final String KEY_USER_ID = "user_id";
     private static final String KEY_USER_NAME = "user_name";
     private static final String KEY_USER_EMAIL = "user_email";
     private static final String KEY_USER_PHONE = "user_phone";
@@ -50,20 +51,35 @@ public class SessionManager {
 
     public void saveTokens(String access, String refresh) {
         android.util.Log.d("SessionManager", "Saving tokens. Access token length: " + (access != null ? access.length() : "null"));
-        prefs.edit()
-                .putString(KEY_TOKEN, access)
-                .putString(KEY_REFRESH_TOKEN, refresh)
-                .apply();
+        SharedPreferences.Editor editor = prefs.edit();
+        if (access != null) {
+            editor.putString(KEY_TOKEN, access);
+        } else {
+            editor.remove(KEY_TOKEN);
+        }
+        
+        if (refresh != null) {
+            editor.putString(KEY_REFRESH_TOKEN, refresh);
+        } else {
+            editor.remove(KEY_REFRESH_TOKEN);
+        }
+        // Use commit() for tokens to ensure they are available to the next request immediately
+        editor.commit();
     }
 
-    public void saveUser(String name, String email, String phone, String role) {
+    public void saveUser(String id, String name, String email, String phone, String role) {
         String safeName = (name == null || name.trim().isEmpty() || name.equalsIgnoreCase("null null") || name.equalsIgnoreCase("null")) ? "Citizen" : name;
         prefs.edit()
+                .putString(KEY_USER_ID, id != null ? id : "")
                 .putString(KEY_USER_NAME, safeName)
                 .putString(KEY_USER_EMAIL, email != null ? email : "")
                 .putString(KEY_USER_PHONE, phone != null ? phone : "")
                 .putString(KEY_USER_ROLE, role != null ? role : "CITIZEN")
                 .apply();
+    }
+
+    public String getUserId() {
+        return prefs.getString(KEY_USER_ID, "");
     }
 
     public String getAccessToken() {
@@ -99,6 +115,7 @@ public class SessionManager {
         prefs.edit()
                 .remove(KEY_TOKEN)
                 .remove(KEY_REFRESH_TOKEN)
+                .remove(KEY_USER_ID)
                 .remove(KEY_USER_NAME)
                 .remove(KEY_USER_EMAIL)
                 .remove(KEY_USER_PHONE)

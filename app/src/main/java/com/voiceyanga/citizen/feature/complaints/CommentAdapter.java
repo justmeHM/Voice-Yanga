@@ -50,7 +50,14 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
 
         public void bind(Comment comment) {
             binding.tvAuthor.setText(comment.getAuthorName());
-            binding.tvContent.setText(comment.getContent());
+            
+            String content = comment.getContent();
+            if (content == null || content.trim().isEmpty()) {
+                content = "(No content)";
+            }
+            binding.tvContent.setText(content);
+            binding.tvContent.setVisibility(View.VISIBLE);
+            
             binding.tvDate.setText(dateFormat.format(new Date(comment.getCreatedAt())));
             binding.tvOfficialBadge.setVisibility(comment.isOfficial() ? View.VISIBLE : View.GONE);
             

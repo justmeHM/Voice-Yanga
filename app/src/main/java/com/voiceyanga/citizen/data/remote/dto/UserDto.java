@@ -6,14 +6,17 @@ public class UserDto {
     @SerializedName("id")
     private String id;
 
-    @SerializedName(value = "firstName", alternate = {"first_name"})
+    @SerializedName("role")
+    private String role;
+
+    @SerializedName("name")
+    private String name;
+
+    @SerializedName("firstName")
     private String firstName;
 
-    @SerializedName(value = "lastName", alternate = {"last_name"})
+    @SerializedName("lastName")
     private String lastName;
-
-    @SerializedName(value = "name", alternate = {"full_name"})
-    private String name;
     
     @SerializedName("email")
     private String email;
@@ -21,13 +24,16 @@ public class UserDto {
     @SerializedName("phone")
     private String phone;
 
-    @SerializedName("role")
-    private String role;
+    @SerializedName("permissions")
+    private java.util.List<String> permissions;
 
-    @SerializedName(value = "locationId", alternate = {"location_id"})
+    @SerializedName("createdAt")
+    private String createdAt;
+
+    @SerializedName("locationId")
     private String locationId;
 
-    @SerializedName(value = "fcmToken", alternate = {"fcm_token"})
+    @SerializedName("fcmToken")
     private String fcmToken;
 
     public String getId() { return id; }
@@ -38,6 +44,8 @@ public class UserDto {
     public String getRole() { return role != null ? role : "CITIZEN"; }
     public String getLocationId() { return locationId; }
     public String getFcmToken() { return fcmToken; }
+    public java.util.List<String> getPermissions() { return permissions != null ? permissions : new java.util.ArrayList<>(); }
+    public String getCreatedAt() { return createdAt; }
 
     public void setFirstName(String firstName) { this.firstName = firstName; }
     public void setLastName(String lastName) { this.lastName = lastName; }

@@ -1,122 +1,148 @@
 package com.voiceyanga.citizen.data.remote.api;
 
+import com.voiceyanga.citizen.data.remote.dto.ApiEnvelope;
 import com.voiceyanga.citizen.data.remote.dto.AuthResponse;
-import com.voiceyanga.citizen.data.remote.dto.BaseResponse;
 import com.voiceyanga.citizen.data.remote.dto.CategoryDto;
 import com.voiceyanga.citizen.data.remote.dto.CommentRequest;
 import com.voiceyanga.citizen.data.remote.dto.CommentResponse;
 import com.voiceyanga.citizen.data.remote.dto.ComplaintDto;
 import com.voiceyanga.citizen.data.remote.dto.ComplaintRequest;
-import com.voiceyanga.citizen.data.remote.dto.ComplaintResponse;
+import com.voiceyanga.citizen.data.remote.dto.CreateComplaintResponse;
 import com.voiceyanga.citizen.data.remote.dto.HealthResponse;
+import com.voiceyanga.citizen.data.remote.dto.HistoryItem;
 import com.voiceyanga.citizen.data.remote.dto.LocationDto;
 import com.voiceyanga.citizen.data.remote.dto.LoginRequest;
 import com.voiceyanga.citizen.data.remote.dto.NotificationDto;
-import com.voiceyanga.citizen.data.remote.dto.PaginatedResponse;
-import com.voiceyanga.citizen.data.remote.dto.PhotoUploadResponse;
+import com.voiceyanga.citizen.data.remote.dto.NotificationPreferences;
+import com.voiceyanga.citizen.data.remote.dto.PaginatedComplaints;
+import com.voiceyanga.citizen.data.remote.dto.PaginatedNotifications;
+import com.voiceyanga.citizen.data.remote.dto.RefreshData;
+import com.voiceyanga.citizen.data.remote.dto.RefreshRequest;
 import com.voiceyanga.citizen.data.remote.dto.RegisterRequest;
+import com.voiceyanga.citizen.data.remote.dto.SupportResponse;
 import com.voiceyanga.citizen.data.remote.dto.UserDto;
-import com.voiceyanga.citizen.data.remote.dto.VoiceNoteUploadResponse;
-import com.voiceyanga.citizen.data.local.entity.Notification;
+import com.voiceyanga.citizen.data.remote.dto.VoiceNoteData;
 
 import java.util.List;
 import java.util.Map;
 
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
+import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.Multipart;
 import retrofit2.http.PATCH;
 import retrofit2.http.POST;
 import retrofit2.http.Part;
-import retrofit2.http.PartMap;
 import retrofit2.http.Path;
-import retrofit2.http.QueryMap;
+import retrofit2.http.Query;
 
 public interface ApiService {
-    @GET("/health")
-    retrofit2.Call<HealthResponse> healthCheck();
 
-    // Authentication
-    @POST("auth/login")
-    retrofit2.Call<AuthResponse> login(@Body LoginRequest request);
+    @GET("/health")
+    Call<Void> health();
+
+    @GET("/ready")
+    Call<HealthResponse> ready();
 
     @POST("auth/register")
-    retrofit2.Call<Void> register(@Body RegisterRequest request);
+    Call<AuthResponse> register(@Body RegisterRequest body);
+
+    @POST("auth/login")
+    Call<AuthResponse> login(@Body LoginRequest body);
 
     @POST("auth/refresh")
-    retrofit2.Call<AuthResponse> refreshToken(@Body Map<String, String> body);
+    Call<ApiEnvelope<RefreshData>> refresh(@Body RefreshRequest body);
 
     @POST("auth/logout")
-    retrofit2.Call<Void> logout(@Body Map<String, String> body);
+    Call<ApiEnvelope<Object>> logout(@Body RefreshRequest body);
 
-    @POST("auth/password-reset/request")
-    retrofit2.Call<Void> requestPasswordReset(@Body Map<String, String> body);
-
-    // Reference Data
-    @GET("categories")
-    retrofit2.Call<BaseResponse<List<CategoryDto>>> getCategories();
-
-    @GET("locations")
-    retrofit2.Call<BaseResponse<List<LocationDto>>> getLocations();
-
-    // Users
     @GET("users/profile")
-    retrofit2.Call<UserDto> getProfile();
+    Call<UserDto> getProfile();
 
     @PATCH("users/profile")
-    retrofit2.Call<UserDto> updateProfile(@Body Map<String, Object> body);
+    Call<ApiEnvelope<UserDto>> updateProfile(@Body Map<String, Object> body);
 
-    // Complaints
+    @GET("categories")
+    Call<ApiEnvelope<List<CategoryDto>>> getCategories();
+
+    @GET("locations")
+    Call<ApiEnvelope<List<LocationDto>>> getLocations();
+
+    @POST("complaints")
+    Call<CreateComplaintResponse> createComplaint(@Body ComplaintRequest body);
+
     @Multipart
     @POST("complaints")
-    retrofit2.Call<ComplaintResponse> createComplaint(
-            @Part("title") RequestBody title,
-            @Part("description") RequestBody description,
-            @Part("category") RequestBody category,
-            @Part("location") RequestBody location,
-            @Part("priority") RequestBody priority,
-            @Part("clientUuid") RequestBody clientUuid,
-            @Part("voiceNoteUrl") RequestBody voiceNoteUrl,
-            @Part("voiceNoteDurationSeconds") RequestBody voiceNoteDurationSeconds,
-            @Part List<MultipartBody.Part> photos
+    Call<CreateComplaintResponse> createComplaintWithPhotos(
+        @Part("title") RequestBody title,
+        @Part("description") RequestBody description,
+        @Part("category") RequestBody category,
+        @Part("location") RequestBody location,
+        @Part("priority") RequestBody priority,
+        @Part("clientUuid") RequestBody clientUuid,
+        @Part("voiceNoteUrl") RequestBody voiceNoteUrl,
+        @Part("voiceNoteDurationSeconds") RequestBody voiceNoteDurationSeconds,
+        @Part List<MultipartBody.Part> photos
     );
-
-    @Multipart
-    @POST("photos/upload")
-    retrofit2.Call<PhotoUploadResponse> uploadPhoto(@Part MultipartBody.Part file);
 
     @Multipart
     @POST("voice-notes")
-    retrofit2.Call<VoiceNoteUploadResponse> uploadVoiceNote(
-            @Part MultipartBody.Part file,
-            @Part("durationSeconds") RequestBody durationSeconds
+    Call<ApiEnvelope<VoiceNoteData>> uploadVoiceNote(
+        @Part MultipartBody.Part file,
+        @Part("durationSeconds") RequestBody durationSeconds
     );
 
-    // Notifications
-    @GET("notifications")
-    retrofit2.Call<BaseResponse<List<NotificationDto>>> getNotifications();
-
-    @PATCH("notifications/{id}/read")
-    retrofit2.Call<Void> markNotificationRead(@Path("id") String id);
-
-    @PATCH("notifications/read-all")
-    retrofit2.Call<Void> markAllNotificationsRead();
+    @GET("complaints/my")
+    Call<ApiEnvelope<PaginatedComplaints>> getMyComplaints(
+        @Query("page") int page,
+        @Query("limit") int limit
+    );
 
     @GET("complaints")
-    retrofit2.Call<PaginatedResponse<ComplaintDto>> getComplaints(
-            @QueryMap Map<String, String> filters);
+    Call<ApiEnvelope<PaginatedComplaints>> getComplaints(
+        @Query("page") int page,
+        @Query("limit") int limit,
+        @Query("status") String status,
+        @Query("category") String category,
+        @Query("search") String search,
+        @Query("ward") String ward,
+        @Query("district") String district,
+        @Query("province") String province
+    );
 
-    @POST("complaints/{serverId}/support")
-    retrofit2.Call<Void> supportComplaint(@retrofit2.http.Path("serverId") String serverId);
+    @GET("complaints/{id}")
+    Call<com.google.gson.JsonElement> getComplaint(@Path("id") String id);
 
-    // Comments
-    @GET("complaints/{serverId}/comments")
-    retrofit2.Call<BaseResponse<List<CommentResponse>>> getComments(@Path("serverId") String serverId);
+    @GET("complaints/{id}/history")
+    Call<com.google.gson.JsonElement> getHistory(@Path("id") String id);
 
-    @POST("complaints/{serverId}/comments")
-    retrofit2.Call<CommentResponse> postComment(
-            @Path("serverId") String serverId,
-            @Body CommentRequest request);
+    @GET("complaints/{id}/comments")
+    Call<List<CommentResponse>> getComments(@Path("id") String id);
+
+    @POST("complaints/{id}/comments")
+    Call<ApiEnvelope<CommentResponse>> addComment(
+        @Path("id") String id,
+        @Body CommentRequest body
+    );
+
+    @POST("complaints/{id}/support")
+    Call<SupportResponse> support(@Path("id") String id);
+
+    @GET("notifications")
+    Call<ApiEnvelope<PaginatedNotifications>> getNotifications(
+        @Query("page") int page,
+        @Query("limit") int limit,
+        @Query("unreadOnly") boolean unreadOnly
+    );
+
+    @PATCH("notifications/preferences")
+    Call<ApiEnvelope<Object>> updateNotificationPreferences(@Body NotificationPreferences body);
+
+    @PATCH("notifications/{id}/read")
+    Call<ApiEnvelope<Object>> markNotificationRead(@Path("id") String id);
+
+    @PATCH("notifications/read-all")
+    Call<ApiEnvelope<Object>> markAllNotificationsRead();
 }

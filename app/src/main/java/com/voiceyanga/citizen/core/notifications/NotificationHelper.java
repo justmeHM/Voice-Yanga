@@ -6,7 +6,9 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.graphics.BitmapFactory;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.data.local.dao.NotificationDao;
 import com.voiceyanga.citizen.data.local.entity.Notification;
@@ -86,6 +88,8 @@ public class NotificationHelper {
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification_bell_vector)
+                .setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_voice_yanga))
+                .setColor(ContextCompat.getColor(context, R.color.primary_green))
                 .setContentTitle(title)
                 .setContentText(message)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -96,5 +100,10 @@ public class NotificationHelper {
         if (manager != null) {
             manager.notify((int) System.currentTimeMillis(), builder.build());
         }
+    }
+
+    public void showMilestoneNotification(String title, String complaintTitle, int milestone, String complaintUuid) {
+        String message = context.getString(R.string.notification_milestone_message, complaintTitle, milestone);
+        showNotification(title, message, complaintUuid, "MILESTONE");
     }
 }

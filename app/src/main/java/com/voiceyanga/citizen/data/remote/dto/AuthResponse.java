@@ -3,16 +3,21 @@ package com.voiceyanga.citizen.data.remote.dto;
 import com.google.gson.annotations.SerializedName;
 
 public class AuthResponse {
-    @SerializedName(value = "accessToken", alternate = {"token", "access_token"})
+    @SerializedName("token")
+    private String token;
+
+    @SerializedName("accessToken")
     private String accessToken;
 
-    @SerializedName(value = "refreshToken", alternate = {"refresh_token"})
+    @SerializedName("refreshToken")
     private String refreshToken;
     
     @SerializedName("user")
     private UserDto user;
 
-    public String getAccessToken() { return accessToken; }
+    public String getToken() { 
+        return accessToken != null ? accessToken : token; 
+    }
     public String getRefreshToken() { return refreshToken; }
     public UserDto getUser() { return user; }
 }

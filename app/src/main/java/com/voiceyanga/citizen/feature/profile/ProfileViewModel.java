@@ -5,7 +5,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
-import com.voiceyanga.citizen.data.remote.dto.BaseResponse;
+import com.voiceyanga.citizen.data.remote.dto.ApiEnvelope;
 import com.voiceyanga.citizen.data.remote.dto.UserDto;
 
 import java.util.HashMap;
@@ -25,6 +25,9 @@ public class ProfileViewModel extends ViewModel {
     private final MutableLiveData<Boolean> _updateSuccess = new MutableLiveData<>();
     public LiveData<Boolean> getUpdateSuccess() { return _updateSuccess; }
 
+    private final MutableLiveData<Boolean> _deleteSuccess = new MutableLiveData<>();
+    public LiveData<Boolean> getDeleteSuccess() { return _deleteSuccess; }
+
     private final MutableLiveData<UserDto> _userProfile = new MutableLiveData<>();
     public LiveData<UserDto> getUserProfile() { return _userProfile; }
 
@@ -36,7 +39,6 @@ public class ProfileViewModel extends ViewModel {
         this.sessionManager = sessionManager;
         this.apiService = apiService;
         
-        // INITIALIZE FROM LOCAL SESSION [UX Improvement]
         UserDto cached = new UserDto();
         String fullName = sessionManager.getUserName();
         if (fullName != null && fullName.contains(" ")) {
@@ -61,9 +63,9 @@ public class ProfileViewModel extends ViewModel {
                 if (response.isSuccessful() && response.body() != null) {
                     UserDto user = response.body();
                     _userProfile.setValue(user);
-                    // Update local session
                     if (user.getEmail() != null) {
                         sessionManager.saveUser(
+                            user.getId(),
                             user.getFullName(),
                             user.getEmail(),
                             user.getPhone(),
@@ -86,36 +88,41 @@ public class ProfileViewModel extends ViewModel {
         updates.put("lastName", lastName);
         updates.put("phone", phone);
 
-        apiService.updateProfile(updates).enqueue(new Callback<UserDto>() {
+        apiService.updateProfile(updates).enqueue(new Callback<ApiEnvelope<UserDto>>() {
             @Override
-            public void onResponse(Call<UserDto> call, Response<UserDto> response) {
-                if (response.isSuccessful() && response.body() != null) {
+            public void onResponse(Call<ApiEnvelope<UserDto>> call, Response<ApiEnvelope<UserDto>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().success) {
                     _updateSuccess.setValue(true);
-                    fetchProfile(); // Refresh
+                    fetchProfile();
                 } else {
-                    _error.setValue("Update failed: " + response.code());
+                    _error.setValue("Update failed");
                 }
             }
 
             @Override
-            public void onFailure(Call<UserDto> call, Throwable t) {
+            public void onFailure(Call<ApiEnvelope<UserDto>> call, Throwable t) {
                 _error.setValue(t.getMessage());
             }
         });
+    }
+
+    public void deleteAccount() {
+        // Not supported by current API guide
+        _error.setValue("Delete account not supported");
     }
 
     public void registerFcmToken(String token) {
         Map<String, Object> updates = new HashMap<>();
         updates.put("fcmToken", token);
 
-        apiService.updateProfile(updates).enqueue(new Callback<UserDto>() {
+        apiService.updateProfile(updates).enqueue(new Callback<ApiEnvelope<UserDto>>() {
             @Override
-            public void onResponse(Call<UserDto> call, Response<UserDto> response) {
+            public void onResponse(Call<ApiEnvelope<UserDto>> call, Response<ApiEnvelope<UserDto>> response) {
                 android.util.Log.d("ProfileVM", "FCM Token registered: " + response.isSuccessful());
             }
 
             @Override
-            public void onFailure(Call<UserDto> call, Throwable t) {
+            public void onFailure(Call<ApiEnvelope<UserDto>> call, Throwable t) {
                 android.util.Log.e("ProfileVM", "FCM Token registration failed", t);
             }
         });

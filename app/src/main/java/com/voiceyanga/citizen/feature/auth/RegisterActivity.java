@@ -110,15 +110,11 @@ public class RegisterActivity extends AppCompatActivity {
             etLastName.setError(getString(R.string.error_invalid_last_name));
             return false;
         }
-        if (phone.isEmpty()) {
-            etPhone.setError(getString(R.string.error_invalid_phone));
+        if (phone.isEmpty() && email.isEmpty()) {
+            Toast.makeText(this, R.string.error_email_or_phone_required, Toast.LENGTH_SHORT).show();
             return false;
         }
-        if (email.isEmpty()) {
-            etEmail.setError(getString(R.string.error_invalid_email));
-            return false;
-        }
-        if (password.length() < 8) {
+        if (password.length() < 8 || !password.matches(".*\\d.*")) {
             etPassword.setError(getString(R.string.error_invalid_password));
             return false;
         }
@@ -133,19 +129,32 @@ public class RegisterActivity extends AppCompatActivity {
 
         viewModel.getErrorMessage().observe(this, error -> {
             if (error != null) {
-                Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, error, Toast.LENGTH_LONG).show();
+                if (error.contains("Account created, but")) {
+                    Intent intent = new Intent(this, LoginActivity.class);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                    finish();
+                }
             }
         });
 
         viewModel.getLoginSuccess().observe(this, success -> {
             if (success) {
-                Toast.makeText(this, "Registration successful! Please log in.", Toast.LENGTH_LONG).show();
-                Intent intent = new Intent(this, LoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                intent.putExtra("email", etEmail.getText() != null ? etEmail.getText().toString().trim() : "");
-                intent.putExtra("password", etPassword.getText() != null ? etPassword.getText().toString().trim() : "");
-                startActivity(intent);
-                finish();
+                if (viewModel.isRegistrationNavigationDone()) {
+                    return;
+                }
+                viewModel.markRegistrationNavigationDone();
+
+                try {
+                    Intent intent = new Intent(this, HomeActivity.class);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                    finish();
+                } catch (Exception e) {
+                    android.util.Log.e("AuthDiagnostic", "NAVIGATION_FAILED", e);
+                    Toast.makeText(this, "Account created, but navigation failed. Please restart the app.", Toast.LENGTH_LONG).show();
+                }
             }
         });
     }

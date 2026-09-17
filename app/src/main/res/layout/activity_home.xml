@@ -339,6 +339,85 @@
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
 
+                        <!-- Strategy 2: Trending Section -->
+                        <LinearLayout
+                            android:id="@+id/llTrendingRoot"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingVertical="16dp"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="24dp"
+                                android:text="@string/title_trending"
+                                android:textColor="?android:attr/textColorPrimary"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+
+                            <androidx.recyclerview.widget.RecyclerView
+                                android:id="@+id/rvTrending"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:clipToPadding="false"
+                                android:paddingHorizontal="20dp"
+                                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                                android:orientation="horizontal"
+                                tools:listitem="@layout/item_trending_complaint" />
+
+                        </LinearLayout>
+
+                        <!-- Strategy 7: Success Stories Redesign -->
+                        <LinearLayout
+                            android:id="@+id/llSuccessRoot"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingBottom="32dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="24dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Our Success Stories"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="18sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvViewAllSuccess"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="View All"
+                                    android:textColor="@color/primary_green"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                            </LinearLayout>
+
+                            <androidx.recyclerview.widget.RecyclerView
+                                android:id="@+id/rvSuccessStories"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:clipToPadding="false"
+                                android:paddingHorizontal="20dp"
+                                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                                android:orientation="horizontal"
+                                tools:listitem="@layout/item_success_preview" />
+
+                        </LinearLayout>
+
                     </LinearLayout>
                 </com.google.android.material.appbar.CollapsingToolbarLayout>
             </com.google.android.material.appbar.AppBarLayout>
@@ -405,7 +484,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="16dp"
-                            android:text="@string/empty_reports_title"
+                            android:text="@string/empty_community_title"
                             android:textColor="?android:attr/textColorPrimary"
                             android:textSize="18sp"
                             android:textStyle="bold" />
@@ -415,7 +494,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
                             android:gravity="center"
-                            android:text="@string/empty_reports_subtitle"
+                            android:text="@string/empty_community_subtitle"
                             android:textColor="?android:attr/textColorSecondary"
                             android:textSize="14sp" />
 

@@ -31,14 +31,31 @@ public class SplashViewModel extends ViewModel {
     }
 
     public void checkServerHealth() {
-        apiService.healthCheck().enqueue(new Callback<HealthResponse>() {
+        apiService.health().enqueue(new Callback<Void>() {
             @Override
-            public void onResponse(Call<HealthResponse> call, Response<HealthResponse> response) {
-                isServerReachable.setValue(response.isSuccessful());
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    apiService.ready().enqueue(new Callback<HealthResponse>() {
+                        @Override
+                        public void onResponse(Call<HealthResponse> call, Response<HealthResponse> response) {
+                            boolean isReady = response.isSuccessful() && 
+                                    response.body() != null && 
+                                    "ready".equalsIgnoreCase(response.body().getStatus());
+                            isServerReachable.setValue(isReady);
+                        }
+
+                        @Override
+                        public void onFailure(Call<HealthResponse> call, Throwable t) {
+                            isServerReachable.setValue(false);
+                        }
+                    });
+                } else {
+                    isServerReachable.setValue(false);
+                }
             }
 
             @Override
-            public void onFailure(Call<HealthResponse> call, Throwable t) {
+            public void onFailure(Call<Void> call, Throwable t) {
                 isServerReachable.setValue(false);
             }
         });

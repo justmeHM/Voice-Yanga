@@ -1,24 +1,29 @@
 package com.voiceyanga.citizen.core.di;
 
-import com.voiceyanga.citizen.core.network.ApiConstants;
+import android.content.Context;
+import android.content.Intent;
+import com.voiceyanga.citizen.BuildConfig;
 import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
-import com.voiceyanga.citizen.data.remote.dto.AuthResponse;
+import com.voiceyanga.citizen.data.remote.dto.ApiEnvelope;
+import com.voiceyanga.citizen.data.remote.dto.RefreshData;
+import com.voiceyanga.citizen.data.remote.dto.RefreshRequest;
+import com.voiceyanga.citizen.feature.auth.LoginActivity;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import javax.inject.Singleton;
-import javax.inject.Provider;
 import dagger.Module;
 import dagger.Provides;
 import dagger.hilt.InstallIn;
+import dagger.hilt.android.qualifiers.ApplicationContext;
 import dagger.hilt.components.SingletonComponent;
 import okhttp3.Authenticator;
+import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 import okhttp3.Route;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
@@ -39,71 +44,126 @@ public class NetworkModule {
     @Provides
     @Singleton
     public OkHttpClient provideOkHttpClient(
+            @ApplicationContext Context context,
             HttpLoggingInterceptor loggingInterceptor, 
             SessionManager sessionManager) {
         
+        Interceptor bearerInterceptor = chain -> {
+            Request original = chain.request();
+            String path = original.url().encodedPath();
+
+            // Do not attach access token to login, register, or refresh endpoints
+            if (path.contains("/auth/login") || path.contains("/auth/register") || path.contains("/auth/refresh")) {
+                return chain.proceed(original);
+            }
+
+            String host = original.url().host();
+            String apiHost = android.net.Uri.parse(BuildConfig.API_BASE_URL).getHost();
+
+            Request.Builder requestBuilder = original.newBuilder();
+            
+            if (host.equalsIgnoreCase(apiHost)) {
+                requestBuilder.header("Accept", "application/json");
+                String token = sessionManager.getAccessToken();
+                if (token != null && !token.isEmpty()) {
+                    android.util.Log.d("NetworkModule", "Attaching token to request: " + path);
+                    requestBuilder.header("Authorization", "Bearer " + token);
+                } else {
+                    android.util.Log.w("NetworkModule", "Token is missing for request: " + path);
+                }
+            }
+            
+            Response response = chain.proceed(requestBuilder.build());
+            if (!response.isSuccessful()) {
+                android.util.Log.e("NetworkModule", "Request failed: " + path + " | Code: " + response.code());
+            }
+            return response;
+        };
+
+        Authenticator authenticator = new Authenticator() {
+            @Override
+            public Request authenticate(Route route, Response response) throws IOException {
+                // responseCount >= 2 prevents infinite retry loops
+                if (responseCount(response) >= 2) {
+                    return null;
+                }
+
+                // Only handle TOKEN_EXPIRED specifically
+                String errorBody = "";
+                try (ResponseBody peekBody = response.peekBody(1024)) {
+                    errorBody = peekBody.string();
+                } catch (Exception ignored) {}
+
+                if (!errorBody.contains("TOKEN_EXPIRED")) {
+                    return null;
+                }
+
+                synchronized (this) {
+                    String currentToken = sessionManager.getAccessToken();
+                    String requestToken = response.request().header("Authorization");
+
+                    // Check if token was already refreshed by a concurrent request
+                    if (requestToken != null && !requestToken.contains(currentToken)) {
+                        return response.request().newBuilder()
+                                .header("Authorization", "Bearer " + currentToken)
+                                .build();
+                    }
+
+                    String refreshToken = sessionManager.getRefreshToken();
+                    if (refreshToken == null || refreshToken.isEmpty()) {
+                        handleSessionExpired(sessionManager, context);
+                        return null;
+                    }
+
+                    // Attempt token refresh using a dedicated Retrofit instance to avoid interceptor recursion
+                    Retrofit refreshRetrofit = new Retrofit.Builder()
+                            .baseUrl(BuildConfig.API_BASE_URL)
+                            .addConverterFactory(GsonConverterFactory.create())
+                            .build();
+
+                    ApiService refreshApi = refreshRetrofit.create(ApiService.class);
+                    retrofit2.Response<ApiEnvelope<RefreshData>> refreshResponse = 
+                            refreshApi.refresh(new RefreshRequest(refreshToken)).execute();
+
+                    if (refreshResponse.isSuccessful() && refreshResponse.body() != null && refreshResponse.body().success) {
+                        RefreshData data = refreshResponse.body().data;
+                        // Atomically save rotated tokens
+                        sessionManager.saveTokens(data.accessToken, data.refreshToken);
+
+                        return response.request().newBuilder()
+                                .header("Authorization", "Bearer " + data.accessToken)
+                                .build();
+                    } else {
+                        // Refresh failed (e.g. 400 or 401)
+                        handleSessionExpired(sessionManager, context);
+                        return null;
+                    }
+                }
+            }
+        };
+        
         return new OkHttpClient.Builder()
                 .addInterceptor(loggingInterceptor)
-                .addInterceptor(chain -> {
-                    String token = sessionManager.getAccessToken();
-                    if (token != null) {
-                        token = token.trim().replace("\"", "");
-                    }
-
-                    Request originalRequest = chain.request();
-                    
-                    if (token != null && !token.isEmpty() && !token.equals("null")) {
-                        // Instruction 6: Trim stored token and avoid adding Bearer twice
-                        String authHeader = token.startsWith("Bearer ") ? token : "Bearer " + token;
-                        
-                        Request authenticatedRequest = originalRequest.newBuilder()
-                                .header("Authorization", authHeader)
-                                .build();
-                        
-                        // Safe logging as requested
-                        android.util.Log.d("NetworkModule", "Request URL: " + authenticatedRequest.url());
-                        android.util.Log.d("NetworkModule", "Authorization header added: Bearer [REDACTED]");
-                        
-                        return chain.proceed(authenticatedRequest);
-                    }
-                    
-                    android.util.Log.w("NetworkModule", "No valid token available for request: " + originalRequest.url());
-                    return chain.proceed(originalRequest);
-                })
-                .authenticator((route, response) -> {
-                    if (responseCount(response) >= 2) {
-                        return null;
-                    }
-
-                    // Check for specific backend error message
-                    String bodyString;
-                    try {
-                        okhttp3.ResponseBody body = response.peekBody(Long.MAX_VALUE);
-                        bodyString = body.string();
-                    } catch (Exception ignored) {
-                        bodyString = "";
-                    }
-
-                    if (bodyString.contains("Token is invalid or expired")) {
-                        android.util.Log.e("NetworkModule", "Token expired. Clearing session.");
-                        sessionManager.clearSession();
-                        // Instructions say "log in again, save new 'token', and retry".
-                        // In background sync, we return null to stop the loop and let the 
-                        // app handle the cleared session.
-                        return null;
-                    }
-                    return null;
-                })
+                .addInterceptor(bearerInterceptor)
+                .authenticator(authenticator)
+                .followRedirects(true)
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .build();
+    }
+
+    private void handleSessionExpired(SessionManager sessionManager, Context context) {
+        sessionManager.clearSession();
+        Intent intent = new Intent(context, LoginActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        context.startActivity(intent);
     }
 
     @Provides
     @Singleton
     public Retrofit provideRetrofit(OkHttpClient okHttpClient) {
         return new Retrofit.Builder()
-                .baseUrl(ApiConstants.BASE_URL)
+                .baseUrl(BuildConfig.API_BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(okHttpClient)
                 .build();

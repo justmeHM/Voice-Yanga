@@ -6,7 +6,6 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
-import com.voiceyanga.citizen.core.network.ApiConstants;
 import com.voiceyanga.citizen.databinding.ItemPhotoBinding;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -70,10 +69,7 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         }
 
         void bind(String uri) {
-            String fullUrl = uri;
-            if (uri != null && !uri.startsWith("http") && !uri.startsWith("content://") && !uri.startsWith("file://")) {
-                fullUrl = ApiConstants.API_HOST + (uri.startsWith("/") ? uri : "/" + uri);
-            }
+            String fullUrl = com.voiceyanga.citizen.core.utils.MediaUtils.resolvePhotoUrl(uri);
 
             Glide.with(itemView.getContext())
                     .load(fullUrl)

@@ -1,28 +1,48 @@
 package com.voiceyanga.citizen.feature.complaints;
 
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.target.CustomTarget;
+import com.bumptech.glide.request.transition.Transition;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.voiceyanga.citizen.BuildConfig;
 import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
 import com.voiceyanga.citizen.databinding.ActivityComplaintDetailBinding;
+import com.voiceyanga.citizen.data.remote.dto.HistoryItem;
+import com.voiceyanga.citizen.data.repository.ComplaintRepository;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
-import android.content.res.ColorStateList;
-import androidx.core.content.ContextCompat;
+import com.voiceyanga.citizen.core.audio.VoiceNotePlayer;
+import com.voiceyanga.citizen.core.utils.MediaResolver;
+import okhttp3.OkHttpClient;
+import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 
 @AndroidEntryPoint
@@ -30,12 +50,21 @@ public class ComplaintDetailActivity extends AppCompatActivity {
 
     public static final String EXTRA_COMPLAINT_UUID = "extra_complaint_uuid";
 
+    @Inject
+    com.voiceyanga.citizen.data.local.SessionManager sessionManager;
+
+    @Inject
+    OkHttpClient okHttpClient;
+
     private ActivityComplaintDetailBinding binding;
     private ComplaintDetailViewModel viewModel;
     private String complaintUuid;
     private PhotoAdapter photoAdapter;
     private CommentAdapter commentAdapter;
     private Complaint currentComplaint;
+    private VoiceNotePlayer voiceNotePlayer;
+    private java.util.List<HistoryItem> cachedHistory = null;
+    private List<TimelineAdapter.StatusPoint> timelinePoints = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,11 +88,43 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this).get(ComplaintDetailViewModel.class);
 
         setupToolbar();
-        setupTimeline();
         setupPhotoList();
         setupCommentList();
+        setupVoicePlayer();
         observeViewModel();
         setupListeners();
+    }
+
+    private void setupVoicePlayer() {
+        voiceNotePlayer = new VoiceNotePlayer();
+        voiceNotePlayer.setListener(new VoiceNotePlayer.PlayerListener() {
+            @Override
+            public void onCompletion() {
+                binding.btnPlayVoice.setIconResource(R.drawable.ic_play);
+            }
+
+            @Override
+            public void onError(String message) {
+                Toast.makeText(ComplaintDetailActivity.this, message, Toast.LENGTH_SHORT).show();
+                binding.btnPlayVoice.setIconResource(R.drawable.ic_play);
+            }
+        });
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (voiceNotePlayer != null) {
+            voiceNotePlayer.stop();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (voiceNotePlayer != null) {
+            voiceNotePlayer.release();
+        }
     }
 
     private void setupToolbar() {
@@ -90,19 +151,19 @@ public class ComplaintDetailActivity extends AppCompatActivity {
                 shareWithGlide(photoUri, shareText);
             } else {
                 try {
-                    java.io.File cachePath = new java.io.File(getCacheDir(), "images");
+                    File cachePath = new File(getCacheDir(), "images");
                     cachePath.mkdirs();
-                    java.io.File shareFile = new java.io.File(cachePath, "share_image_detail.png");
+                    File shareFile = new File(cachePath, "share_image_detail.png");
                     
-                    java.io.InputStream is;
+                    InputStream is;
                     if (photoUri.startsWith("content://")) {
                         is = getContentResolver().openInputStream(android.net.Uri.parse(photoUri));
                     } else {
-                        is = new java.io.FileInputStream(photoUri);
+                        is = new FileInputStream(photoUri);
                     }
                     
                     if (is != null) {
-                        java.io.FileOutputStream os = new java.io.FileOutputStream(shareFile);
+                        FileOutputStream os = new FileOutputStream(shareFile);
                         byte[] buffer = new byte[8192];
                         int read;
                         while ((read = is.read(buffer)) != -1) os.write(buffer, 0, read);
@@ -125,39 +186,39 @@ public class ComplaintDetailActivity extends AppCompatActivity {
     private void shareWithGlide(String url, String shareText) {
         String fullUrl = url;
         if (!url.startsWith("http") && !url.startsWith("content://") && !url.startsWith("file://") && !url.startsWith("/")) {
-            fullUrl = com.voiceyanga.citizen.core.network.ApiConstants.API_HOST + "/" + url;
+            fullUrl = BuildConfig.API_ORIGIN + "/" + url;
         }
 
-        com.bumptech.glide.Glide.with(this)
+        Glide.with(this)
             .asBitmap()
             .load(fullUrl)
-            .into(new com.bumptech.glide.request.target.CustomTarget<android.graphics.Bitmap>() {
+            .into(new CustomTarget<android.graphics.Bitmap>() {
                 @Override
-                public void onResourceReady(@androidx.annotation.NonNull android.graphics.Bitmap resource, @androidx.annotation.Nullable com.bumptech.glide.request.transition.Transition<? super android.graphics.Bitmap> transition) {
+                public void onResourceReady(@NonNull android.graphics.Bitmap resource, @Nullable Transition<? super android.graphics.Bitmap> transition) {
                     try {
-                        java.io.File cachePath = new java.io.File(getCacheDir(), "images");
+                        File cachePath = new File(getCacheDir(), "images");
                         cachePath.mkdirs();
-                        java.io.File imageFile = new java.io.File(cachePath, "share_image_detail.png");
-                        java.io.FileOutputStream stream = new java.io.FileOutputStream(imageFile);
+                        File imageFile = new File(cachePath, "share_image_detail.png");
+                        FileOutputStream stream = new FileOutputStream(imageFile);
                         resource.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, stream);
                         stream.close();
                         triggerShare(imageFile, shareText);
-                    } catch (java.io.IOException e) {
+                    } catch (IOException e) {
                         shareAsText(shareText);
                     }
                 }
 
                 @Override
-                public void onLoadCleared(@androidx.annotation.Nullable android.graphics.drawable.Drawable placeholder) {}
+                public void onLoadCleared(@Nullable android.graphics.drawable.Drawable placeholder) {}
 
                 @Override
-                public void onLoadFailed(@androidx.annotation.Nullable android.graphics.drawable.Drawable errorDrawable) {
+                public void onLoadFailed(@Nullable android.graphics.drawable.Drawable errorDrawable) {
                     shareAsText(shareText);
                 }
             });
     }
 
-    private void triggerShare(java.io.File imageFile, String text) {
+    private void triggerShare(File imageFile, String text) {
         runOnUiThread(() -> {
             android.net.Uri contentUri = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".provider", imageFile);
             Intent shareIntent = new Intent(Intent.ACTION_SEND);
@@ -176,12 +237,8 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         startActivity(Intent.createChooser(intent, "Share via"));
     }
 
-    private void setupTimeline() {
-        binding.rvTimeline.setLayoutManager(new LinearLayoutManager(this));
-    }
-
     private void setupPhotoList() {
-        photoAdapter = new PhotoAdapter(null); // No removal in detail
+        photoAdapter = new PhotoAdapter(null);
         binding.rvPhotos.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         binding.rvPhotos.setAdapter(photoAdapter);
     }
@@ -197,12 +254,13 @@ public class ComplaintDetailActivity extends AppCompatActivity {
             if (complaint != null) {
                 this.currentComplaint = complaint;
                 displayComplaint(complaint);
-                
-                // Hide shimmer once main data is loaded
+                viewModel.refreshHistory(complaintUuid);
                 binding.layoutShimmer.getRoot().setVisibility(View.GONE);
                 binding.scrollContent.setVisibility(View.VISIBLE);
             }
         });
+
+        viewModel.getHistory().observe(this, this::updateTimelineWithHistory);
 
         viewModel.getPhotos(complaintUuid).observe(this, photos -> {
             if (photos != null && !photos.isEmpty()) {
@@ -232,6 +290,31 @@ public class ComplaintDetailActivity extends AppCompatActivity {
     private void displayComplaint(Complaint complaint) {
         binding.tvRefCode.setText(complaint.getReferenceCode() != null ? complaint.getReferenceCode() : "PENDING SYNC");
         binding.tvTitle.setText(complaint.getTitle());
+
+        // Sync Retry & Edit Logic
+        if ("FAILED".equals(complaint.getSyncStatus())) {
+            binding.btnEditReport.setVisibility(View.VISIBLE);
+            binding.btnRetrySync.setVisibility(View.VISIBLE);
+            binding.btnRetrySync.setText(R.string.btn_retry_upload);
+            binding.btnRetrySync.setEnabled(true);
+            
+            if (complaint.getFailureReason() != null) {
+                binding.tvFailureReason.setVisibility(View.VISIBLE);
+                binding.tvFailureReason.setText(complaint.getFailureReason());
+            } else {
+                binding.tvFailureReason.setVisibility(View.GONE);
+            }
+        } else if ("SYNCING".equals(complaint.getSyncStatus()) || "PENDING".equals(complaint.getSyncStatus())) {
+            binding.btnEditReport.setVisibility(View.GONE);
+            binding.btnRetrySync.setVisibility(View.VISIBLE);
+            binding.btnRetrySync.setText("Retrying...");
+            binding.btnRetrySync.setEnabled(false);
+            binding.tvFailureReason.setVisibility(View.GONE);
+        } else {
+            binding.btnEditReport.setVisibility(View.GONE);
+            binding.btnRetrySync.setVisibility(View.GONE);
+            binding.tvFailureReason.setVisibility(View.GONE);
+        }
         
         String cat = complaint.getCategory();
         binding.tvCategory.setText(cat != null ? cat.toUpperCase() : "GENERAL");
@@ -252,6 +335,30 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         } else {
             binding.tvPriority.setVisibility(View.GONE);
         }
+
+        // Strategy 6: Milestone Badges
+        int supportCount = complaint.getSupportCount();
+        if (supportCount >= 50) {
+            binding.tvMilestoneBadge.setVisibility(View.VISIBLE);
+            binding.tvMilestoneBadge.setText("CRITICAL PRIORITY");
+            binding.tvMilestoneBadge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    ContextCompat.getColor(this, R.color.primary_red)));
+            binding.tvMilestoneBadge.setTextColor(ContextCompat.getColor(this, R.color.white));
+        } else if (supportCount >= 20) {
+            binding.tvMilestoneBadge.setVisibility(View.VISIBLE);
+            binding.tvMilestoneBadge.setText("COMMUNITY PRIORITY");
+            binding.tvMilestoneBadge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    ContextCompat.getColor(this, R.color.primary_green)));
+            binding.tvMilestoneBadge.setTextColor(ContextCompat.getColor(this, R.color.white));
+        } else if (supportCount >= 10) {
+            binding.tvMilestoneBadge.setVisibility(View.VISIBLE);
+            binding.tvMilestoneBadge.setText("TRENDING");
+            binding.tvMilestoneBadge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    ContextCompat.getColor(this, R.color.primary_green_light)));
+            binding.tvMilestoneBadge.setTextColor(ContextCompat.getColor(this, R.color.primary_green));
+        } else {
+            binding.tvMilestoneBadge.setVisibility(View.GONE);
+        }
         
         binding.btnSupport.setText(String.format(Locale.getDefault(), getString(R.string.support_count_format), complaint.getSupportCount()));
 
@@ -270,39 +377,208 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         }
 
         updateTimeline(complaint);
+        setupVoiceNote(complaint);
+        setupProofOfResolution(complaint);
+    }
+
+    private void setupProofOfResolution(Complaint complaint) {
+        String proofUri = complaint.getProofOfResolutionUri();
+        if ("RESOLVED".equals(complaint.getStatus()) && proofUri != null && !proofUri.isEmpty()) {
+            binding.cardProof.setVisibility(View.VISIBLE);
+            String fullUrl = com.voiceyanga.citizen.core.utils.MediaUtils.resolvePhotoUrl(proofUri);
+            Glide.with(this)
+                    .load(fullUrl)
+                    .placeholder(R.color.neutral_400)
+                    .into(binding.ivProof);
+        } else {
+            binding.cardProof.setVisibility(View.GONE);
+        }
+    }
+
+    private void setupVoiceNote(Complaint complaint) {
+        String voiceUrl = complaint.getVoiceNoteUrl();
+        String localPath = complaint.getVoiceNoteLocalPath();
+        
+        if ((voiceUrl != null && !voiceUrl.isEmpty()) || (localPath != null && new File(localPath).exists())) {
+            binding.cardVoiceNote.setVisibility(View.VISIBLE);
+            int duration = complaint.getVoiceNoteDuration();
+            binding.tvVoiceDuration.setText(String.format(Locale.getDefault(), "%d:%02d", duration / 60, duration % 60));
+
+            binding.btnPlayVoice.setOnClickListener(v -> {
+                if (voiceNotePlayer.isPlaying()) {
+                    voiceNotePlayer.pause();
+                    binding.btnPlayVoice.setIconResource(R.drawable.ic_play);
+                } else {
+                    playVoiceNote(complaint);
+                }
+            });
+        } else {
+            binding.cardVoiceNote.setVisibility(View.GONE);
+        }
+    }
+
+    private void playVoiceNote(Complaint complaint) {
+        String voiceUrl = complaint.getVoiceNoteUrl();
+        String localPath = complaint.getVoiceNoteLocalPath();
+
+        if (localPath != null && new File(localPath).exists()) {
+            voiceNotePlayer.play(localPath);
+            binding.btnPlayVoice.setIconResource(R.drawable.ic_pause);
+        } else if (voiceUrl != null) {
+            binding.btnPlayVoice.setEnabled(false);
+            new Thread(() -> {
+                try {
+                    String resolvedUrl = MediaResolver.resolveMediaUrl(voiceUrl, sessionManager, okHttpClient);
+                    runOnUiThread(() -> {
+                        binding.btnPlayVoice.setEnabled(true);
+                        voiceNotePlayer.play(resolvedUrl);
+                        binding.btnPlayVoice.setIconResource(R.drawable.ic_pause);
+                    });
+                } catch (IOException e) {
+                    runOnUiThread(() -> {
+                        binding.btnPlayVoice.setEnabled(true);
+                        Toast.makeText(this, "Failed to resolve recording: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
+                }
+            }).start();
+        }
     }
 
     private void updateTimeline(Complaint complaint) {
-        List<TimelineAdapter.StatusPoint> points = new ArrayList<>();
-        long created = complaint.getCreatedAt() > 0 ? complaint.getCreatedAt() : System.currentTimeMillis();
-        String dateStr = new SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()).format(new Date(created));
-        String pending = getString(R.string.status_pending);
-
-        String currentStatus = complaint.getStatus() != null ? complaint.getStatus() : "SUBMITTED";
-
-        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_submitted), dateStr, true));
-        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_reviewed), pending, isAtLeast(currentStatus, "REVIEWED")));
-        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_assigned), pending, isAtLeast(currentStatus, "ASSIGNED"), complaint.getAssignedTo()));
-        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_in_progress), pending, isAtLeast(currentStatus, "IN_PROGRESS")));
-        points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_resolved), pending, isAtLeast(currentStatus, "RESOLVED")));
-
-        binding.rvTimeline.setAdapter(new TimelineAdapter(points));
+        updateTimelineWithHistory(this.cachedHistory);
     }
 
-    private boolean isAtLeast(String currentStatus, String targetStatus) {
-        List<String> order = List.of("SUBMITTED", "REVIEWED", "ASSIGNED", "IN_PROGRESS", "RESOLVED");
-        int currentIndex = order.indexOf(currentStatus);
-        int targetIndex = order.indexOf(targetStatus);
-        return currentIndex >= targetIndex;
+    private void updateTimelineWithHistory(List<HistoryItem> history) {
+        if (history != null) {
+            this.cachedHistory = history;
+        }
+        if (currentComplaint == null) return;
+        
+        List<TimelineAdapter.StatusPoint> points = new ArrayList<>();
+        String currentStatus = currentComplaint.getStatus() != null ? currentComplaint.getStatus() : "SUBMITTED";
+        String pending = getString(R.string.status_pending);
+        
+        // Define statuses in order
+        List<String> statuses = Arrays.asList("SUBMITTED", "REVIEWED", "VERIFIED", "ASSIGNED", "IN_PROGRESS", "RESOLVED", "CLOSED");
+        
+        int currentStatusIndex = statuses.indexOf(currentStatus);
+
+        for (int i = 0; i < statuses.size(); i++) {
+            String status = statuses.get(i);
+            String label = getStatusLabel(status);
+            String date = pending;
+            boolean completed = i <= currentStatusIndex && currentStatusIndex != -1;
+            String subLabel = null;
+
+            // 1. Resolve date and subLabel from history
+            if (history != null) {
+                for (HistoryItem item : history) {
+                    if (status.equals(item.status)) {
+                        date = formatDate(item.createdAt);
+                        completed = true;
+                        break;
+                    }
+                }
+            }
+
+            // 2. Fallback for SUBMITTED date if history missing
+            if (i == 0 && date.equals(pending)) {
+                date = new SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()).format(new Date(currentComplaint.getCreatedAt()));
+            }
+
+            // 3. Fallback for COMPLETED status dates if history missing
+            if (completed && date.equals(pending)) {
+                date = new SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()).format(new Date(currentComplaint.getUpdatedAt()));
+            }
+
+            // 4. AUTO-CLOSE Logic: If RESOLVED is reached, CLOSED is also marked completed
+            if ("CLOSED".equals(status) && currentStatusIndex >= statuses.indexOf("RESOLVED")) {
+                completed = true;
+                if (date.equals(pending)) {
+                    // Inherit date from Resolved if possible, otherwise use updatedAt
+                    date = getPointDate(points, getString(R.string.status_resolved));
+                    if (date.equals(pending)) {
+                        date = new SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()).format(new Date(currentComplaint.getUpdatedAt()));
+                    }
+                }
+            }
+            
+            // 5. Assignment data display
+            if ("ASSIGNED".equals(status) && currentComplaint.getAssignedTo() != null) {
+                subLabel = currentComplaint.getAssignedTo();
+                if (currentComplaint.getAssignedOrganization() != null) {
+                    subLabel += " (" + currentComplaint.getAssignedOrganization() + ")";
+                }
+            }
+
+            points.add(new TimelineAdapter.StatusPoint(label, date, completed, subLabel));
+        }
+
+        if ("REJECTED".equals(currentStatus)) {
+            points.add(new TimelineAdapter.StatusPoint(getString(R.string.status_rejected), formatDate(null), true));
+        }
+
+        this.timelinePoints = points;
+    }
+
+    private String getPointDate(List<TimelineAdapter.StatusPoint> points, String label) {
+        for (TimelineAdapter.StatusPoint p : points) {
+            if (p.label.equals(label)) return p.date;
+        }
+        return new SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()).format(new Date());
+    }
+
+    private String getStatusLabel(String status) {
+        switch (status) {
+            case "SUBMITTED": return getString(R.string.status_submitted);
+            case "REVIEWED": return getString(R.string.status_reviewed);
+            case "VERIFIED": return "Verified";
+            case "ASSIGNED": return getString(R.string.status_assigned);
+            case "IN_PROGRESS": return getString(R.string.status_in_progress);
+            case "RESOLVED": return getString(R.string.status_resolved);
+            case "CLOSED": return "Closed";
+            case "REJECTED": return getString(R.string.status_rejected);
+            default: return status;
+        }
+    }
+
+    private String formatDate(String isoDate) {
+        if (isoDate == null || isoDate.isEmpty()) return new SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()).format(new Date());
+        
+        long ts = ComplaintRepository.parseServerDate(isoDate);
+        return new SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()).format(new Date(ts));
     }
 
     private void setupListeners() {
+        binding.btnEditReport.setOnClickListener(v -> {
+            com.voiceyanga.citizen.core.utils.HapticHelper.performClick(v);
+            Intent intent = new Intent(this, CreateComplaintActivity.class);
+            intent.putExtra("extra_complaint_uuid", complaintUuid);
+            startActivity(intent);
+        });
+
+        binding.btnRetrySync.setOnClickListener(v -> {
+            android.net.ConnectivityManager cm = (android.net.ConnectivityManager) getSystemService(android.content.Context.CONNECTIVITY_SERVICE);
+            android.net.Network network = cm.getActiveNetwork();
+            android.net.NetworkCapabilities caps = cm.getNetworkCapabilities(network);
+            boolean isConnected = caps != null && caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET);
+            
+            if (!isConnected) {
+                Toast.makeText(this, "Please check your internet connection and try again.", Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            com.voiceyanga.citizen.core.utils.HapticHelper.performClick(v);
+            viewModel.retryComplaint(complaintUuid);
+            
+            binding.btnRetrySync.setText("Initiating retry...");
+            binding.btnRetrySync.setEnabled(false);
+        });
+
         binding.btnSupport.setOnClickListener(v -> {
             com.voiceyanga.citizen.core.utils.HapticHelper.performSuccess(v);
             viewModel.supportComplaint(complaintUuid);
-            viewModel.simulateProgress(complaintUuid); // Mock update for UI verification
             
-            // Change button state to "Supported" (Red & Disabled)
             binding.btnSupport.setEnabled(false);
             binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
                     ContextCompat.getColor(this, R.color.primary_red)));
@@ -316,8 +592,30 @@ public class ComplaintDetailActivity extends AppCompatActivity {
             String message = binding.etComment.getText().toString().trim();
             if (!message.isEmpty()) {
                 com.voiceyanga.citizen.core.utils.HapticHelper.performClick(v);
-                viewModel.postComment(complaintUuid, message, true);
+                viewModel.postComment(complaintUuid, message);
             }
         });
+
+        binding.fabTimeline.setOnClickListener(v -> {
+            com.voiceyanga.citizen.core.utils.HapticHelper.performClick(v);
+            showTimelineBottomSheet();
+        });
+    }
+
+    private void showTimelineBottomSheet() {
+        if (timelinePoints == null || timelinePoints.isEmpty()) {
+            Toast.makeText(this, "Resolution timeline not available yet", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.Theme_VoiceYanga);
+        View view = getLayoutInflater().inflate(R.layout.layout_timeline_bottom_sheet, null);
+        
+        RecyclerView rv = view.findViewById(R.id.rvTimelineSheet);
+        rv.setLayoutManager(new LinearLayoutManager(this));
+        rv.setAdapter(new TimelineAdapter(timelinePoints));
+        
+        dialog.setContentView(view);
+        dialog.show();
     }
 }

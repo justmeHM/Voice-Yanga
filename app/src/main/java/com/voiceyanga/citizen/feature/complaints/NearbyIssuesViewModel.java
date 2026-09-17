@@ -30,6 +30,10 @@ public class NearbyIssuesViewModel extends ViewModel {
         userLocation.setValue(location);
     }
 
+    public void refreshData() {
+        repository.refreshCommunityFeed();
+    }
+
     public LiveData<List<Complaint>> getNearbyComplaints() {
         return Transformations.switchMap(userLocation, location -> 
             Transformations.map(repository.getCommunityComplaints(null, null, null, null, null, null), complaints -> {
@@ -39,6 +43,7 @@ public class NearbyIssuesViewModel extends ViewModel {
 
                 return complaints.stream()
                     .filter(c -> {
+                        if (!c.isHasValidCoordinates()) return false;
                         float[] results = new float[1];
                         android.location.Location.distanceBetween(location.getLatitude(), location.getLongitude(), c.getLatitude(), c.getLongitude(), results);
                         return results[0] <= MAX_DISTANCE_METERS;

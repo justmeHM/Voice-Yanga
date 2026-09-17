@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "885802709713",
+    "project_id": "voice-yanga",
+    "storage_bucket": "voice-yanga.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:885802709713:android:54f951fdabaa7df6b48bf0",
+        "android_client_info": {
+          "package_name": "com.voiceyanga"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrghAaohTCZysi0BXG4BqxVFeanYfpEic"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -93,6 +93,22 @@
                         android:textSize="12sp"
                         android:textStyle="bold" />
 
+                    <TextView
+                        android:id="@+id/tvMilestoneBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_status_chip"
+                        android:backgroundTint="@color/primary_red"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="6dp"
+                        android:textColor="@color/white"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:visibility="gone"
+                        tools:visibility="visible"
+                        tools:text="COMMUNITY PRIORITY" />
+
                 </LinearLayout>
 
                 <LinearLayout
@@ -153,28 +169,98 @@
                     app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                     tools:listitem="@layout/item_photo" />
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="24dp"
-                    android:background="@color/neutral_200" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:text="@string/section_timeline"
-                    android:textColor="?android:attr/textColorSecondary"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.1" />
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvTimeline"
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardProof"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:nestedScrollingEnabled="false" />
+                    android:visibility="gone"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="4dp"
+                    app:strokeColor="@color/primary_green"
+                    app:strokeWidth="2dp"
+                    tools:visibility="visible">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="@color/primary_green"
+                            android:padding="8dp"
+                            android:text="@string/proof_of_resolution_header"
+                            android:textColor="@color/white"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:gravity="center" />
+                        <ImageView
+                            android:id="@+id/ivProof"
+                            android:layout_width="match_parent"
+                            android:layout_height="200dp"
+                            android:scaleType="centerCrop" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardVoiceNote"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:visibility="gone"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/neutral_200"
+                    app:strokeWidth="1dp"
+                    tools:visibility="visible">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="16dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnPlayVoice"
+                            style="@style/Widget.MaterialComponents.Button.Icon"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:insetLeft="0dp"
+                            android:insetTop="0dp"
+                            android:insetRight="0dp"
+                            android:insetBottom="0dp"
+                            app:icon="@drawable/ic_play"
+                            app:iconGravity="textStart"
+                            app:iconPadding="0dp"
+                            app:iconSize="24dp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/label_voice_note"
+                                android:textColor="?android:attr/textColorPrimary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvVoiceDuration"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0:00"
+                                android:textColor="?android:attr/textColorSecondary"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
                 <View
                     android:layout_width="match_parent"
@@ -225,11 +311,46 @@
                     android:text="@string/btn_post_comment"
                     app:rippleColor="@color/primary_green_light" />
 
+                <TextView
+                    android:id="@+id/tvFailureReason"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/primary_red"
+                    android:textSize="14sp"
+                    android:visibility="gone"
+                    tools:text="Error: Internal Server Error"
+                    tools:visibility="visible" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnEditReport"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="32dp"
+                    android:text="@string/btn_edit_report"
+                    android:visibility="gone"
+                    app:icon="@android:drawable/ic_menu_edit"
+                    tools:visibility="visible" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRetrySync"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/btn_retry_upload"
+                    android:textColor="@android:color/white"
+                    android:visibility="gone"
+                    app:backgroundTint="@color/primary_red"
+                    app:icon="@drawable/ic_mic"
+                    app:iconTint="@android:color/white"
+                    tools:visibility="visible" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSupport"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:layout_marginTop="32dp"
+                    android:layout_marginTop="16dp"
                     android:layout_marginBottom="48dp"
                     android:text="@string/support_button_label"
                     android:textColor="@android:color/white"
@@ -240,5 +361,16 @@
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
     </FrameLayout>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabTimeline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        app:srcCompat="@drawable/ic_sort_vector"
+        app:tint="@color/white"
+        app:backgroundTint="@color/primary_green"
+        android:contentDescription="@string/desc_view_timeline" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

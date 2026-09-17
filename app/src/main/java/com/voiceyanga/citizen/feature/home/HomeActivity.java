@@ -3,6 +3,10 @@ package com.voiceyanga.citizen.feature.home;
 import android.content.Intent;
 import android.net.Uri;
 import android.net.ConnectivityManager;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import androidx.core.app.ActivityCompat;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
@@ -20,6 +24,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import com.voiceyanga.citizen.BuildConfig;
 import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.databinding.ActivityHomeBinding;
@@ -29,6 +34,7 @@ import com.voiceyanga.citizen.domain.repository.AuthRepository;
 import com.voiceyanga.citizen.feature.complaints.ComplaintDetailActivity;
 import com.voiceyanga.citizen.feature.complaints.CreateComplaintActivity;
 import com.voiceyanga.citizen.feature.complaints.NearbyIssuesActivity;
+import com.voiceyanga.citizen.feature.complaints.SuccessGalleryActivity;
 import com.voiceyanga.citizen.feature.notifications.NotificationCenterActivity;
 import com.voiceyanga.citizen.feature.profile.ProfileActivity;
 import com.voiceyanga.citizen.ui.common.AboutActivity;
@@ -45,6 +51,8 @@ public class HomeActivity extends AppCompatActivity {
     private ActivityHomeBinding binding;
     private HomeViewModel viewModel;
     private ComplaintAdapter adapter;
+    private TrendingAdapter trendingAdapter;
+    private SuccessPreviewAdapter successPreviewAdapter;
     private boolean isFabExpanded = false;
     private ConnectivityManager.NetworkCallback networkCallback;
 
@@ -56,6 +64,15 @@ public class HomeActivity extends AppCompatActivity {
 
     private android.view.GestureDetector gestureDetector;
 
+    private com.google.android.material.badge.BadgeDrawable notificationBadge;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        viewModel.refreshData();
+    }
+
+    @com.google.android.material.badge.ExperimentalBadgeUtils
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
@@ -83,6 +100,15 @@ public class HomeActivity extends AppCompatActivity {
         handleDeepLink();
         setupNetworkListener();
         setupSwipeRefresh();
+        requestNotificationPermission();
+    }
+
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1001);
+            }
+        }
     }
 
     private void setupSwipeRefresh() {
@@ -165,12 +191,24 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleDeepLink();
+    }
+
     private void handleDeepLink() {
         if (getIntent().hasExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID)) {
             String uuid = getIntent().getStringExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID);
-            Intent intent = new Intent(this, ComplaintDetailActivity.class);
-            intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, uuid);
-            startActivity(intent);
+            if (uuid != null && !uuid.isEmpty()) {
+                Intent intent = new Intent(this, ComplaintDetailActivity.class);
+                intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, uuid);
+                startActivity(intent);
+                
+                // Clear the extra so it doesn't re-open on activity restart
+                getIntent().removeExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID);
+            }
         }
     }
 
@@ -258,7 +296,7 @@ public class HomeActivity extends AppCompatActivity {
             private void shareWithGlide(String url, String shareText) {
                 String fullUrl = url;
                 if (!url.startsWith("http") && !url.startsWith("content://") && !url.startsWith("file://") && !url.startsWith("/")) {
-                    fullUrl = com.voiceyanga.citizen.core.network.ApiConstants.API_HOST + "/" + url;
+                    fullUrl = BuildConfig.API_ORIGIN + "/" + url;
                 }
 
                 com.bumptech.glide.Glide.with(HomeActivity.this)
@@ -317,9 +355,40 @@ public class HomeActivity extends AppCompatActivity {
         }, sessionManager.getUserEmail());
         binding.rvComplaints.setLayoutManager(new LinearLayoutManager(this));
         binding.rvComplaints.setAdapter(adapter);
+
+        trendingAdapter = new TrendingAdapter(complaint -> {
+            Intent intent = new Intent(HomeActivity.this, ComplaintDetailActivity.class);
+            intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaint.getClientUuid());
+            startActivity(intent);
+        });
+        binding.rvTrending.setAdapter(trendingAdapter);
+
+        successPreviewAdapter = new SuccessPreviewAdapter(complaint -> {
+            Intent intent = new Intent(HomeActivity.this, ComplaintDetailActivity.class);
+            intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaint.getClientUuid());
+            startActivity(intent);
+        });
+        binding.rvSuccessStories.setAdapter(successPreviewAdapter);
     }
 
+    @com.google.android.material.badge.ExperimentalBadgeUtils
     private void setupObservers() {
+        viewModel.getUnreadNotificationCount().observe(this, count -> {
+            if (count != null && count > 0) {
+                if (notificationBadge == null) {
+                    notificationBadge = com.google.android.material.badge.BadgeDrawable.create(this);
+                    notificationBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.primary_red));
+                    notificationBadge.setBadgeTextColor(ContextCompat.getColor(this, R.color.white));
+                    com.google.android.material.badge.BadgeUtils.attachBadgeDrawable(
+                            notificationBadge, binding.btnNotifications, null);
+                }
+                notificationBadge.setNumber(count);
+                notificationBadge.setVisible(true);
+            } else if (notificationBadge != null) {
+                notificationBadge.setVisible(false);
+            }
+        });
+
         viewModel.getError().observe(this, error -> {
             if (error != null) {
                 binding.layoutError.llErrorRoot.setVisibility(View.VISIBLE);
@@ -350,9 +419,32 @@ public class HomeActivity extends AppCompatActivity {
             viewModel.setLoading(false);
             
             adapter.submitList(complaints);
+            int renderedCount = complaints != null ? complaints.size() : 0;
+            java.util.Map<String, String> currentFilters = viewModel.getFilters().getValue();
+            String summary = currentFilters != null ? currentFilters.toString() : "{}";
+            android.util.Log.d("HomeActivity", "HOME_UI renderedCount=" + renderedCount + " activeFilters=" + summary);
+
             binding.llEmptyState.setVisibility(
                     (complaints == null || complaints.isEmpty()) ? View.VISIBLE : View.GONE);
             binding.swipeRefresh.setRefreshing(false);
+        });
+
+        viewModel.getTrendingComplaints().observe(this, trending -> {
+            if (trending != null && !trending.isEmpty()) {
+                binding.llTrendingRoot.setVisibility(View.VISIBLE);
+                trendingAdapter.submitList(trending);
+            } else {
+                binding.llTrendingRoot.setVisibility(View.GONE);
+            }
+        });
+
+        viewModel.getSuccessStories().observe(this, stories -> {
+            if (stories != null && !stories.isEmpty()) {
+                binding.llSuccessRoot.setVisibility(View.VISIBLE);
+                successPreviewAdapter.submitList(stories);
+            } else {
+                binding.llSuccessRoot.setVisibility(View.GONE);
+            }
         });
 
         viewModel.getLatestMyComplaint().observe(this, complaint -> {
@@ -408,6 +500,8 @@ public class HomeActivity extends AppCompatActivity {
                 startActivity(new Intent(this, ProfileActivity.class));
             } else if (id == R.id.nav_my_complaints) {
                 startActivity(new Intent(this, MyComplaintsActivity.class));
+            } else if (id == R.id.nav_success_stories) {
+                startActivity(new Intent(this, SuccessGalleryActivity.class));
             } else if (id == R.id.nav_help) {
                 startActivity(new Intent(this, SupportActivity.class));
             } else if (id == R.id.nav_about) {
@@ -420,7 +514,10 @@ public class HomeActivity extends AppCompatActivity {
             return true;
         });
 
-        binding.swipeRefresh.setOnRefreshListener(() -> viewModel.retrySync());
+        binding.swipeRefresh.setOnRefreshListener(() -> {
+            viewModel.refreshData();
+            viewModel.retrySync();
+        });
         
         binding.fabReport.setOnClickListener(v -> toggleFabMenu());
 
@@ -453,6 +550,9 @@ public class HomeActivity extends AppCompatActivity {
 
         binding.btnSeeMore.setOnClickListener(v -> 
             startActivity(new Intent(this, MyComplaintsActivity.class)));
+
+        binding.tvViewAllSuccess.setOnClickListener(v -> 
+            startActivity(new Intent(this, SuccessGalleryActivity.class)));
 
         binding.layoutError.btnRetry.setOnClickListener(v -> viewModel.retrySync());
     }

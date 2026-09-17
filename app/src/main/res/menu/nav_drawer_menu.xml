@@ -10,6 +10,10 @@
             android:icon="@drawable/my_complaints"
             android:title="@string/menu_my_complaints" />
         <item
+            android:id="@+id/nav_success_stories"
+            android:icon="@drawable/ic_menu_vector"
+            android:title="@string/title_success_stories" />
+        <item
             android:id="@+id/nav_help"
             android:icon="@drawable/support"
             android:title="@string/menu_help" />

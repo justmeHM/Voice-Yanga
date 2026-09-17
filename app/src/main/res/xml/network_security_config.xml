@@ -3,9 +3,11 @@
     <domain-config cleartextTrafficPermitted="true">
         <!-- Localhost for Emulator -->
         <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">10.11.106.10</domain>
         <domain includeSubdomains="true">10.42.177.10</domain>
         <domain includeSubdomains="true">10.227.108.10</domain>
         <domain includeSubdomains="true">10.214.122.10</domain>
         <domain includeSubdomains="true">192.168.43.35</domain>
+        <domain includeSubdomains="true">10.54.58.10</domain>
     </domain-config>
 </network-security-config>

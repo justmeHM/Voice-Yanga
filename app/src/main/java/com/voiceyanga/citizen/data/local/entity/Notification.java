@@ -18,7 +18,7 @@ public class Notification {
     private String complaintUuid;
     private String title;
     private String message;
-    private String type; // STATUS_CHANGE, NEW_COMMENT, SYSTEM
+    private String type; // STATUS_CHANGE, NEW_COMMENT, SYSTEM, MILESTONE, SUPPORTER_UPDATE, OFFICIAL_RESPONSE
     private boolean isRead;
     private long timestamp;
 

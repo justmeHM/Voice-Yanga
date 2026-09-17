@@ -9,18 +9,18 @@ public class CommentResponse {
     @SerializedName("authorName")
     private String authorName;
 
-    @SerializedName("message")
+    @SerializedName("content")
     private String message;
 
     @SerializedName("isOfficial")
     private boolean isOfficial;
 
     @SerializedName("createdAt")
-    private String createdAt;
+    private Long createdAt;
 
     public String getId() { return id; }
     public String getAuthorName() { return authorName; }
     public String getMessage() { return message; }
     public boolean isOfficial() { return isOfficial; }
-    public String getCreatedAt() { return createdAt; }
+    public Long getCreatedAt() { return createdAt; }
 }

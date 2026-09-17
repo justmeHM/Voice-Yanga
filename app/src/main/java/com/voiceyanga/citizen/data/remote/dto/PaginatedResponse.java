@@ -11,6 +11,7 @@ public class PaginatedResponse<T> {
     private Meta meta;
 
     public List<T> getData() { return data; }
+    public void setData(List<T> data) { this.data = data; }
     public Meta getMeta() { return meta; }
 
     public static class Meta {

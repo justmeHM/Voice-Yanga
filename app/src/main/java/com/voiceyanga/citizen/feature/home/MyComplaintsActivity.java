@@ -31,6 +31,12 @@ public class MyComplaintsActivity extends AppCompatActivity {
     private android.view.GestureDetector gestureDetector;
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        viewModel.refreshData();
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
@@ -48,8 +54,15 @@ public class MyComplaintsActivity extends AppCompatActivity {
         setupToolbar();
         setupTabs();
         setupRecyclerView();
+        setupSwipeRefresh();
         observeViewModel();
         setupGestures();
+    }
+
+    private void setupSwipeRefresh() {
+        binding.swipeRefresh.setOnRefreshListener(() -> {
+            viewModel.refreshData();
+        });
     }
 
     private void setupGestures() {
@@ -154,6 +167,7 @@ public class MyComplaintsActivity extends AppCompatActivity {
         viewModel.getMyComplaints().observe(this, complaints -> {
             // When data arrives, stop loading
             viewModel.setLoading(false);
+            binding.swipeRefresh.setRefreshing(false);
             
             adapter.submitList(complaints);
             binding.llEmptyState.setVisibility(

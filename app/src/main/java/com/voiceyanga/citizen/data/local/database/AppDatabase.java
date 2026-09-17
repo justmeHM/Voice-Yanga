@@ -13,10 +13,46 @@ import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
 import com.voiceyanga.citizen.data.local.entity.Notification;
 import com.voiceyanga.citizen.data.local.entity.PendingAction;
 
-@Database(entities = {Complaint.class, Comment.class, ComplaintPhoto.class, Notification.class, PendingAction.class}, version = 16, exportSchema = false)
+@Database(entities = {Complaint.class, Comment.class, ComplaintPhoto.class, Notification.class, PendingAction.class, com.voiceyanga.citizen.data.local.entity.ComplaintFeedMembership.class}, version = 21, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract ComplaintDao complaintDao();
     public abstract NotificationDao notificationDao();
+
+    public static final Migration MIGRATION_20_21 = new Migration(20, 21) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS `complaint_feed_membership` (`serverId` TEXT NOT NULL, `feedType` TEXT NOT NULL, `page` INTEGER NOT NULL, PRIMARY KEY(`serverId`, `feedType`))");
+            database.execSQL("ALTER TABLE `complaints` ADD COLUMN `hasValidCoordinates` INTEGER NOT NULL DEFAULT 0");
+        }
+    };
+
+    public static final Migration MIGRATION_19_20 = new Migration(19, 20) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE complaints ADD COLUMN userId TEXT");
+        }
+    };
+
+    public static final Migration MIGRATION_18_19 = new Migration(18, 19) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE complaints ADD COLUMN assignedOrganization TEXT");
+        }
+    };
+
+    public static final Migration MIGRATION_17_18 = new Migration(17, 18) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE complaints ADD COLUMN proofOfResolutionUri TEXT");
+        }
+    };
+
+    public static final Migration MIGRATION_16_17 = new Migration(16, 17) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE complaints ADD COLUMN failureReason TEXT");
+        }
+    };
 
     public static final Migration MIGRATION_15_16 = new Migration(15, 16) {
         @Override

@@ -30,6 +30,7 @@
     <string name="error_invalid_first_name">Enter first name</string>
     <string name="error_invalid_last_name">Enter last name</string>
     <string name="error_invalid_phone">Enter a valid phone number</string>
+    <string name="error_email_or_phone_required">Email or phone is required</string>
     <string name="error_invalid_password">Password must be 8+ chars with a number</string>
     <string name="register_loading">Creating account…</string>
     <string name="welcome_message">Welcome to Voice Yanga</string>
@@ -81,6 +82,7 @@
     <string name="status_in_progress">In Progress</string>
     <string name="status_resolved">Resolved</string>
     <string name="status_rejected">Rejected</string>
+    <string name="status_supported">Supported</string>
     <string name="badge_official">OFFICIAL</string>
     <string name="notifications_title">Notifications</string>
     <string name="mark_all_read">Mark all as read</string>
@@ -90,6 +92,8 @@
     <string name="status_priority_format">%1$s • %2$s</string>
     <string name="empty_reports_title">No reports yet</string>
     <string name="empty_reports_subtitle">When you report a community problem,\nyou\'ll see it here.</string>
+    <string name="empty_community_title">No community issues found</string>
+    <string name="empty_community_subtitle">There are no reports filed in the community yet. Be the first to report an issue!</string>
     <string name="menu_profile">Profile</string>
     <string name="menu_my_complaints">My Complaints</string>
     <string name="menu_help">Support</string>
@@ -114,6 +118,7 @@
     <string name="error_invalid_credentials">Invalid credentials</string>
     <string name="support_thanks">Thank you for your support!</string>
     <string name="sync_failed_hint">Sync Failed</string>
+    <string name="btn_edit_report">Edit Report</string>
     <string name="syncing_hint">Syncing…</string>
     <string name="pending_sync_hint">Pending Sync</string>
     <string name="about_mission_label">OUR MISSION</string>
@@ -167,6 +172,14 @@
     <string name="label_phone_hint">Phone</string>
     <string name="btn_update_profile">UPDATE PROFILE</string>
     <string name="profile_updated">Profile updated successfully</string>
+
+    <!-- Account Deletion -->
+    <string name="action_delete_account">Delete Account</string>
+    <string name="dialog_delete_account_title">Delete Account?</string>
+    <string name="dialog_delete_account_message">Are you sure you want to permanently delete your account? This action cannot be undone and all your data will be lost.</string>
+    <string name="account_deleted_success">Account deleted successfully</string>
+    <string name="btn_delete">Delete</string>
+
     <string name="filter_all">All</string>
     <string name="filter_resolved">Resolved</string>
     <string name="filter_critical">Critical</string>
@@ -279,4 +292,19 @@
     <string name="label_tap_to_change">Tap to change</string>
     <string name="label_voice_note">Voice Note</string>
     <string name="btn_change_location">Change</string>
+
+    <string name="title_trending">Trending in Your Ward</string>
+    <string name="title_success_stories">Success Stories</string>
+    <string name="subtitle_success_stories">See how our community is improving</string>
+    <string name="btn_explore_stories">Explore Stories</string>
+    <string name="notification_milestone_title">New Milestone Reached!</string>
+    <string name="notification_milestone_message">Your report \'%1$s\' has reached %2$d supports!</string>
+    <string name="label_before">BEFORE</string>
+    <string name="label_fixed">FIXED</string>
+    <string name="proof_of_resolution_header">OFFICIAL PROOF OF RESOLUTION</string>
+    <string name="empty_success_stories_title">No Success Stories Yet</string>
+    <string name="empty_success_stories_subtitle">Resolved complaints with proof of resolution will appear here to inspire others.</string>
+    <string name="title_resolution_progress">Resolution Progress</string>
+    <string name="subtitle_resolution_progress">Follow the timeline of this report from submission to final resolution.</string>
+    <string name="desc_view_timeline">View resolution timeline</string>
 </resources>

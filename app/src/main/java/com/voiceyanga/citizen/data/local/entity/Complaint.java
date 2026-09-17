@@ -25,20 +25,25 @@ public class Complaint {
     private String syncStatus; // PENDING, SYNCING, SYNCED, FAILED, NEEDS_ACTION
     private String syncProgress; // e.g. "Compressing Photos..."
     private String authorEmail;
+    private String userId; // Server-side user identity
     private long createdAt;
     private long updatedAt;
     private double latitude;
     private double longitude;
+    private boolean hasValidCoordinates;
     private boolean supportedByMe;
     private int commentCount;
     private String assignedTo;
+    private String assignedOrganization;
     private String ward;
     private String district;
     private String province;
     private String firstPhotoUri;
+    private String proofOfResolutionUri;
     private String voiceNoteLocalPath;
     private String voiceNoteUrl;
     private int voiceNoteDuration;
+    private String failureReason;
 
     public Complaint(@NonNull String clientUuid, String title, String description, String category, String location, String syncStatus, long createdAt) {
         this.clientUuid = clientUuid;
@@ -100,6 +105,9 @@ public class Complaint {
     public String getAuthorEmail() { return authorEmail; }
     public void setAuthorEmail(String authorEmail) { this.authorEmail = authorEmail; }
 
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
+
     public long getCreatedAt() { return createdAt; }
     public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
 
@@ -112,6 +120,9 @@ public class Complaint {
     public double getLongitude() { return longitude; }
     public void setLongitude(double longitude) { this.longitude = longitude; }
 
+    public boolean isHasValidCoordinates() { return hasValidCoordinates; }
+    public void setHasValidCoordinates(boolean hasValidCoordinates) { this.hasValidCoordinates = hasValidCoordinates; }
+
     public boolean isSupportedByMe() { return supportedByMe; }
     public void setSupportedByMe(boolean supportedByMe) { this.supportedByMe = supportedByMe; }
 
@@ -120,6 +131,9 @@ public class Complaint {
 
     public String getAssignedTo() { return assignedTo; }
     public void setAssignedTo(String assignedTo) { this.assignedTo = assignedTo; }
+
+    public String getAssignedOrganization() { return assignedOrganization; }
+    public void setAssignedOrganization(String assignedOrganization) { this.assignedOrganization = assignedOrganization; }
 
     public String getWard() { return ward; }
     public void setWard(String ward) { this.ward = ward; }
@@ -133,6 +147,9 @@ public class Complaint {
     public String getFirstPhotoUri() { return firstPhotoUri; }
     public void setFirstPhotoUri(String firstPhotoUri) { this.firstPhotoUri = firstPhotoUri; }
 
+    public String getProofOfResolutionUri() { return proofOfResolutionUri; }
+    public void setProofOfResolutionUri(String proofOfResolutionUri) { this.proofOfResolutionUri = proofOfResolutionUri; }
+
     public String getVoiceNoteLocalPath() { return voiceNoteLocalPath; }
     public void setVoiceNoteLocalPath(String voiceNoteLocalPath) { this.voiceNoteLocalPath = voiceNoteLocalPath; }
 
@@ -142,11 +159,14 @@ public class Complaint {
     public int getVoiceNoteDuration() { return voiceNoteDuration; }
     public void setVoiceNoteDuration(int voiceNoteDuration) { this.voiceNoteDuration = voiceNoteDuration; }
 
+    public String getFailureReason() { return failureReason; }
+    public void setFailureReason(String failureReason) { this.failureReason = failureReason; }
+
     public String getCalculatedPriority() {
         int engagementScore = supportCount + (commentCount * 2); // Comments carry more weight
-        if (engagementScore >= 20) return "CRITICAL";
-        if (engagementScore >= 10) return "HIGH";
-        if (engagementScore >= 5) return "MEDIUM";
+        if (engagementScore >= 50) return "CRITICAL";
+        if (engagementScore >= 20) return "HIGH";
+        if (engagementScore >= 10) return "MEDIUM";
         return "LOW";
     }
 }

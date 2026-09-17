@@ -9,6 +9,7 @@ import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.data.remote.dto.LocationDto;
 import com.voiceyanga.citizen.data.remote.dto.UserDto;
 import com.voiceyanga.citizen.data.repository.ComplaintRepository;
+import com.voiceyanga.citizen.data.repository.NotificationRepository;
 import com.voiceyanga.citizen.data.repository.UserRepository;
 import com.voiceyanga.citizen.domain.repository.ReferenceRepository;
 
@@ -16,6 +17,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -33,6 +35,7 @@ public class HomeViewModel extends ViewModel {
     private final SessionManager sessionManager;
     private final UserRepository userRepository;
     private final ReferenceRepository referenceRepository;
+    private final NotificationRepository notificationRepository;
     
     private final MutableLiveData<Map<String, String>> filters = new MutableLiveData<>(new HashMap<>());
     private final MutableLiveData<String> sortOrder = new MutableLiveData<>("NEWEST");
@@ -42,6 +45,14 @@ public class HomeViewModel extends ViewModel {
     private final androidx.lifecycle.MediatorLiveData<List<Complaint>> _sortedComplaints = new androidx.lifecycle.MediatorLiveData<>();
     public LiveData<List<Complaint>> getComplaints() { return _sortedComplaints; }
 
+    private final androidx.lifecycle.MediatorLiveData<List<Complaint>> _trendingComplaints = new androidx.lifecycle.MediatorLiveData<>();
+    public LiveData<List<Complaint>> getTrendingComplaints() { return _trendingComplaints; }
+
+    private final androidx.lifecycle.MediatorLiveData<List<Complaint>> _successStories = new androidx.lifecycle.MediatorLiveData<>();
+    public LiveData<List<Complaint>> getSuccessStories() { return _successStories; }
+
+    private final LiveData<List<Complaint>> trendingSource;
+
     private final MutableLiveData<Boolean> _loading = new MutableLiveData<>(false);
     public LiveData<Boolean> getLoading() { return _loading; }
 
@@ -50,42 +61,62 @@ public class HomeViewModel extends ViewModel {
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
+    public LiveData<com.voiceyanga.citizen.feature.home.CommunityFeedState> getCommunityFeedState() {
+        return repository.getCommunityFeedState();
+    }
+
     @Inject
     public HomeViewModel(ComplaintRepository repository, SessionManager sessionManager,
                          UserRepository userRepository,
-                         ReferenceRepository referenceRepository) {
+                         ReferenceRepository referenceRepository,
+                         NotificationRepository notificationRepository) {
         this.repository = repository;
         this.sessionManager = sessionManager;
         this.userRepository = userRepository;
         this.referenceRepository = referenceRepository;
+        this.notificationRepository = notificationRepository;
 
-        // Load user profile to set default filters
-        loadUserProfile();
+        _sortedComplaints.addSource(repository.getCommunityFeedState(), state -> {
+            if (state != null) {
+                _loading.setValue(state.isInitialLoading() || state.isRefreshing());
+                _error.setValue(state.getError());
+            }
+        });
+
+        // Start with no automatic filters on launch to see all complaints by default
+        // loadUserProfile();
 
         // Chain filters and sorting
         LiveData<List<Complaint>> filteredComplaints = Transformations.switchMap(filters, f -> {
-            _loading.setValue(true);
             String status = f.get("status");
             String category = f.get("category");
             String search = f.get("search");
             String ward = f.get("ward");
             String district = f.get("district");
             String province = f.get("province");
-            return repository.getCommunityComplaints(status, category, search, ward, district, province);
+            return repository.observeCommunityFeed(status, category, search, ward, district, province);
         });
 
-        _sortedComplaints.addSource(filteredComplaints, list -> {
-            if (list != null) {
-                performSort(list, sortOrder.getValue());
-            } else {
-                _sortedComplaints.setValue(null);
-                _loading.setValue(false);
-            }
+        _sortedComplaints.addSource(filteredComplaints, list -> performSort(list, sortOrder.getValue()));
+        _sortedComplaints.addSource(sortOrder, order -> performSort(filteredComplaints.getValue(), order));
+
+        this.trendingSource = Transformations.switchMap(filters, f -> {
+            String district = f.get("district");
+            return repository.getTrendingComplaints(district);
         });
-        _sortedComplaints.addSource(sortOrder, order -> {
-            List<Complaint> currentList = filteredComplaints.getValue();
-            if (currentList != null) {
-                performSort(currentList, order);
+
+        _trendingComplaints.addSource(trendingSource, list -> {
+            _trendingComplaints.setValue(list);
+        });
+
+        _successStories.addSource(repository.getSuccessStories(), list -> {
+            if (list != null) {
+                java.util.List<Complaint> sneakPeek = new java.util.ArrayList<>();
+                int topCount = Math.min(list.size(), 5);
+                for (int i = 0; i < topCount; i++) {
+                    sneakPeek.add(list.get(i));
+                }
+                _successStories.setValue(sneakPeek);
             }
         });
     }
@@ -112,7 +143,7 @@ public class HomeViewModel extends ViewModel {
             @Override
             public void onSuccess(List<LocationDto> data) {
                 for (LocationDto loc : data) {
-                    if (loc.getId().equals(locationId)) {
+                    if (Objects.equals(loc.getId(), locationId)) {
                         // User's default is their city/district
                         setFilter("district", loc.getDistrict());
                         break;
@@ -126,14 +157,17 @@ public class HomeViewModel extends ViewModel {
     }
 
     private void performSort(List<Complaint> list, String order) {
-        if (list == null) {
-            _sortedComplaints.postValue(null);
-            return;
-        }
-        
         executor.execute(() -> {
+            if (list == null) {
+                _sortedComplaints.postValue(null);
+                _loading.postValue(false);
+                return;
+            }
+
             java.util.List<Complaint> sorted = new java.util.ArrayList<>(list);
-            switch (order != null ? order : "NEWEST") {
+            String finalOrder = (order != null) ? order : "NEWEST";
+            
+            switch (finalOrder) {
                 case "SUPPORT":
                     sorted.sort((c1, c2) -> Integer.compare(c2.getSupportCount(), c1.getSupportCount()));
                     break;
@@ -171,6 +205,16 @@ public class HomeViewModel extends ViewModel {
         filters.setValue(Collections.emptyMap());
     }
 
+    public void refreshData() {
+        _loading.setValue(true);
+        repository.refreshCommunityFeed();
+        notificationRepository.refreshNotifications();
+        
+        // Trigger filters update to refresh the LiveData stream
+        Map<String, String> current = filters.getValue();
+        filters.setValue(current != null ? current : new java.util.HashMap<>());
+    }
+
     public void retrySync() {
         repository.scheduleSync();
     }
@@ -188,7 +232,7 @@ public class HomeViewModel extends ViewModel {
     }
 
     public LiveData<Complaint> getLatestMyComplaint() {
-        return repository.getLatestMyComplaint(sessionManager.getUserEmail());
+        return repository.getLatestMyComplaint(sessionManager.getUserId(), sessionManager.getUserEmail());
     }
 
     public LiveData<Complaint> getDraft() {
@@ -200,7 +244,7 @@ public class HomeViewModel extends ViewModel {
     }
 
     public LiveData<Integer> getMyReportsCount() {
-        return repository.getMyReportsCount(sessionManager.getUserEmail());
+        return repository.getMyReportsCount(sessionManager.getUserId(), sessionManager.getUserEmail());
     }
 
     public LiveData<Integer> getSupportedCount() {
@@ -209,5 +253,9 @@ public class HomeViewModel extends ViewModel {
 
     public LiveData<List<Complaint>> getOutboxComplaints() {
         return repository.getOutboxComplaints();
+    }
+
+    public LiveData<Integer> getUnreadNotificationCount() {
+        return notificationRepository.getUnreadCount();
     }
 }
