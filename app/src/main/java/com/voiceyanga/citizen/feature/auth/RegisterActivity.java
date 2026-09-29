@@ -25,6 +25,9 @@ import dagger.hilt.android.AndroidEntryPoint;
 @AndroidEntryPoint
 public class RegisterActivity extends AppCompatActivity {
 
+    @javax.inject.Inject
+    com.voiceyanga.citizen.data.repository.AnalyticsRepository analyticsRepository;
+
     private AuthViewModel viewModel;
     private TextInputEditText etFirstName, etLastName, etPhone, etEmail, etPassword;
     private MaterialButton btnRegister;
@@ -35,6 +38,10 @@ public class RegisterActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
+
+        if (analyticsRepository != null) {
+            analyticsRepository.trackRegistrationStarted();
+        }
 
         viewModel = new ViewModelProvider(this).get(AuthViewModel.class);
 

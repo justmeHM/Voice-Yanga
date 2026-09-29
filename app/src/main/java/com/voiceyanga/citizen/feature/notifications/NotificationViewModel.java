@@ -47,6 +47,20 @@ public class NotificationViewModel extends ViewModel {
         filterType.setValue(type);
     }
 
+    public void refresh() {
+        _loading.setValue(true);
+        new Thread(() -> {
+            try {
+                repository.refreshNotifications();
+                _error.postValue(null);
+            } catch (Exception e) {
+                _error.postValue("Failed to refresh notifications: " + e.getMessage());
+            } finally {
+                _loading.postValue(false);
+            }
+        }).start();
+    }
+
     public void markAsRead(String id) {
         repository.markAsRead(id);
     }

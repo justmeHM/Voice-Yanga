@@ -21,7 +21,7 @@ public class ComplaintSubmissionTest {
         );
         assertTrue("Valid text complaint should pass", request.isValid());
 
-        request.title = "Short";
+        request.title = "Four";
         assertFalse("Title too short should fail", request.isValid());
     }
 

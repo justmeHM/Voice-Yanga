@@ -81,6 +81,12 @@ public class ComplaintDto {
     @SerializedName("proofOfResolutionUrl")
     private String proofOfResolutionUrl;
 
+    @SerializedName(value = "voiceNoteUrl", alternate = {"voiceUrl", "audioUrl", "voiceNote"})
+    private String voiceNoteUrl;
+
+    @SerializedName(value = "voiceNoteDurationSeconds", alternate = {"voiceNoteDuration", "duration", "voiceDuration"})
+    private Integer voiceNoteDurationSeconds;
+
     @SerializedName("assignedOrganization")
     private String assignedOrganization;
 
@@ -129,6 +135,10 @@ public class ComplaintDto {
         return null;
     }
 
+    public java.util.List<ComplaintMedia> getMedia() {
+        return media != null ? media : java.util.Collections.emptyList();
+    }
+
     public java.util.List<String> getPhotos() { 
         if (media == null) return java.util.Collections.emptyList();
         java.util.List<String> photos = new java.util.ArrayList<>();
@@ -144,10 +154,29 @@ public class ComplaintDto {
         if (proofOfResolutionUrl != null) return proofOfResolutionUrl;
         if (media != null) {
             for (ComplaintMedia item : media) {
-                if ("PROOF_OF_RESOLUTION".equals(item.type)) return item.fileUrl;
+                if ("PROOF_OF_RESOLUTION".equalsIgnoreCase(item.type)) return item.getFileUrl();
             }
         }
         return null;
+    }
+
+    public String getVoiceNoteUrl() {
+        if (voiceNoteUrl != null && !voiceNoteUrl.isEmpty()) {
+            return voiceNoteUrl;
+        }
+        if (media != null) {
+            for (ComplaintMedia item : media) {
+                if ("AUDIO".equalsIgnoreCase(item.type) || "VOICE_NOTE".equalsIgnoreCase(item.type)) {
+                    String url = item.getFileUrl();
+                    if (url != null && !url.isEmpty()) return url;
+                }
+            }
+        }
+        return null;
+    }
+
+    public int getVoiceNoteDuration() {
+        return voiceNoteDurationSeconds != null ? voiceNoteDurationSeconds : 0;
     }
 
     public String getAssignedToName() {

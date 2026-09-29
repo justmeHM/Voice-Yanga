@@ -16,23 +16,51 @@ public class VoiceYangaApplication extends Application implements Configuration.
     @Inject
     HiltWorkerFactory workerFactory;
 
+    @Inject
+    okhttp3.OkHttpClient okHttpClient;
+
     @Override
     public void onCreate() {
         super.onCreate();
+        // Prevent Glide from throwing "You must not call setTag() on a view Glide is targeting"
+        com.bumptech.glide.request.target.ViewTarget.setTagId(R.id.glide_internal_request_tag);
+        registerGlideComponents();
         createNotificationChannel();
+    }
+
+    private void registerGlideComponents() {
+        try {
+            // Force register the authenticated OkHttpClient into Glide
+            com.bumptech.glide.Glide.get(this).getRegistry().replace(
+                    com.bumptech.glide.load.model.GlideUrl.class,
+                    java.io.InputStream.class,
+                    new com.bumptech.glide.integration.okhttp3.OkHttpUrlLoader.Factory(okHttpClient)
+            );
+            android.util.Log.d("VoiceYangaApp", "Glide OkHttp integration manually registered");
+        } catch (Throwable t) {
+            android.util.Log.e("VoiceYangaApp", "Failed to manually register Glide OkHttp integration", t);
+        }
     }
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    "complaint_updates",
-                    "Complaint updates",
-                    NotificationManager.IMPORTANCE_DEFAULT
-            );
-            channel.setDescription("Responses and updates to your complaints");
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
-                manager.createNotificationChannel(channel);
+                NotificationChannel channelAlerts = new NotificationChannel(
+                        "voice_yanga_alerts",
+                        getString(R.string.notification_channel_name),
+                        NotificationManager.IMPORTANCE_DEFAULT
+                );
+                channelAlerts.setDescription(getString(R.string.notification_channel_desc));
+                manager.createNotificationChannel(channelAlerts);
+
+                NotificationChannel channelUpdates = new NotificationChannel(
+                        "complaint_updates",
+                        "Complaint updates",
+                        NotificationManager.IMPORTANCE_DEFAULT
+                );
+                channelUpdates.setDescription("Responses and updates to your complaints");
+                manager.createNotificationChannel(channelUpdates);
             }
         }
     }

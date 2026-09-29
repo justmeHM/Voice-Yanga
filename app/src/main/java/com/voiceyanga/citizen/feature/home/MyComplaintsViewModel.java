@@ -29,6 +29,10 @@ public class MyComplaintsViewModel extends ViewModel {
     public LiveData<String> getError() { return _error; }
     public LiveData<com.voiceyanga.citizen.feature.home.MyComplaintsState> getMyComplaintsState() { return repository.getMyComplaintsState(); }
 
+    public ComplaintRepository getRepository() {
+        return repository;
+    }
+
     @Inject
     public MyComplaintsViewModel(ComplaintRepository repository, SessionManager sessionManager) {
         this.repository = repository;

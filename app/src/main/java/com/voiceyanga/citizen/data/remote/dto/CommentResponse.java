@@ -10,7 +10,7 @@ public class CommentResponse {
     private String authorName;
 
     @SerializedName("content")
-    private String message;
+    private String content;
 
     @SerializedName("isOfficial")
     private boolean isOfficial;
@@ -20,7 +20,7 @@ public class CommentResponse {
 
     public String getId() { return id; }
     public String getAuthorName() { return authorName; }
-    public String getMessage() { return message; }
+    public String getContent() { return content; }
     public boolean isOfficial() { return isOfficial; }
     public Long getCreatedAt() { return createdAt; }
 }

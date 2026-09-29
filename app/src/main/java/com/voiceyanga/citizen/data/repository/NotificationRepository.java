@@ -12,7 +12,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import retrofit2.Response;
 
 @Singleton
 public class NotificationRepository {
@@ -29,36 +28,70 @@ public class NotificationRepository {
     }
 
     public LiveData<List<Notification>> getAllNotifications() {
-        refreshNotifications();
+        executorService.execute(() -> {
+            try {
+                refreshNotifications();
+            } catch (Exception ignored) {}
+        });
         return notificationDao.getAllNotifications();
     }
 
-    public void refreshNotifications() {
-        executorService.execute(() -> {
-            try {
+    public void refreshNotifications() throws Exception {
+        try {
+            int currentPage = 0;
+            int totalPages = 1;
+            int totalItems = 0;
+            int accumulatedParsed = 0;
+
+            while (currentPage < totalPages) {
                 // Guide uses getNotifications(page, limit, unreadOnly)
-                Response<ApiEnvelope<PaginatedNotifications>> response = apiService.getNotifications(0, 100, false).execute();
+                retrofit2.Response<ApiEnvelope<PaginatedNotifications>> response = apiService.getNotifications(currentPage, 100, false).execute();
+                
+                int statusCode = response.code();
                 if (response.isSuccessful() && response.body() != null && response.body().success) {
-                    List<NotificationDto> serverNotifications = response.body().data.data;
+                    PaginatedNotifications paginatedData = response.body().data;
+                    List<NotificationDto> serverNotifications = paginatedData.data;
+                    
+                    if (paginatedData.meta != null) {
+                        totalPages = paginatedData.meta.totalPages;
+                        totalItems = paginatedData.meta.totalItems;
+                    }
+
+                    android.util.Log.d("NotificationRepo", String.format("NOTIFICATIONS_HTTP page=%d parsedCount=%d totalItems=%d result=%d",
+                            currentPage, serverNotifications != null ? serverNotifications.size() : 0, totalItems, statusCode));
+
                     if (serverNotifications != null) {
+                        accumulatedParsed += serverNotifications.size();
                         for (NotificationDto dto : serverNotifications) {
                             Notification notification = new Notification(
                                     dto.getId(),
-                                    dto.getComplaintUuid(),
+                                    dto.getComplaintId(), // Store server complaint ID as requested
                                     dto.getTitle(),
                                     dto.getMessage(),
                                     dto.getType(),
-                                    com.voiceyanga.citizen.data.repository.ComplaintRepository.parseServerDate(dto.getTimestamp())
+                                    com.voiceyanga.citizen.data.repository.ComplaintRepository.parseServerDate(dto.getCreatedAt())
                             );
                             notification.setRead(dto.isRead());
                             notificationDao.insert(notification);
                         }
                     }
+                    currentPage++;
+                } else {
+                    android.util.Log.e("NotificationRepo", "NOTIFICATIONS_HTTP result=" + statusCode);
+                    throw new Exception("Server returned " + statusCode);
                 }
-            } catch (Exception e) {
-                android.util.Log.e("NotificationRepo", "Refresh failed", e);
             }
-        });
+            
+            // DB status logging
+            int observedCount = notificationDao.getCountSync();
+            int unreadCount = notificationDao.getUnreadCountSync();
+            android.util.Log.d("NotificationRepo", String.format("NOTIFICATIONS_DB upserted=%d observedCount=%d unreadCount=%d",
+                    accumulatedParsed, observedCount, unreadCount));
+            
+        } catch (Exception e) {
+            android.util.Log.e("NotificationRepo", "Refresh failed", e);
+            throw e;
+        }
     }
 
     public LiveData<Integer> getUnreadCount() {

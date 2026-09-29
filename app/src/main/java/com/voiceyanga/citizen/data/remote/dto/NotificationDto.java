@@ -6,8 +6,8 @@ public class NotificationDto {
     @SerializedName("id")
     private String id;
 
-    @SerializedName("complaintUuid")
-    private String complaintUuid;
+    @SerializedName("complaintId")
+    private String complaintId;
 
     @SerializedName("title")
     private String title;
@@ -18,17 +18,17 @@ public class NotificationDto {
     @SerializedName("type")
     private String type;
 
-    @SerializedName("isRead")
-    private boolean isRead;
+    @SerializedName("readStatus")
+    private boolean readStatus;
 
-    @SerializedName("timestamp")
-    private String timestamp;
+    @SerializedName("createdAt")
+    private String createdAt;
 
     public String getId() { return id; }
-    public String getComplaintUuid() { return complaintUuid; }
+    public String getComplaintId() { return complaintId; }
     public String getTitle() { return title; }
     public String getMessage() { return message; }
     public String getType() { return type; }
-    public boolean isRead() { return isRead; }
-    public String getTimestamp() { return timestamp; }
+    public boolean isRead() { return readStatus; }
+    public String getCreatedAt() { return createdAt; }
 }

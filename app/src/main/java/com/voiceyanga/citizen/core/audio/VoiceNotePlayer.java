@@ -36,9 +36,17 @@ public class VoiceNotePlayer {
                 release();
                 return true;
             });
-            mediaPlayer.prepare();
-            mediaPlayer.start();
-            isPlaying = true;
+            mediaPlayer.setOnPreparedListener(mp -> {
+                try {
+                    mp.start();
+                    isPlaying = true;
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to start playback after prepare", e);
+                    if (listener != null) listener.onError("Failed to play: " + e.getMessage());
+                    release();
+                }
+            });
+            mediaPlayer.prepareAsync();
         } catch (IOException | RuntimeException e) {
             Log.e(TAG, "play() failed", e);
             if (listener != null) listener.onError("Failed to play recording: " + e.getMessage());

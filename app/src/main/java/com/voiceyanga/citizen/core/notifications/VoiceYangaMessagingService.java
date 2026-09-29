@@ -36,28 +36,34 @@ public class VoiceYangaMessagingService extends FirebaseMessagingService {
         // Check if message contains a notification payload.
         if (remoteMessage.getNotification() != null) {
             title = remoteMessage.getNotification().getTitle();
-            body = remoteMessage.getNotification().getBody();
+            String messageBody = remoteMessage.getNotification().getBody();
+            if (messageBody != null) body = messageBody;
         }
 
         // Check if message contains a data payload.
         if (remoteMessage.getData().size() > 0) {
-            if (remoteMessage.getData().containsKey("title")) title = remoteMessage.getData().get("title");
-            if (remoteMessage.getData().containsKey("body")) body = remoteMessage.getData().get("body");
-            if (remoteMessage.getData().containsKey("message")) body = remoteMessage.getData().get("message");
+            String dataTitle = remoteMessage.getData().get("title");
+            if (dataTitle != null) title = dataTitle;
+
+            String dataBody = remoteMessage.getData().get("body");
+            if (dataBody == null) dataBody = remoteMessage.getData().get("message");
+            if (dataBody != null) body = dataBody;
             
             complaintUuid = remoteMessage.getData().get("complaintId");
             if (complaintUuid == null) complaintUuid = remoteMessage.getData().get("complaintUuid");
             if (complaintUuid == null) complaintUuid = remoteMessage.getData().get("id");
             if (complaintUuid == null) complaintUuid = remoteMessage.getData().get("complaint_id");
             
-            type = remoteMessage.getData().get("type");
-            if (type == null) type = "SYSTEM";
+            String dataType = remoteMessage.getData().get("type");
+            if (dataType != null) type = dataType;
         }
         
         notificationHelper.showNotification(title, body, complaintUuid, type);
         
         // Refresh in-app notifications
-        notificationRepository.refreshNotifications();
+        try {
+            notificationRepository.refreshNotifications();
+        } catch (Exception ignored) {}
 
         // Proactive refresh for real-time UI updates
         if (complaintUuid != null) {

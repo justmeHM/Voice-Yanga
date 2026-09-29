@@ -9,6 +9,10 @@ public class HealthResponse {
     @SerializedName("version")
     private String version;
 
+    @SerializedName("communityReadPolicy")
+    private String communityReadPolicy;
+
     public String getStatus() { return status; }
     public String getVersion() { return version; }
+    public String getCommunityReadPolicy() { return communityReadPolicy; }
 }

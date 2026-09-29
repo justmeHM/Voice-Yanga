@@ -1,11 +1,13 @@
 package com.voiceyanga.citizen.data.repository;
 
 import com.google.firebase.messaging.FirebaseMessaging;
+import androidx.work.WorkManager;
 import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.data.local.database.AppDatabase;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
 import com.voiceyanga.citizen.data.remote.dto.ApiEnvelope;
 import com.voiceyanga.citizen.data.remote.dto.AuthResponse;
+import com.voiceyanga.citizen.data.remote.dto.DeleteAccountResponse;
 import com.voiceyanga.citizen.data.remote.dto.LoginRequest;
 import com.voiceyanga.citizen.data.remote.dto.RefreshRequest;
 import com.voiceyanga.citizen.data.remote.dto.RegisterRequest;
@@ -26,13 +28,21 @@ public class RealAuthRepository implements AuthRepository {
     private final SessionManager sessionManager;
     private final AppDatabase database;
     private final UserRepository userRepository;
+    private final WorkManager workManager;
+    private final AnalyticsRepository analyticsRepository;
+
+    public RealAuthRepository(ApiService apiService, SessionManager sessionManager, AppDatabase database, UserRepository userRepository, WorkManager workManager) {
+        this(apiService, sessionManager, database, userRepository, workManager, null);
+    }
 
     @Inject
-    public RealAuthRepository(ApiService apiService, SessionManager sessionManager, AppDatabase database, UserRepository userRepository) {
+    public RealAuthRepository(ApiService apiService, SessionManager sessionManager, AppDatabase database, UserRepository userRepository, WorkManager workManager, AnalyticsRepository analyticsRepository) {
         this.apiService = apiService;
         this.sessionManager = sessionManager;
         this.database = database;
         this.userRepository = userRepository;
+        this.workManager = workManager;
+        this.analyticsRepository = analyticsRepository;
     }
 
     @Override
@@ -75,6 +85,10 @@ public class RealAuthRepository implements AuthRepository {
                                 android.util.Log.e("AuthRepo", "Failed to clear tables", e);
                             }
                         }).start();
+
+                        if (analyticsRepository != null) {
+                            analyticsRepository.trackLoginSucceeded();
+                        }
 
                         callback.onSuccess();
                     } else {
@@ -144,6 +158,11 @@ public class RealAuthRepository implements AuthRepository {
                         }
                     }).start();
 
+                    if (analyticsRepository != null) {
+                        analyticsRepository.trackRegistrationCompleted();
+                        analyticsRepository.trackAccountRegistered();
+                    }
+
                     callback.onSuccess();
                 } else {
                     if (response.code() == 409) {
@@ -172,7 +191,9 @@ public class RealAuthRepository implements AuthRepository {
     public void logout(LogoutCallback callback) {
         // Remove FCM token from backend and local Firebase
         userRepository.removeFcmToken();
-        FirebaseMessaging.getInstance().deleteToken();
+        try {
+            FirebaseMessaging.getInstance().deleteToken();
+        } catch (Exception ignored) {}
 
         String refreshToken = sessionManager.getRefreshToken();
         if (refreshToken != null) {
@@ -190,6 +211,62 @@ public class RealAuthRepository implements AuthRepository {
         } else {
             performLocalLogout(callback);
         }
+    }
+
+    @Override
+    public void deleteAccount(LogoutCallback callback) {
+        // Remove FCM token before deletion
+        userRepository.removeFcmToken();
+        try {
+            FirebaseMessaging.getInstance().deleteToken();
+        } catch (Exception ignored) {}
+
+        apiService.deleteMyAccount().enqueue(new Callback<ApiEnvelope<DeleteAccountResponse>>() {
+            @Override
+            public void onResponse(Call<ApiEnvelope<DeleteAccountResponse>> call, Response<ApiEnvelope<DeleteAccountResponse>> response) {
+                if (response.isSuccessful() || response.code() == 401) {
+                    // Success or already deleted (401)
+                    if (analyticsRepository != null) {
+                        analyticsRepository.trackAccountDeleted();
+                    }
+                    performLocalCleanup(callback);
+                } else {
+                    callback.onResult(false);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ApiEnvelope<DeleteAccountResponse>> call, Throwable t) {
+                // Preserving account on network failure
+                callback.onResult(false);
+            }
+        });
+    }
+
+    private void performLocalCleanup(LogoutCallback callback) {
+        new Thread(() -> {
+            try {
+                // Cancel pending sync work
+                workManager.cancelAllWorkByTag("complaint_sync");
+                
+                // Clear all local database tables
+                database.clearAllTables();
+
+                // Clear analytics queue & rotate anonymous user ID for privacy
+                if (analyticsRepository != null) {
+                    analyticsRepository.clearAnalyticsQueue();
+                }
+                sessionManager.clearAnonymousUserId();
+                
+                // Clear session credentials
+                sessionManager.clearSession();
+                
+                callback.onResult(true);
+            } catch (Exception e) {
+                android.util.Log.e("AuthRepo", "Cleanup failed", e);
+                callback.onResult(false);
+            }
+        }).start();
     }
 
     private void performLocalLogout(LogoutCallback callback) {

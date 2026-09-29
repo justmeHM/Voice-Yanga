@@ -17,7 +17,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@drawable/ic_cancel_back"
+            app:navigationIcon="@drawable/ic_back_small"
             app:title="@string/create_complaint_title"
             app:titleTextColor="?attr/colorOnSurface" />
 
@@ -39,361 +39,333 @@
             android:orientation="vertical"
             android:padding="24dp">
 
-            <!-- Title -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilTitle"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/complaint_title_label">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etTitle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textCapSentences" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- AI-First Category Chip -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardCategorySelector"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/primary_green"
-                app:strokeWidth="1dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:rippleColor="@color/primary_green_light">
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="12dp">
-                    <ImageView
-                        android:id="@+id/ivCategoryIcon"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/about"
-                        app:tint="@color/primary_green" />
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_toEndOf="@id/ivCategoryIcon"
-                        android:layout_marginStart="12dp"
-                        android:layout_centerVertical="true"
-                        android:orientation="vertical">
-                        <TextView
-                            android:id="@+id/tvCategoryName"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/default_category"
-                            android:textStyle="bold"
-                            android:textSize="14sp"
-                            android:textColor="@color/primary_green" />
-                        <TextView
-                            android:id="@+id/tvCategoryHint"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_tap_to_change"
-                            android:textSize="10sp"
-                            android:alpha="0.6" />
-                    </LinearLayout>
-                    <TextView
-                        android:id="@+id/badgeSuggestion"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:background="@drawable/bg_status_chip"
-                        android:paddingHorizontal="8dp"
-                        android:paddingVertical="2dp"
-                        android:text="@string/suggestion_badge"
-                        android:textColor="@color/primary_green"
-                        android:textSize="10sp"
-                        android:visibility="gone" />
-                </RelativeLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Custom Category Input (Hidden by default) -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilCustomCategory"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:hint="@string/label_custom_category"
-                android:visibility="gone">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etCustomCategory"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textCapSentences" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- Description -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilDescription"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:hint="@string/complaint_desc_label">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etDescription"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="top"
-                    android:inputType="textMultiLine|textCapSentences"
-                    android:minLines="3" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- Media Section (Horizontal) -->
+            <!-- Step 1: Category Selection -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/section_photos"
+                android:text="What is the problem about?"
                 android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="12sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.1" />
+                android:layout_marginBottom="12dp" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnAddPhotos"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/add_photos_button"
-                    app:icon="@drawable/ic_photos"
-                    android:textSize="12sp" />
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnRecord"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:text="Voice Note"
-                    app:icon="@drawable/ic_mic"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <!-- Photo List -->
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvPhotos"
+                android:id="@+id/rvCategories"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:orientation="horizontal"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                tools:listitem="@layout/item_photo" />
+                tools:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+                tools:spanCount="3"
+                tools:listitem="@layout/item_category" />
 
-            <!-- Voice Recording UI (Overlay style) -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardVoiceNote"
+            <!-- Step 2: Details (Hidden until category selected) -->
+            <LinearLayout
+                android:id="@+id/llStepDetails"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:orientation="vertical"
                 android:visibility="gone"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp">
-                <LinearLayout
+                android:layout_marginTop="24dp">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="?attr/colorOutlineVariant"
+                    android:layout_marginBottom="24dp" />
+
+                <!-- Title -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilTitle"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <LinearLayout
-                        android:id="@+id/llRecordControls"
+                    android:hint="@string/complaint_title_label">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etTitle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnStop"
-                            style="@style/Widget.Material3.Button.IconButton.Filled"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            app:icon="@drawable/ic_stop"
-                            app:backgroundTint="@color/primary_red" />
-                        <TextView
-                            android:id="@+id/tvRecordingTimer"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp"
-                            android:text="00:00"
-                            android:textStyle="bold" />
-                        <com.voiceyanga.citizen.ui.views.VisualizerView
-                            android:id="@+id/visualizer"
-                            android:layout_width="0dp"
-                            android:layout_height="40dp"
-                            android:layout_weight="1"
-                            android:layout_marginStart="12dp" />
-                    </LinearLayout>
-                    <LinearLayout
-                        android:id="@+id/llPlaybackControls"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:visibility="gone">
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnPlay"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            app:icon="@drawable/ic_play" />
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnPause"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:visibility="gone"
-                            app:icon="@drawable/ic_pause" />
-                        <TextView
-                            android:id="@+id/tvVoiceDuration"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="8dp"
-                            android:text="00:00" />
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnDeleteVoice"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_delete_recording"
-                            android:textColor="@color/primary_red"
-                            app:icon="@drawable/ic_delete" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                        android:inputType="textCapSentences" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Zero-Click Location -->
-            <LinearLayout
-                android:id="@+id/llLocationResult"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@drawable/ic_location_vector"
-                    app:tint="@color/primary_green" />
-                <ProgressBar
-                    android:id="@+id/pbLocationLoading"
-                    style="?android:attr/progressBarStyleSmall"
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_marginStart="8dp" />
-                <TextView
-                    android:id="@+id/tvDetectedLocation"
-                    android:layout_width="0dp"
+                <!-- Custom Category Input (Hidden by default) -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilCustomCategory"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:text="@string/status_searching_gps"
-                    android:textColor="@color/primary_green"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnManualLocation"
-                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/label_custom_category"
+                    android:visibility="gone">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etCustomCategory"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textCapSentences" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Media Section (Horizontal) -->
+                <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Change"
-                    android:textSize="10sp" />
-            </LinearLayout>
+                    android:layout_marginTop="24dp"
+                    android:text="ADD EVIDENCE"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
 
-            <!-- Final Review Summary -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardReviewSummary"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/neutral_50"
-                android:clickable="true"
-                android:focusable="true"
-                app:rippleColor="@color/primary_green_light">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-                    <RelativeLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_review_summary"
-                            android:textSize="12sp"
-                            android:textStyle="bold"
-                            android:alpha="0.6" />
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_alignParentEnd="true"
-                            android:text="View Full"
-                            android:textColor="@color/primary_green"
-                            android:textSize="12sp"
-                            android:textStyle="bold" />
-                    </RelativeLayout>
-                    <TextView
-                        android:id="@+id/tvSummaryTitle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:textStyle="bold"
-                        android:textSize="16sp"
-                        tools:text="Broken Water Pipe" />
-                    <TextView
-                        android:id="@+id/tvSummaryCategory"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAddPhotos"
+                        style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textColor="@color/primary_green"
-                        android:textStyle="bold"
-                        android:textSize="14sp"
-                        tools:text="Category: Water" />
-                    <TextView
-                        android:id="@+id/tvSummaryMedia"
-                        android:layout_width="match_parent"
+                        android:text="@string/add_photos_button"
+                        app:icon="@drawable/ic_photos"
+                        android:textSize="12sp" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnRecord"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:textSize="13sp"
-                        tools:text="Evidence: 2 Photos • Voice Note Included" />
-                    <TextView
-                        android:id="@+id/tvSummaryLocation"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textSize="13sp"
-                        tools:text="Location: Matero, Ward 24" />
+                        android:layout_marginStart="12dp"
+                        android:text="Voice Note"
+                        app:icon="@drawable/ic_mic"
+                        android:textSize="12sp" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
-            <!-- Submit Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSubmit"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="32dp"
-                android:layout_marginBottom="32dp"
-                android:text="@string/submit_complaint_button"
-                android:textSize="16sp"
-                app:backgroundTint="@color/primary_green"
-                app:cornerRadius="12dp" />
+                <!-- Voice Recording UI -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardVoiceNote"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+                        <LinearLayout
+                            android:id="@+id/llRecordControls"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnStop"
+                                style="@style/Widget.Material3.Button.IconButton.Filled"
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                app:icon="@drawable/ic_stop"
+                                app:backgroundTint="@color/primary_red" />
+                            <TextView
+                                android:id="@+id/tvRecordingTimer"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="16dp"
+                                android:text="00:00"
+                                android:textStyle="bold" />
+                            <com.voiceyanga.citizen.ui.views.VisualizerView
+                                android:id="@+id/visualizer"
+                                android:layout_width="0dp"
+                                android:layout_height="40dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="12dp" />
+                        </LinearLayout>
+                        <LinearLayout
+                            android:id="@+id/llPlaybackControls"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:visibility="gone">
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnPlay"
+                                style="@style/Widget.Material3.Button.IconButton"
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                app:icon="@drawable/ic_play" />
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnPause"
+                                style="@style/Widget.Material3.Button.IconButton"
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:visibility="gone"
+                                app:icon="@drawable/ic_pause" />
+                            <TextView
+                                android:id="@+id/tvVoiceDuration"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="8dp"
+                                android:text="00:00" />
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDeleteVoice"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/label_delete_recording"
+                                android:textColor="@color/primary_red"
+                                app:icon="@drawable/ic_delete" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
+                <!-- Description (Hidden if voice note is present) -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilDescription"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="@string/complaint_desc_label">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etDescription"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="top"
+                        android:inputType="textMultiLine|textCapSentences"
+                        android:minLines="3" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Photo List -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvPhotos"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:listitem="@layout/item_photo" />
+
+                <!-- Zero-Click Location -->
+                <LinearLayout
+                    android:id="@+id/llLocationResult"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_location_vector"
+                        app:tint="@color/primary_green" />
+                    <ProgressBar
+                        android:id="@+id/pbLocationLoading"
+                        style="?android:attr/progressBarStyleSmall"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_marginStart="8dp" />
+                    <TextView
+                        android:id="@+id/tvDetectedLocation"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/status_searching_gps"
+                        android:textColor="@color/primary_green"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnManualLocation"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Change"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <!-- Final Review Summary -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardReviewSummary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="32dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp"
+                    app:cardBackgroundColor="@color/neutral_50"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:rippleColor="@color/primary_green_light">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+                        <RelativeLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/label_review_summary"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:alpha="0.6" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentEnd="true"
+                                android:text="View Full"
+                                android:textColor="@color/primary_green"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+                        </RelativeLayout>
+                        <TextView
+                            android:id="@+id/tvSummaryTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:textStyle="bold"
+                            android:textSize="16sp"
+                            tools:text="Broken Water Pipe" />
+                        <TextView
+                            android:id="@+id/tvSummaryCategory"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="@color/primary_green"
+                            android:textStyle="bold"
+                            android:textSize="14sp"
+                            tools:text="Category: Water" />
+                        <TextView
+                            android:id="@+id/tvSummaryMedia"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:textSize="13sp"
+                            tools:text="Evidence: 2 Photos • Voice Note Included" />
+                        <TextView
+                            android:id="@+id/tvSummaryLocation"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textSize="13sp"
+                            tools:text="Location: Matero, Ward 24" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Submit Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSubmit"
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:layout_marginTop="32dp"
+                    android:layout_marginBottom="32dp"
+                    android:text="@string/submit_complaint_button"
+                    android:textSize="16sp"
+                    app:backgroundTint="@color/primary_green"
+                    app:cornerRadius="12dp" />
+
+            </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

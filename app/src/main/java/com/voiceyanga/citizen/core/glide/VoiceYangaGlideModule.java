@@ -26,6 +26,7 @@ public final class VoiceYangaGlideModule extends AppGlideModule {
 
     @Override
     public void registerComponents(@NonNull Context context, @NonNull Glide glide, @NonNull Registry registry) {
+        android.util.Log.d("VoiceYangaGlideModule", "Registering authenticated OkHttpUrlLoader");
         // Use Hilt's EntryPoint to get the authenticated OkHttpClient
         GlideModuleEntryPoint entryPoint = EntryPointAccessors.fromApplication(
                 context.getApplicationContext(), 

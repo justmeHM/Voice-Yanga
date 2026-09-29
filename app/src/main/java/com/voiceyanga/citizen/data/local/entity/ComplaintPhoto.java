@@ -31,6 +31,8 @@ public class ComplaintPhoto {
     @NonNull
     private String photoUri; // Local file path or content URI
 
+    private String mediaId; // Server-side media ID
+
     private String label; // "Close-up", "Wide-view", etc.
 
     public ComplaintPhoto(@NonNull String complaintUuid, @NonNull String photoUri) {
@@ -48,6 +50,9 @@ public class ComplaintPhoto {
     @NonNull
     public String getPhotoUri() { return photoUri; }
     public void setPhotoUri(@NonNull String photoUri) { this.photoUri = photoUri; }
+
+    public String getMediaId() { return mediaId; }
+    public void setMediaId(String mediaId) { this.mediaId = mediaId; }
 
     public String getLabel() { return label; }
     public void setLabel(String label) { this.label = label; }

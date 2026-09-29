@@ -44,6 +44,7 @@ public class SyncWorker extends Worker {
     private final NotificationHelper notificationHelper;
     private final ApiService apiService;
     private final com.voiceyanga.citizen.data.local.SessionManager sessionManager;
+    private final com.voiceyanga.citizen.data.repository.AnalyticsRepository analyticsRepository;
 
     @AssistedInject
     public SyncWorker(
@@ -52,12 +53,14 @@ public class SyncWorker extends Worker {
             ComplaintDao complaintDao,
             NotificationHelper notificationHelper,
             ApiService apiService,
-            com.voiceyanga.citizen.data.local.SessionManager sessionManager) {
+            com.voiceyanga.citizen.data.local.SessionManager sessionManager,
+            com.voiceyanga.citizen.data.repository.AnalyticsRepository analyticsRepository) {
         super(context, params);
         this.complaintDao = complaintDao;
         this.notificationHelper = notificationHelper;
         this.apiService = apiService;
         this.sessionManager = sessionManager;
+        this.analyticsRepository = analyticsRepository;
     }
 
     @NonNull
@@ -181,21 +184,33 @@ public class SyncWorker extends Worker {
                 MultipartBody.Part photoPart = prepareImagePart(localPhoto.getPhotoUri());
                 if (photoPart != null) {
                     photoParts.add(photoPart);
+                } else {
+                    throw new Exception("Failed to prepare a photo for upload");
                 }
             }
 
+            if (photoParts.isEmpty()) {
+                throw new Exception("No photos could be prepared for upload despite local photos existing.");
+            }
+
             Log.d(TAG, "Submitting Multipart complaint: " + complaint.getClientUuid() + " with " + photoParts.size() + " photos");
-            response = apiService.createComplaintWithPhotos(
-                    toRequestBody(complaint.getTitle()),
-                    toRequestBody(complaint.getDescription()),
-                    toRequestBody(complaint.getCategory()),
-                    toRequestBody(complaint.getLocation()),
-                    toRequestBody(complaint.getPriority()),
-                    toRequestBody(complaint.getClientUuid()),
-                    toRequestBody(voiceNoteUrl),
-                    toRequestBody(complaint.getVoiceNoteDuration() != 0 ? String.valueOf(complaint.getVoiceNoteDuration()) : null),
-                    photoParts
-            ).execute();
+            
+            java.util.Map<String, RequestBody> parts = new java.util.HashMap<>();
+            parts.put("title", toRequestBody(complaint.getTitle() != null ? complaint.getTitle() : "Untitled"));
+            parts.put("description", toRequestBody(complaint.getDescription() != null ? complaint.getDescription() : ""));
+            parts.put("category", toRequestBody(complaint.getCategory() != null ? complaint.getCategory() : "General"));
+            parts.put("location", toRequestBody(complaint.getLocation() != null ? complaint.getLocation() : "Unknown"));
+            parts.put("priority", toRequestBody(complaint.getPriority() != null ? complaint.getPriority() : "MEDIUM"));
+            parts.put("clientUuid", toRequestBody(complaint.getClientUuid()));
+            
+            if (voiceNoteUrl != null) {
+                parts.put("voiceNoteUrl", toRequestBody(voiceNoteUrl));
+            }
+            if (complaint.getVoiceNoteDuration() != 0) {
+                parts.put("voiceNoteDurationSeconds", toRequestBody(String.valueOf(complaint.getVoiceNoteDuration())));
+            }
+
+            response = apiService.createComplaintWithPhotos(parts, photoParts).execute();
         }
 
         if (response.isSuccessful() && response.body() != null) {
@@ -226,7 +241,7 @@ public class SyncWorker extends Worker {
                 if (paginatedData.data != null) {
                     List<com.voiceyanga.citizen.data.remote.dto.ComplaintDto> serverList = paginatedData.data;
                     for (com.voiceyanga.citizen.data.remote.dto.ComplaintDto dto : serverList) {
-                        if (local.getClientUuid().equals(dto.getClientUuid())) {
+                        if (dto != null && dto.getClientUuid() != null && local.getClientUuid().equals(dto.getClientUuid())) {
                             local.setSyncStatus("SYNCED");
                             local.setServerId(dto.getServerId());
                             local.setReferenceCode(dto.getReferenceCode());
@@ -245,14 +260,26 @@ public class SyncWorker extends Worker {
     private void recordFailure(String action, Response<?> response, Complaint complaint, boolean isMultipart) {
         String errorBody = "";
         try {
-            if (response.errorBody() != null) {
+            if (response != null && response.errorBody() != null) {
                 errorBody = response.errorBody().string();
             }
         } catch (IOException ignored) {}
 
+        if (analyticsRepository != null) {
+            String failureClass = "SERVER";
+            if (response != null) {
+                int code = response.code();
+                if (code == 401 || code == 403) failureClass = "AUTHENTICATION";
+                else if (code == 400 || code == 422) failureClass = "VALIDATION";
+                else if (code == 408 || code == 504) failureClass = "TIMEOUT";
+                else if (code >= 500) failureClass = "SERVER";
+            }
+            analyticsRepository.trackComplaintSubmissionFailed(complaint.getClientUuid(), failureClass);
+        }
+
         Log.e(TAG, String.format(
             "[DIAGNOSTICS] Action: %s | Status: %d | isMultipart: %b | clientUuid: %s | voiceNote: %b | photos: %d | Body: %s",
-            action, response.code(), isMultipart, complaint.getClientUuid(), 
+            action, response != null ? response.code() : 0, isMultipart, complaint.getClientUuid(), 
             complaint.getVoiceNoteUrl() != null, 
             complaintDao.getPhotosForComplaintSync(complaint.getClientUuid()).size(),
             errorBody
@@ -296,6 +323,16 @@ public class SyncWorker extends Worker {
 
     private MultipartBody.Part prepareImagePart(String uriString) {
         try {
+            if (uriString == null || uriString.isEmpty()) return null;
+            
+            if (uriString.startsWith("/")) {
+                File file = new File(uriString);
+                if (!file.exists()) {
+                    Log.e(TAG, "File does not exist: " + uriString);
+                    return null;
+                }
+            }
+
             Context context = getApplicationContext();
             File compressedFile = com.voiceyanga.citizen.core.utils.ImageCompressor.compress(context, uriString);
             if (compressedFile == null) return null;

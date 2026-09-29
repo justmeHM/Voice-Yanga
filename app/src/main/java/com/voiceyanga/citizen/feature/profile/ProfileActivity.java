@@ -89,6 +89,12 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void setupObservers() {
+        viewModel.isDeleting().observe(this, deleting -> {
+            binding.progressBar.setVisibility(deleting ? View.VISIBLE : View.GONE);
+            // Optionally disable update button as well
+            binding.btnUpdateProfile.setEnabled(!deleting);
+        });
+
         viewModel.getUserProfile().observe(this, user -> {
             if (user != null) {
                 binding.etFirstName.setText(user.getFirstName());

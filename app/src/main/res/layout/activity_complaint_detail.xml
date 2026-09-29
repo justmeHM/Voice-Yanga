@@ -278,6 +278,17 @@
                     android:textStyle="bold"
                     android:letterSpacing="0.1" />
 
+                <TextView
+                    android:id="@+id/tvCommentsRestricted"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Comments for community complaints are restricted."
+                    android:textColor="@color/primary_red"
+                    android:textSize="14sp"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvComments"
                     android:layout_width="match_parent"

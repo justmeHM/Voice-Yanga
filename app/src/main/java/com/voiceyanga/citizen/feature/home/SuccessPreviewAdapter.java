@@ -15,12 +15,13 @@ import com.voiceyanga.citizen.databinding.ItemSuccessPreviewBinding;
 public class SuccessPreviewAdapter extends ListAdapter<Complaint, SuccessPreviewAdapter.ViewHolder> {
 
     private final OnComplaintClickListener listener;
+    private final com.voiceyanga.citizen.data.repository.ComplaintRepository repository;
 
     public interface OnComplaintClickListener {
         void onComplaintClick(Complaint complaint);
     }
 
-    public SuccessPreviewAdapter(OnComplaintClickListener listener) {
+    public SuccessPreviewAdapter(OnComplaintClickListener listener, com.voiceyanga.citizen.data.repository.ComplaintRepository repository) {
         super(new DiffUtil.ItemCallback<Complaint>() {
             @Override
             public boolean areItemsTheSame(@NonNull Complaint oldItem, @NonNull Complaint newItem) {
@@ -35,6 +36,7 @@ public class SuccessPreviewAdapter extends ListAdapter<Complaint, SuccessPreview
             }
         });
         this.listener = listener;
+        this.repository = repository;
     }
 
     @NonNull
@@ -46,7 +48,7 @@ public class SuccessPreviewAdapter extends ListAdapter<Complaint, SuccessPreview
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(getItem(position));
+        holder.bind(getItem(position), repository);
     }
 
     class ViewHolder extends RecyclerView.ViewHolder {
@@ -57,20 +59,18 @@ public class SuccessPreviewAdapter extends ListAdapter<Complaint, SuccessPreview
             this.binding = binding;
         }
 
-        void bind(Complaint complaint) {
+        void bind(Complaint complaint, com.voiceyanga.citizen.data.repository.ComplaintRepository repository) {
             binding.tvTitle.setText(complaint.getTitle());
             
             String photoPath = complaint.getProofOfResolutionUri();
-            if (photoPath == null || photoPath.isEmpty()) photoPath = complaint.getFirstPhotoUri();
+            String mediaId = complaint.getProofOfResolutionMediaId();
+            if (photoPath == null || photoPath.isEmpty()) {
+                photoPath = complaint.getFirstPhotoUri();
+                mediaId = complaint.getFirstPhotoMediaId();
+            }
 
-            String resolvedUrl = com.voiceyanga.citizen.core.utils.MediaUtils.resolvePhotoUrl(photoPath);
-            
-            Glide.with(binding.ivAfter.getContext())
-                    .load(resolvedUrl)
-                    .placeholder(R.color.neutral_400)
-                    .error(R.drawable.vote_icon)
-                    .centerCrop()
-                    .into(binding.ivAfter);
+            com.voiceyanga.citizen.core.utils.PhotoLoader.loadPhoto(
+                    complaint, photoPath, mediaId, repository, binding.ivAfter, R.color.neutral_400);
 
             binding.getRoot().setOnClickListener(v -> listener.onComplaintClick(complaint));
         }

@@ -29,8 +29,8 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "API_BASE_URL", "\"http://10.54.58.10:3000/api/v1/\"")
-            buildConfigField("String", "API_ORIGIN", "\"http://10.54.58.10:3000\"")
+            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000/api/v1/\"")
+            buildConfigField("String", "API_ORIGIN", "\"http://10.0.2.2:3000\"")
         }
         release {
             isMinifyEnabled = false
@@ -93,7 +93,7 @@ dependencies {
     annotationProcessor(libs.hilt.work.compiler)
     implementation(libs.glide)
     implementation(libs.glide.okhttp)
-    annotationProcessor(libs.glide) // Glide annotation processor is optional for simple use but good to have
+    annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
     implementation(libs.play.services.location)
     implementation(libs.firebase.messaging)
     implementation(libs.security.crypto)

@@ -21,6 +21,9 @@ import dagger.hilt.android.AndroidEntryPoint;
 @AndroidEntryPoint
 public class NotificationCenterActivity extends AppCompatActivity {
 
+    @javax.inject.Inject
+    com.voiceyanga.citizen.data.repository.AnalyticsRepository analyticsRepository;
+
     private ActivityNotificationCenterBinding binding;
     private NotificationViewModel viewModel;
     private NotificationAdapter adapter;
@@ -50,11 +53,16 @@ public class NotificationCenterActivity extends AppCompatActivity {
         binding.tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
+                String type = "ALL";
                 switch (tab.getPosition()) {
-                    case 0: viewModel.setFilterType("ALL"); break;
-                    case 1: viewModel.setFilterType("STATUS_CHANGE"); break;
-                    case 2: viewModel.setFilterType("NEW_COMMENT"); break;
+                    case 0: type = "ALL"; break;
+                    case 1: type = "COMPLAINT_STATUS_CHANGED"; break;
+                    case 2: type = "COMPLAINT_COMMENT_ADDED"; break;
                 }
+                viewModel.setFilterType(type);
+                
+                // Safe diagnostic for UI
+                android.util.Log.d("NotificationUI", String.format("NOTIFICATIONS_UI activeFilter=%s", type));
             }
 
             @Override
@@ -68,15 +76,19 @@ public class NotificationCenterActivity extends AppCompatActivity {
     private void setupToolbar() {
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.tvMarkAllRead.setOnClickListener(v -> viewModel.markAllAsRead());
-        binding.layoutError.btnRetry.setOnClickListener(v -> viewModel.getNotifications());
+        binding.layoutError.btnRetry.setOnClickListener(v -> viewModel.refresh());
     }
 
     private void setupRecyclerView() {
         adapter = new NotificationAdapter(notification -> {
             viewModel.markAsRead(notification.getId());
+            if (analyticsRepository != null) {
+                analyticsRepository.trackNotificationOpened("IN_APP", notification.getType(), "OPEN_DETAIL");
+            }
             if (notification.getComplaintUuid() != null) {
                 Intent intent = new Intent(this, ComplaintDetailActivity.class);
                 intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, notification.getComplaintUuid());
+                intent.putExtra("view_context", "NOTIFICATION");
                 startActivity(intent);
             }
         });
@@ -101,22 +113,42 @@ public class NotificationCenterActivity extends AppCompatActivity {
     }
 
     private void observeViewModel() {
+        viewModel.getLoading().observe(this, loading -> {
+            if (loading != null && loading) {
+                binding.llEmptyState.setVisibility(View.GONE);
+                // Maybe show a progress bar if one exists, but keeping minimal changes
+            }
+        });
+
         viewModel.getError().observe(this, error -> {
             if (error != null) {
                 binding.layoutError.llErrorRoot.setVisibility(View.VISIBLE);
                 binding.layoutError.tvErrorMessage.setText(error);
                 binding.rvNotifications.setVisibility(View.GONE);
+                binding.llEmptyState.setVisibility(View.GONE);
             } else {
                 binding.layoutError.llErrorRoot.setVisibility(View.GONE);
+                binding.rvNotifications.setVisibility(View.VISIBLE);
             }
         });
 
         viewModel.getNotifications().observe(this, notifications -> {
             adapter.setNotifications(notifications);
-            binding.llEmptyState.setVisibility(
-                    (notifications == null || notifications.isEmpty()) ? View.VISIBLE : View.GONE);
+            
+            Boolean loading = viewModel.getLoading().getValue();
+            boolean isLoading = loading != null && loading;
+            
+            if (!isLoading) {
+                binding.llEmptyState.setVisibility(
+                        (notifications == null || notifications.isEmpty()) ? View.VISIBLE : View.GONE);
+            }
+            
             binding.tvMarkAllRead.setVisibility(
                     (notifications == null || notifications.isEmpty()) ? View.GONE : View.VISIBLE);
+            
+            // Safe diagnostic for UI
+            android.util.Log.d("NotificationUI", String.format("NOTIFICATIONS_UI renderedCount=%d",
+                    notifications != null ? notifications.size() : 0));
         });
     }
 }

@@ -7,6 +7,7 @@ import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
 import com.voiceyanga.citizen.data.remote.dto.ApiEnvelope;
 import com.voiceyanga.citizen.data.remote.dto.UserDto;
+import com.voiceyanga.citizen.domain.repository.AuthRepository;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,6 +23,7 @@ public class ProfileViewModel extends ViewModel {
 
     private final SessionManager sessionManager;
     private final ApiService apiService;
+    private final AuthRepository authRepository;
     private final MutableLiveData<Boolean> _updateSuccess = new MutableLiveData<>();
     public LiveData<Boolean> getUpdateSuccess() { return _updateSuccess; }
 
@@ -35,9 +37,10 @@ public class ProfileViewModel extends ViewModel {
     public LiveData<String> getError() { return _error; }
 
     @Inject
-    public ProfileViewModel(SessionManager sessionManager, ApiService apiService) {
+    public ProfileViewModel(SessionManager sessionManager, ApiService apiService, AuthRepository authRepository) {
         this.sessionManager = sessionManager;
         this.apiService = apiService;
+        this.authRepository = authRepository;
         
         UserDto cached = new UserDto();
         String fullName = sessionManager.getUserName();
@@ -106,9 +109,21 @@ public class ProfileViewModel extends ViewModel {
         });
     }
 
+    private final MutableLiveData<Boolean> _isDeleting = new MutableLiveData<>(false);
+    public LiveData<Boolean> isDeleting() { return _isDeleting; }
+
     public void deleteAccount() {
-        // Not supported by current API guide
-        _error.setValue("Delete account not supported");
+        if (Boolean.TRUE.equals(_isDeleting.getValue())) return;
+        
+        _isDeleting.setValue(true);
+        authRepository.deleteAccount(success -> {
+            _isDeleting.postValue(false);
+            if (success) {
+                _deleteSuccess.postValue(true);
+            } else {
+                _error.postValue("Failed to delete account. Please try again.");
+            }
+        });
     }
 
     public void registerFcmToken(String token) {

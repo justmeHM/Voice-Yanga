@@ -27,6 +27,7 @@ import java.util.Set;
 public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.ViewHolder> {
 
     private final OnComplaintClickListener listener;
+    private final com.voiceyanga.citizen.data.repository.ComplaintRepository repository;
     private String currentUserEmail;
 
     public interface OnComplaintClickListener {
@@ -36,15 +37,15 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
         default void onRetryClick(Complaint complaint) {}
     }
 
-    public ComplaintAdapter(OnComplaintClickListener listener) {
-        this(listener, null);
+    public ComplaintAdapter(OnComplaintClickListener listener, com.voiceyanga.citizen.data.repository.ComplaintRepository repository) {
+        this(listener, repository, null);
     }
 
-    public ComplaintAdapter(OnComplaintClickListener listener, String currentUserEmail) {
+    public ComplaintAdapter(OnComplaintClickListener listener, com.voiceyanga.citizen.data.repository.ComplaintRepository repository, String currentUserEmail) {
         super(new DiffUtil.ItemCallback<Complaint>() {
             @Override
             public boolean areItemsTheSame(@NonNull Complaint oldItem, @NonNull Complaint newItem) {
-                return oldItem.getClientUuid().equals(newItem.getClientUuid());
+                return Objects.equals(oldItem.getClientUuid(), newItem.getClientUuid());
             }
 
             @Override
@@ -59,6 +60,7 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
             }
         });
         this.listener = listener;
+        this.repository = repository;
         this.currentUserEmail = currentUserEmail;
     }
 
@@ -77,7 +79,7 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(getItem(position), currentUserEmail);
+        holder.bind(getItem(position), currentUserEmail, repository);
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
@@ -116,12 +118,23 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
             colorPrimaryRedLight = ContextCompat.getColor(context, R.color.primary_red_light);
         }
 
-        void bind(Complaint complaint, String currentUserEmail) {
-            binding.tvTitle.setText(complaint.getTitle());
-            binding.tvDescriptionSnippet.setText(complaint.getDescription());
+        void bind(Complaint complaint, String currentUserEmail, com.voiceyanga.citizen.data.repository.ComplaintRepository repository) {
+            String title = complaint.getTitle();
+            String description = complaint.getDescription();
+            binding.tvTitle.setText(title != null ? title : "");
+            binding.tvDescriptionSnippet.setText(description != null ? description : "");
             
+            // Set dynamic Initials placeholder based on category
+            String categoryLabel = complaint.getCategory() != null ? complaint.getCategory().toUpperCase() : "GENERAL";
+            if (categoryLabel.length() >= 2) {
+                binding.ivUserAvatar.setText(categoryLabel.substring(0, 2));
+            } else {
+                binding.ivUserAvatar.setText(categoryLabel.isEmpty() ? "" : categoryLabel.substring(0, 1));
+            }
+
             // Dynamic Branding based on Status/Priority
-            String status = complaint.getStatus() != null ? complaint.getStatus() : "SUBMITTED";
+            String status = complaint.getStatus();
+            if (status == null) status = "SUBMITTED";
             String priority = complaint.getCalculatedPriority();
             
             if ("RESOLVED".equals(status)) {
@@ -142,52 +155,50 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
                 binding.getRoot().setStrokeWidth(2);
             }
 
-            // Sub-header: CATEGORY • TIME • LOCATION
+            // Sync status evaluation before building header sub-text
+            String syncStatus = complaint.getSyncStatus();
+            String refSuffix = "";
+            if ("SYNCED".equals(syncStatus) && complaint.getReferenceCode() != null && !complaint.getReferenceCode().isEmpty()) {
+                refSuffix = " • #" + complaint.getReferenceCode();
+            } else if ("SYNCING".equals(syncStatus)) {
+                refSuffix = " • Syncing...";
+            } else if ("FAILED".equals(syncStatus)) {
+                refSuffix = " • Sync Failed";
+            }
+
+            // Sub-header: TIME • LOCATION
             String timeStr = getRelativeTime(complaint.getCreatedAt());
-            String cat = complaint.getCategory() != null ? complaint.getCategory().toUpperCase() : "GENERAL";
             String loc = complaint.getLocation() != null ? complaint.getLocation() : "Unknown";
             
             // Priority handling: Only show if HIGH or CRITICAL
             String priorityText = "";
             if ("HIGH".equals(priority) || "CRITICAL".equals(priority)) {
-                priorityText = " • " + priority;
+                priorityText = priority + " • ";
             }
             
-            String subText = String.format("%s%s • %s • %s", cat, priorityText, timeStr, loc);
+            String subText = String.format("%s%s • %s%s", priorityText, timeStr, loc, refSuffix);
             
             if (complaint.getAssignedTo() != null && !complaint.getAssignedTo().isEmpty()) {
                 subText += String.format(" • Assigned to %s", complaint.getAssignedTo());
             }
             binding.tvHeaderSub.setText(subText);
             
-            // Photo Preview with Glide
+            // Photo Preview with PhotoLoader
             String photoUri = complaint.getFirstPhotoUri();
+            String mediaId = complaint.getFirstPhotoMediaId();
             
             if (photoUri != null && !photoUri.isEmpty()) {
                 binding.flPhotoContainer.setVisibility(android.view.View.VISIBLE);
-                
-                String fullUrl;
-                if (photoUri.startsWith("http") || photoUri.startsWith("content://") || photoUri.startsWith("file://")) {
-                    fullUrl = photoUri;
-                } else if (photoUri.startsWith("/data/") || photoUri.startsWith("/storage/") || photoUri.startsWith("/emulated/")) {
-                    fullUrl = photoUri;
-                } else {
-                    fullUrl = BuildConfig.API_ORIGIN + (photoUri.startsWith("/") ? "" : "/") + photoUri;
-                }
-
-                com.bumptech.glide.Glide.with(itemView.getContext())
-                        .load(fullUrl)
-                        .placeholder(R.color.neutral_200)
-                        .error(R.drawable.vote_icon)
-                        .centerCrop()
-                        .into(binding.ivComplaintPreview);
-                
+                binding.ivComplaintPreview.setAlpha(1.0f); // Reset alpha for recycled views
+                com.voiceyanga.citizen.core.utils.PhotoLoader.loadPhoto(
+                        complaint, photoUri, mediaId, repository, binding.ivComplaintPreview, R.color.neutral_200);
                 binding.ivComplaintPreview.setTransitionName("image_" + complaint.getClientUuid());
             } else {
                 // If no photo, show a placeholder icon instead of hiding to maintain Facebook standard
                 binding.flPhotoContainer.setVisibility(android.view.View.VISIBLE);
                 binding.ivComplaintPreview.setImageResource(R.drawable.vote_icon);
                 binding.ivComplaintPreview.setAlpha(0.1f);
+                com.voiceyanga.citizen.core.utils.PhotoLogger.logPlaceholder();
             }
 
             // Engagement Counts (Facebook Style)
@@ -212,22 +223,7 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
             // Status Badge
             binding.tvStatus.setText(complaint.getStatus());
             
-            // Sync/Reference Footer
-            String syncStatus = complaint.getSyncStatus();
-            if ("SYNCED".equals(syncStatus)) {
-                binding.tvSyncStatus.setText(complaint.getReferenceCode());
-                binding.tvSyncStatus.setTextColor(colorNeutral500);
-            } else if ("FAILED".equals(syncStatus)) {
-                binding.tvSyncStatus.setText(R.string.sync_failed_hint);
-                binding.tvSyncStatus.setTextColor(colorPrimaryRed);
-            } else if ("SYNCING".equals(syncStatus)) {
-                binding.tvSyncStatus.setText(R.string.syncing_hint);
-                binding.tvSyncStatus.setTextColor(colorPrimaryGreen);
-            } else {
-                binding.tvSyncStatus.setText(R.string.pending_sync_hint);
-                binding.tvSyncStatus.setTextColor(colorNeutral500);
-            }
-
+            // Sync/Reference Footer layout backward compatibility click listener
             binding.tvSyncStatus.setOnClickListener(v -> {
                 if (listener != null) {
                     if ("FAILED".equals(syncStatus)) {
@@ -237,7 +233,7 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
                 }
             });
 
-            // User Badge logic: YOURS or SUPPORTED
+            // User Badge logic: YOURS or SUPPORTED compact overlay indicator
             boolean isMyComplaint = currentUserEmail != null && currentUserEmail.equals(complaint.getAuthorEmail());
             
             if (isMyComplaint) {
@@ -245,14 +241,13 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
                 binding.tvUserBadge.setText("YOURS");
                 binding.tvUserBadge.setBackgroundTintList(ColorStateList.valueOf(colorPrimaryGreenLight));
                 binding.tvUserBadge.setTextColor(colorPrimaryGreen);
+                binding.ivSupportedIndicator.setVisibility(android.view.View.GONE);
                 
                 binding.btnSupport.setEnabled(false);
                 binding.btnSupport.setAlpha(0.5f);
             } else if (complaint.isSupportedByMe()) {
-                binding.tvUserBadge.setVisibility(android.view.View.VISIBLE);
-                binding.tvUserBadge.setText("SUPPORTED");
-                binding.tvUserBadge.setBackgroundTintList(ColorStateList.valueOf(colorPrimaryRedLight));
-                binding.tvUserBadge.setTextColor(colorPrimaryRed);
+                binding.tvUserBadge.setVisibility(android.view.View.GONE);
+                binding.ivSupportedIndicator.setVisibility(android.view.View.VISIBLE);
                 
                 binding.btnSupport.setEnabled(true);
                 binding.btnSupport.setAlpha(1.0f);
@@ -261,6 +256,7 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
                 binding.btnSupport.setIconTint(ColorStateList.valueOf(colorPrimaryRed));
             } else {
                 binding.tvUserBadge.setVisibility(android.view.View.GONE);
+                binding.ivSupportedIndicator.setVisibility(android.view.View.GONE);
                 
                 binding.btnSupport.setEnabled(true);
                 binding.btnSupport.setAlpha(1.0f);
@@ -296,7 +292,8 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
         }
 
         private String getRelativeTime(long createdAt) {
-            long diff = System.currentTimeMillis() - createdAt;
+            long now = System.currentTimeMillis();
+            long diff = now - createdAt;
             if (diff < 60000) return "Just now";
             if (diff < 3600000) return (diff / 60000) + "m ago";
             if (diff < 86400000) return (diff / 3600000) + "h ago";

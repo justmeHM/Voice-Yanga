@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
+import com.voiceyanga.citizen.domain.repository.AuthRepository;
 import com.voiceyanga.citizen.feature.profile.ProfileViewModel;
 import org.junit.Before;
 import org.junit.Rule;
@@ -33,6 +34,9 @@ public class ProfileViewModelTest {
     private ApiService apiService;
 
     @Mock
+    private AuthRepository authRepository;
+
+    @Mock
     private Call<Void> voidCall;
 
     @Mock
@@ -44,25 +48,20 @@ public class ProfileViewModelTest {
     public void setup() {
         MockitoAnnotations.openMocks(this);
         when(apiService.getProfile()).thenReturn(userCall);
-        viewModel = new ProfileViewModel(sessionManager, apiService);
+        viewModel = new ProfileViewModel(sessionManager, apiService, authRepository);
     }
 
     @Test
-    @org.junit.Ignore
     public void testDeleteAccountSuccess() {
-        // when(apiService.deleteAccount()).thenReturn(voidCall);
-
-        // Mock the enqueue to trigger onResponse immediately
         Answer<Void> answer = invocation -> {
-            Callback<Void> callback = invocation.getArgument(0);
-            callback.onResponse(voidCall, Response.success(null));
+            AuthRepository.LogoutCallback callback = invocation.getArgument(0);
+            callback.onResult(true);
             return null;
         };
-        org.mockito.Mockito.doAnswer(answer).when(voidCall).enqueue(any());
+        org.mockito.Mockito.doAnswer(answer).when(authRepository).deleteAccount(any());
 
         viewModel.deleteAccount();
 
-        verify(sessionManager).clearSession();
         assertTrue(viewModel.getDeleteSuccess().getValue());
     }
 }

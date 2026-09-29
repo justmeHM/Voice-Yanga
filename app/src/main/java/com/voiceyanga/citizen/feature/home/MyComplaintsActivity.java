@@ -144,15 +144,28 @@ public class MyComplaintsActivity extends AppCompatActivity {
                 viewModel.retrySync(complaint.getClientUuid());
                 android.widget.Toast.makeText(MyComplaintsActivity.this, "Retrying sync...", android.widget.Toast.LENGTH_SHORT).show();
             }
-        }, sessionManager.getUserEmail());
+        }, viewModel.getRepository(), sessionManager.getUserEmail());
         binding.rvMyComplaints.setLayoutManager(new LinearLayoutManager(this));
         binding.rvMyComplaints.setAdapter(adapter);
     }
 
     private void observeViewModel() {
+        viewModel.getError().observe(this, error -> {
+            if (error != null) {
+                if (adapter.getItemCount() > 0) {
+                    com.google.android.material.snackbar.Snackbar.make(binding.getRoot(), 
+                            "Unable to refresh. Showing cached reports.", 
+                            com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show();
+                } else {
+                    android.widget.Toast.makeText(this, error, android.widget.Toast.LENGTH_LONG).show();
+                }
+                binding.swipeRefresh.setRefreshing(false);
+            }
+        });
+
         viewModel.getLoading().observe(this, isLoading -> {
             if (isLoading != null) {
-                if (isLoading) {
+                if (isLoading && adapter.getItemCount() == 0) {
                     binding.shimmerMyComplaints.startShimmer();
                     binding.shimmerMyComplaints.setVisibility(View.VISIBLE);
                     binding.rvMyComplaints.setVisibility(View.GONE);
@@ -160,6 +173,9 @@ public class MyComplaintsActivity extends AppCompatActivity {
                     binding.shimmerMyComplaints.stopShimmer();
                     binding.shimmerMyComplaints.setVisibility(View.GONE);
                     binding.rvMyComplaints.setVisibility(View.VISIBLE);
+                    if (!isLoading) {
+                        binding.swipeRefresh.setRefreshing(false);
+                    }
                 }
             }
         });

@@ -99,7 +99,7 @@ public class NearbyIssuesActivity extends AppCompatActivity {
                 viewModel.retryComplaint(complaint.getClientUuid());
                 Toast.makeText(NearbyIssuesActivity.this, "Retrying sync...", Toast.LENGTH_SHORT).show();
             }
-        }, sessionManager.getUserEmail());
+        }, viewModel.getRepository(), sessionManager.getUserEmail());
         binding.rvComplaints.setLayoutManager(new LinearLayoutManager(this));
         binding.rvComplaints.setAdapter(adapter);
     }

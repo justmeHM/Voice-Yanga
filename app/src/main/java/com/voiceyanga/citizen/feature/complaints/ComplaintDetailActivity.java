@@ -35,6 +35,7 @@ import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -56,6 +57,12 @@ public class ComplaintDetailActivity extends AppCompatActivity {
     @Inject
     OkHttpClient okHttpClient;
 
+    @Inject
+    com.voiceyanga.citizen.data.repository.ComplaintRepository complaintRepository;
+
+    @Inject
+    com.voiceyanga.citizen.data.repository.AnalyticsRepository analyticsRepository;
+
     private ActivityComplaintDetailBinding binding;
     private ComplaintDetailViewModel viewModel;
     private String complaintUuid;
@@ -75,7 +82,18 @@ public class ComplaintDetailActivity extends AppCompatActivity {
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            int bottomPadding = Math.max(systemBars.bottom, ime.bottom);
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, bottomPadding);
+
+            if (ime.bottom > 0 && binding != null && binding.etComment != null && binding.etComment.hasFocus()) {
+                binding.scrollContent.postDelayed(() -> {
+                    if (!isFinishing() && !isDestroyed() && binding != null) {
+                        int scrollTo = binding.btnPostComment.getBottom() + 48;
+                        binding.scrollContent.smoothScrollTo(0, scrollTo);
+                    }
+                }, 100);
+            }
             return insets;
         });
 
@@ -152,7 +170,7 @@ public class ComplaintDetailActivity extends AppCompatActivity {
             } else {
                 try {
                     File cachePath = new File(getCacheDir(), "images");
-                    cachePath.mkdirs();
+                    if (!cachePath.exists()) cachePath.mkdirs();
                     File shareFile = new File(cachePath, "share_image_detail.png");
                     
                     InputStream is;
@@ -184,14 +202,14 @@ public class ComplaintDetailActivity extends AppCompatActivity {
     }
 
     private void shareWithGlide(String url, String shareText) {
-        String fullUrl = url;
-        if (!url.startsWith("http") && !url.startsWith("content://") && !url.startsWith("file://") && !url.startsWith("/")) {
-            fullUrl = BuildConfig.API_ORIGIN + "/" + url;
-        }
+        String fullUrl = com.voiceyanga.citizen.core.utils.MediaUtils.resolvePhotoUrl(url);
+        Object model = (fullUrl != null && (fullUrl.startsWith("http://") || fullUrl.startsWith("https://")))
+                ? new com.bumptech.glide.load.model.GlideUrl(fullUrl) : fullUrl;
 
         Glide.with(this)
             .asBitmap()
-            .load(fullUrl)
+            .load(model)
+            .listener(com.voiceyanga.citizen.core.utils.PhotoLogger.listener())
             .into(new CustomTarget<android.graphics.Bitmap>() {
                 @Override
                 public void onResourceReady(@NonNull android.graphics.Bitmap resource, @Nullable Transition<? super android.graphics.Bitmap> transition) {
@@ -238,7 +256,7 @@ public class ComplaintDetailActivity extends AppCompatActivity {
     }
 
     private void setupPhotoList() {
-        photoAdapter = new PhotoAdapter(null);
+        photoAdapter = new PhotoAdapter(null, complaintRepository);
         binding.rvPhotos.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         binding.rvPhotos.setAdapter(photoAdapter);
     }
@@ -263,12 +281,25 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         viewModel.getHistory().observe(this, this::updateTimelineWithHistory);
 
         viewModel.getPhotos(complaintUuid).observe(this, photos -> {
+            List<String> uris = new ArrayList<>();
+            List<String> ids = new ArrayList<>();
             if (photos != null && !photos.isEmpty()) {
+                for (ComplaintPhoto p : photos) {
+                    if (p.getPhotoUri() != null && !p.getPhotoUri().isEmpty()) {
+                        uris.add(p.getPhotoUri());
+                        ids.add(p.getMediaId());
+                    }
+                }
+            }
+            if (uris.isEmpty() && currentComplaint != null && currentComplaint.getFirstPhotoUri() != null && !currentComplaint.getFirstPhotoUri().isEmpty()) {
+                uris.add(currentComplaint.getFirstPhotoUri());
+                ids.add(currentComplaint.getFirstPhotoMediaId());
+            }
+
+            if (!uris.isEmpty()) {
                 binding.rvPhotos.setVisibility(View.VISIBLE);
-                List<String> uris = photos.stream()
-                        .map(ComplaintPhoto::getPhotoUri)
-                        .collect(Collectors.toList());
-                photoAdapter.setPhotos(uris);
+                photoAdapter.setComplaint(currentComplaint);
+                photoAdapter.setPhotos(uris, ids);
             } else {
                 binding.rvPhotos.setVisibility(View.GONE);
             }
@@ -280,6 +311,16 @@ public class ComplaintDetailActivity extends AppCompatActivity {
             }
         });
 
+        viewModel.getCommentsState().observe(this, state -> {
+            if (state == ComplaintDetailViewModel.CommentsState.RESTRICTED) {
+                binding.tvCommentsRestricted.setVisibility(View.VISIBLE);
+                binding.rvComments.setAlpha(0.5f);
+            } else {
+                binding.tvCommentsRestricted.setVisibility(View.GONE);
+                binding.rvComments.setAlpha(1.0f);
+            }
+        });
+
         viewModel.getCommentSuccess().observe(this, success -> {
             if (success != null && success) {
                 binding.etComment.setText("");
@@ -287,7 +328,19 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         });
     }
 
+    private boolean complaintViewedTracked = false;
+
     private void displayComplaint(Complaint complaint) {
+        if (!complaintViewedTracked && analyticsRepository != null) {
+            complaintViewedTracked = true;
+            String complaintId = complaint.getServerId() != null ? complaint.getServerId() : complaint.getClientUuid();
+            String viewContext = "FEED";
+            if (getIntent() != null && getIntent().hasExtra("view_context")) {
+                viewContext = getIntent().getStringExtra("view_context");
+            }
+            analyticsRepository.trackComplaintViewed(complaintId, viewContext);
+        }
+
         binding.tvRefCode.setText(complaint.getReferenceCode() != null ? complaint.getReferenceCode() : "PENDING SYNC");
         binding.tvTitle.setText(complaint.getTitle());
 
@@ -379,19 +432,29 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         updateTimeline(complaint);
         setupVoiceNote(complaint);
         setupProofOfResolution(complaint);
+
+        if ((photoAdapter == null || photoAdapter.getItemCount() == 0) && complaint.getFirstPhotoUri() != null && !complaint.getFirstPhotoUri().isEmpty()) {
+            binding.rvPhotos.setVisibility(View.VISIBLE);
+            photoAdapter.setComplaint(complaint);
+            photoAdapter.setPhotos(
+                    Collections.singletonList(complaint.getFirstPhotoUri()),
+                    Collections.singletonList(complaint.getFirstPhotoMediaId())
+            );
+        }
     }
 
     private void setupProofOfResolution(Complaint complaint) {
         String proofUri = complaint.getProofOfResolutionUri();
+        String mediaId = complaint.getProofOfResolutionMediaId();
         if ("RESOLVED".equals(complaint.getStatus()) && proofUri != null && !proofUri.isEmpty()) {
             binding.cardProof.setVisibility(View.VISIBLE);
-            String fullUrl = com.voiceyanga.citizen.core.utils.MediaUtils.resolvePhotoUrl(proofUri);
-            Glide.with(this)
-                    .load(fullUrl)
-                    .placeholder(R.color.neutral_400)
-                    .into(binding.ivProof);
+            com.voiceyanga.citizen.core.utils.PhotoLoader.loadPhoto(
+                    complaint, proofUri, mediaId, complaintRepository, binding.ivProof, R.color.neutral_400);
         } else {
             binding.cardProof.setVisibility(View.GONE);
+            if ("RESOLVED".equals(complaint.getStatus())) {
+                com.voiceyanga.citizen.core.utils.PhotoLogger.logPlaceholder();
+            }
         }
     }
 
@@ -579,6 +642,11 @@ public class ComplaintDetailActivity extends AppCompatActivity {
             com.voiceyanga.citizen.core.utils.HapticHelper.performSuccess(v);
             viewModel.supportComplaint(complaintUuid);
             
+            if (analyticsRepository != null) {
+                String complaintId = currentComplaint != null && currentComplaint.getServerId() != null ? currentComplaint.getServerId() : complaintUuid;
+                analyticsRepository.trackComplaintSupported(complaintId);
+            }
+
             binding.btnSupport.setEnabled(false);
             binding.btnSupport.setBackgroundTintList(ColorStateList.valueOf(
                     ContextCompat.getColor(this, R.color.primary_red)));
@@ -594,6 +662,26 @@ public class ComplaintDetailActivity extends AppCompatActivity {
                 com.voiceyanga.citizen.core.utils.HapticHelper.performClick(v);
                 viewModel.postComment(complaintUuid, message);
             }
+        });
+
+        binding.etComment.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                binding.scrollContent.postDelayed(() -> {
+                    if (!isFinishing() && !isDestroyed() && binding != null) {
+                        int scrollTo = binding.btnPostComment.getBottom() + 48;
+                        binding.scrollContent.smoothScrollTo(0, scrollTo);
+                    }
+                }, 200);
+            }
+        });
+
+        binding.etComment.setOnClickListener(v -> {
+            binding.scrollContent.postDelayed(() -> {
+                if (!isFinishing() && !isDestroyed() && binding != null) {
+                    int scrollTo = binding.btnPostComment.getBottom() + 48;
+                    binding.scrollContent.smoothScrollTo(0, scrollTo);
+                }
+            }, 200);
         });
 
         binding.fabTimeline.setOnClickListener(v -> {

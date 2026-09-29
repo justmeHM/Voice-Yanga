@@ -65,6 +65,10 @@ public class HomeViewModel extends ViewModel {
         return repository.getCommunityFeedState();
     }
 
+    public ComplaintRepository getRepository() {
+        return repository;
+    }
+
     @Inject
     public HomeViewModel(ComplaintRepository repository, SessionManager sessionManager,
                          UserRepository userRepository,
@@ -97,12 +101,21 @@ public class HomeViewModel extends ViewModel {
             return repository.observeCommunityFeed(status, category, search, ward, district, province);
         });
 
-        _sortedComplaints.addSource(filteredComplaints, list -> performSort(list, sortOrder.getValue()));
-        _sortedComplaints.addSource(sortOrder, order -> performSort(filteredComplaints.getValue(), order));
+        _sortedComplaints.addSource(filteredComplaints, list -> {
+            String order = sortOrder.getValue();
+            performSort(list, order);
+        });
+        _sortedComplaints.addSource(sortOrder, order -> {
+            List<Complaint> list = filteredComplaints.getValue();
+            performSort(list, order);
+        });
+
+        loadUserProfile();
 
         this.trendingSource = Transformations.switchMap(filters, f -> {
+            String ward = f.get("ward");
             String district = f.get("district");
-            return repository.getTrendingComplaints(district);
+            return repository.getTrendingComplaints(ward, district);
         });
 
         _trendingComplaints.addSource(trendingSource, list -> {
@@ -144,8 +157,12 @@ public class HomeViewModel extends ViewModel {
             public void onSuccess(List<LocationDto> data) {
                 for (LocationDto loc : data) {
                     if (Objects.equals(loc.getId(), locationId)) {
-                        // User's default is their city/district
-                        setFilter("district", loc.getDistrict());
+                        if (loc.getWard() != null && !loc.getWard().isEmpty()) {
+                            setFilter("ward", loc.getWard());
+                        }
+                        if (loc.getDistrict() != null && !loc.getDistrict().isEmpty()) {
+                            setFilter("district", loc.getDistrict());
+                        }
                         break;
                     }
                 }
@@ -157,13 +174,13 @@ public class HomeViewModel extends ViewModel {
     }
 
     private void performSort(List<Complaint> list, String order) {
-        executor.execute(() -> {
-            if (list == null) {
-                _sortedComplaints.postValue(null);
-                _loading.postValue(false);
-                return;
-            }
+        if (list == null) {
+            _sortedComplaints.postValue(null);
+            _loading.postValue(false);
+            return;
+        }
 
+        executor.execute(() -> {
             java.util.List<Complaint> sorted = new java.util.ArrayList<>(list);
             String finalOrder = (order != null) ? order : "NEWEST";
             
@@ -208,7 +225,10 @@ public class HomeViewModel extends ViewModel {
     public void refreshData() {
         _loading.setValue(true);
         repository.refreshCommunityFeed();
-        notificationRepository.refreshNotifications();
+        
+        try {
+            notificationRepository.refreshNotifications();
+        } catch (Exception ignored) {}
         
         // Trigger filters update to refresh the LiveData stream
         Map<String, String> current = filters.getValue();

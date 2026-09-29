@@ -9,6 +9,7 @@ public interface AuthRepository {
     void login(String email, String password, LoginCallback callback);
     void register(String firstName, String lastName, String phone, String email, String password, LoginCallback callback);
     void logout(LogoutCallback callback);
+    void deleteAccount(LogoutCallback callback);
     void resetPassword(String email, LogoutCallback callback);
 
     interface LoginCallback {

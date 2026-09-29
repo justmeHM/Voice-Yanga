@@ -26,4 +26,10 @@ public interface NotificationDao {
 
     @Query("SELECT COUNT(*) FROM notifications WHERE isRead = 0")
     LiveData<Integer> getUnreadCount();
+
+    @Query("SELECT COUNT(*) FROM notifications")
+    int getCountSync();
+
+    @Query("SELECT COUNT(*) FROM notifications WHERE isRead = 0")
+    int getUnreadCountSync();
 }

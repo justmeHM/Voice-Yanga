@@ -62,6 +62,9 @@ public class HomeActivity extends AppCompatActivity {
     @Inject
     AuthRepository authRepository;
 
+    @Inject
+    com.voiceyanga.citizen.data.repository.AnalyticsRepository analyticsRepository;
+
     private android.view.GestureDetector gestureDetector;
 
     private com.google.android.material.badge.BadgeDrawable notificationBadge;
@@ -78,6 +81,10 @@ public class HomeActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         binding = ActivityHomeBinding.inflate(getLayoutInflater());
+
+        if (analyticsRepository != null) {
+            analyticsRepository.trackAppSessionStarted();
+        }
         setContentView(binding.getRoot());
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.drawerLayoutParent, (v, insets) -> {
@@ -225,12 +232,16 @@ public class HomeActivity extends AppCompatActivity {
         binding.tvGreeting.setText(String.format("%s, %s", greeting, name));
         
         // Update Nav Drawer Header
-        View headerView = binding.navView.getHeaderView(0);
-        TextView tvNavName = headerView.findViewById(R.id.tvNavUserName);
-        TextView tvNavEmail = headerView.findViewById(R.id.tvNavUserEmail);
-        if (tvNavName != null) tvNavName.setText(name);
-        if (tvNavEmail != null) tvNavEmail.setText(email);
+        if (binding.navView.getHeaderCount() > 0) {
+            View headerView = binding.navView.getHeaderView(0);
+        if (headerView != null) {
+            TextView tvNavName = headerView.findViewById(R.id.tvNavUserName);
+            TextView tvNavEmail = headerView.findViewById(R.id.tvNavUserEmail);
+            if (tvNavName != null) tvNavName.setText(name != null ? name : "");
+            if (tvNavEmail != null) tvNavEmail.setText(email != null ? email : "");
+        }
     }
+}
 
     private void setupRecyclerView() {
         adapter = new ComplaintAdapter(new ComplaintAdapter.OnComplaintClickListener() {
@@ -294,14 +305,14 @@ public class HomeActivity extends AppCompatActivity {
             }
 
             private void shareWithGlide(String url, String shareText) {
-                String fullUrl = url;
-                if (!url.startsWith("http") && !url.startsWith("content://") && !url.startsWith("file://") && !url.startsWith("/")) {
-                    fullUrl = BuildConfig.API_ORIGIN + "/" + url;
-                }
+                String fullUrl = com.voiceyanga.citizen.core.utils.MediaUtils.resolvePhotoUrl(url);
+                Object model = (fullUrl != null && (fullUrl.startsWith("http://") || fullUrl.startsWith("https://")))
+                        ? new com.bumptech.glide.load.model.GlideUrl(fullUrl) : fullUrl;
 
                 com.bumptech.glide.Glide.with(HomeActivity.this)
                     .asBitmap()
-                    .load(fullUrl)
+                    .load(model)
+                    .listener(com.voiceyanga.citizen.core.utils.PhotoLogger.listener())
                     .into(new com.bumptech.glide.request.target.CustomTarget<android.graphics.Bitmap>() {
                         @Override
                         public void onResourceReady(@androidx.annotation.NonNull android.graphics.Bitmap resource, @androidx.annotation.Nullable com.bumptech.glide.request.transition.Transition<? super android.graphics.Bitmap> transition) {
@@ -352,7 +363,7 @@ public class HomeActivity extends AppCompatActivity {
                 viewModel.retryComplaint(complaint.getClientUuid());
                 Toast.makeText(HomeActivity.this, "Retrying sync...", Toast.LENGTH_SHORT).show();
             }
-        }, sessionManager.getUserEmail());
+        }, viewModel.getRepository(), sessionManager.getUserEmail());
         binding.rvComplaints.setLayoutManager(new LinearLayoutManager(this));
         binding.rvComplaints.setAdapter(adapter);
 
@@ -360,27 +371,39 @@ public class HomeActivity extends AppCompatActivity {
             Intent intent = new Intent(HomeActivity.this, ComplaintDetailActivity.class);
             intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaint.getClientUuid());
             startActivity(intent);
-        });
+        }, viewModel.getRepository());
         binding.rvTrending.setAdapter(trendingAdapter);
 
         successPreviewAdapter = new SuccessPreviewAdapter(complaint -> {
             Intent intent = new Intent(HomeActivity.this, ComplaintDetailActivity.class);
             intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaint.getClientUuid());
             startActivity(intent);
-        });
+        }, viewModel.getRepository());
         binding.rvSuccessStories.setAdapter(successPreviewAdapter);
     }
 
     @com.google.android.material.badge.ExperimentalBadgeUtils
     private void setupObservers() {
         viewModel.getUnreadNotificationCount().observe(this, count -> {
+            if (binding == null || binding.btnNotifications == null) return;
+            
             if (count != null && count > 0) {
                 if (notificationBadge == null) {
                     notificationBadge = com.google.android.material.badge.BadgeDrawable.create(this);
                     notificationBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.primary_red));
                     notificationBadge.setBadgeTextColor(ContextCompat.getColor(this, R.color.white));
-                    com.google.android.material.badge.BadgeUtils.attachBadgeDrawable(
-                            notificationBadge, binding.btnNotifications, null);
+                    
+                    // Attach only when view is laid out to prevent offset issues or crashes
+                    binding.btnNotifications.post(() -> {
+                        if (binding != null && binding.btnNotifications != null) {
+                            try {
+                                com.google.android.material.badge.BadgeUtils.attachBadgeDrawable(
+                                        notificationBadge, binding.btnNotifications, null);
+                            } catch (Exception e) {
+                                android.util.Log.e("HomeActivity", "Failed to attach badge", e);
+                            }
+                        }
+                    });
                 }
                 notificationBadge.setNumber(count);
                 notificationBadge.setVisible(true);
@@ -391,10 +414,19 @@ public class HomeActivity extends AppCompatActivity {
 
         viewModel.getError().observe(this, error -> {
             if (error != null) {
-                binding.layoutError.llErrorRoot.setVisibility(View.VISIBLE);
-                binding.layoutError.tvErrorMessage.setText(error);
-                binding.rvComplaints.setVisibility(View.GONE);
+                if (adapter.getItemCount() > 0) {
+                    // We have cached data, just show a snackbar instead of full screen error
+                    com.google.android.material.snackbar.Snackbar.make(binding.getRoot(), 
+                            "Unable to refresh feed. Showing cached reports.", 
+                            com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show();
+                    binding.layoutError.llErrorRoot.setVisibility(View.GONE);
+                } else {
+                    binding.layoutError.llErrorRoot.setVisibility(View.VISIBLE);
+                    binding.layoutError.tvErrorMessage.setText(error);
+                    binding.rvComplaints.setVisibility(View.GONE);
+                }
                 binding.shimmerFeed.setVisibility(View.GONE);
+                binding.swipeRefresh.setRefreshing(false);
             } else {
                 binding.layoutError.llErrorRoot.setVisibility(View.GONE);
             }
@@ -402,7 +434,7 @@ public class HomeActivity extends AppCompatActivity {
 
         viewModel.getLoading().observe(this, isLoading -> {
             if (isLoading != null) {
-                if (isLoading) {
+                if (isLoading && adapter.getItemCount() == 0) {
                     binding.shimmerFeed.startShimmer();
                     binding.shimmerFeed.setVisibility(View.VISIBLE);
                     binding.rvComplaints.setVisibility(View.GONE);
@@ -410,6 +442,9 @@ public class HomeActivity extends AppCompatActivity {
                     binding.shimmerFeed.stopShimmer();
                     binding.shimmerFeed.setVisibility(View.GONE);
                     binding.rvComplaints.setVisibility(View.VISIBLE);
+                    if (!isLoading) {
+                        binding.swipeRefresh.setRefreshing(false);
+                    }
                 }
             }
         });
@@ -432,6 +467,19 @@ public class HomeActivity extends AppCompatActivity {
         viewModel.getTrendingComplaints().observe(this, trending -> {
             if (trending != null && !trending.isEmpty()) {
                 binding.llTrendingRoot.setVisibility(View.VISIBLE);
+                
+                java.util.Map<String, String> activeFilters = viewModel.getFilters().getValue();
+                String activeWard = activeFilters != null ? activeFilters.get("ward") : null;
+                String activeDistrict = activeFilters != null ? activeFilters.get("district") : null;
+                
+                if (activeWard != null && !activeWard.isEmpty()) {
+                    binding.tvTrendingTitle.setText(getString(R.string.title_trending_ward, activeWard));
+                } else if (activeDistrict != null && !activeDistrict.isEmpty()) {
+                    binding.tvTrendingTitle.setText(getString(R.string.title_trending_ward, activeDistrict));
+                } else {
+                    binding.tvTrendingTitle.setText(R.string.title_trending);
+                }
+
                 trendingAdapter.submitList(trending);
             } else {
                 binding.llTrendingRoot.setVisibility(View.GONE);

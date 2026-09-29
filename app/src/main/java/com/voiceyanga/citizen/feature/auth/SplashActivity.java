@@ -21,14 +21,22 @@ public class SplashActivity extends AppCompatActivity {
     @Inject
     SessionManager sessionManager;
 
+    @Inject
+    com.voiceyanga.citizen.data.repository.AnalyticsRepository analyticsRepository;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
 
+        if (analyticsRepository != null) {
+            analyticsRepository.trackAppSessionStarted();
+        }
+
         SplashViewModel viewModel = new ViewModelProvider(this).get(SplashViewModel.class);
 
         viewModel.getIsServerReachable().observe(this, reachable -> {
+            if (isFinishing() || isDestroyed()) return;
             if (reachable) {
                 Log.d(TAG, "API Server is reachable");
             } else {
@@ -38,6 +46,7 @@ public class SplashActivity extends AppCompatActivity {
         });
 
         viewModel.getIsLoggedIn().observe(this, loggedIn -> {
+            if (isFinishing() || isDestroyed()) return;
             if (loggedIn) {
                 if (sessionManager.isBiometricEnabled() && BiometricHelper.isBiometricAvailable(this)) {
                     BiometricHelper.showPrompt(this, new BiometricHelper.BiometricCallback() {

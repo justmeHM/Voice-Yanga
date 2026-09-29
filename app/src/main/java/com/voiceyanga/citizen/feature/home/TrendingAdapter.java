@@ -14,12 +14,13 @@ import com.voiceyanga.citizen.databinding.ItemTrendingComplaintBinding;
 public class TrendingAdapter extends ListAdapter<Complaint, TrendingAdapter.ViewHolder> {
 
     private final OnComplaintClickListener listener;
+    private final com.voiceyanga.citizen.data.repository.ComplaintRepository repository;
 
     public interface OnComplaintClickListener {
         void onComplaintClick(Complaint complaint);
     }
 
-    public TrendingAdapter(OnComplaintClickListener listener) {
+    public TrendingAdapter(OnComplaintClickListener listener, com.voiceyanga.citizen.data.repository.ComplaintRepository repository) {
         super(new DiffUtil.ItemCallback<Complaint>() {
             @Override
             public boolean areItemsTheSame(@NonNull Complaint oldItem, @NonNull Complaint newItem) {
@@ -33,6 +34,7 @@ public class TrendingAdapter extends ListAdapter<Complaint, TrendingAdapter.View
             }
         });
         this.listener = listener;
+        this.repository = repository;
     }
 
     @NonNull
@@ -44,7 +46,7 @@ public class TrendingAdapter extends ListAdapter<Complaint, TrendingAdapter.View
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(getItem(position));
+        holder.bind(getItem(position), repository);
     }
 
     class ViewHolder extends RecyclerView.ViewHolder {
@@ -55,28 +57,16 @@ public class TrendingAdapter extends ListAdapter<Complaint, TrendingAdapter.View
             this.binding = binding;
         }
 
-        void bind(Complaint complaint) {
+        void bind(Complaint complaint, com.voiceyanga.citizen.data.repository.ComplaintRepository repository) {
             binding.tvTitle.setText(complaint.getTitle());
             binding.tvSupportCount.setText(binding.getRoot().getContext()
                     .getString(R.string.support_count_format_simple, complaint.getSupportCount()));
 
             String rawPath = complaint.getFirstPhotoUri();
-            if (rawPath != null && !rawPath.isEmpty()) {
-                String resolvedUrl = com.voiceyanga.citizen.core.utils.MediaUtils.resolvePhotoUrl(rawPath);
-                
-                android.util.Log.d("TrendingAdapter", "Loading photo: [" + resolvedUrl + "] for: " + complaint.getTitle());
-                
-                Glide.with(binding.ivPhoto.getContext())
-                        .load(resolvedUrl)
-                        .placeholder(R.color.neutral_400) // Distinct grey
-                        .error(R.drawable.vote_icon)
-                        .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
-                        .centerCrop()
-                        .into(binding.ivPhoto);
-            } else {
-                android.util.Log.w("TrendingAdapter", "No photo URL for: " + complaint.getTitle());
-                binding.ivPhoto.setImageResource(R.color.neutral_300);
-            }
+            String mediaId = complaint.getFirstPhotoMediaId();
+            
+            com.voiceyanga.citizen.core.utils.PhotoLoader.loadPhoto(
+                    complaint, rawPath, mediaId, repository, binding.ivPhoto, R.color.neutral_400);
 
             binding.getRoot().setOnClickListener(v -> listener.onComplaintClick(complaint));
         }

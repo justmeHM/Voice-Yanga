@@ -13,10 +13,39 @@ import com.voiceyanga.citizen.data.local.entity.ComplaintPhoto;
 import com.voiceyanga.citizen.data.local.entity.Notification;
 import com.voiceyanga.citizen.data.local.entity.PendingAction;
 
-@Database(entities = {Complaint.class, Comment.class, ComplaintPhoto.class, Notification.class, PendingAction.class, com.voiceyanga.citizen.data.local.entity.ComplaintFeedMembership.class}, version = 21, exportSchema = false)
+import com.voiceyanga.citizen.data.local.dao.AnalyticsEventDao;
+import com.voiceyanga.citizen.data.local.entity.AnalyticsEventEntity;
+
+@Database(entities = {Complaint.class, Comment.class, ComplaintPhoto.class, Notification.class, PendingAction.class, com.voiceyanga.citizen.data.local.entity.ComplaintFeedMembership.class, AnalyticsEventEntity.class}, version = 23, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract ComplaintDao complaintDao();
     public abstract NotificationDao notificationDao();
+    public abstract AnalyticsEventDao analyticsEventDao();
+
+    public static final Migration MIGRATION_22_23 = new Migration(22, 23) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS `analytics_events` (" +
+                    "`localId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`idempotencyKey` TEXT NOT NULL, " +
+                    "`eventName` TEXT, " +
+                    "`payloadJson` TEXT, " +
+                    "`createdAt` INTEGER NOT NULL, " +
+                    "`attemptCount` INTEGER NOT NULL DEFAULT 0, " +
+                    "`nextAttemptAt` INTEGER NOT NULL DEFAULT 0, " +
+                    "`lastErrorClass` TEXT)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_analytics_events_idempotencyKey` ON `analytics_events` (`idempotencyKey`)");
+        }
+    };
+
+    public static final Migration MIGRATION_21_22 = new Migration(21, 22) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `complaints` ADD COLUMN `firstPhotoMediaId` TEXT");
+            database.execSQL("ALTER TABLE `complaints` ADD COLUMN `proofOfResolutionMediaId` TEXT");
+            database.execSQL("ALTER TABLE `complaint_photos` ADD COLUMN `mediaId` TEXT");
+        }
+    };
 
     public static final Migration MIGRATION_20_21 = new Migration(20, 21) {
         @Override

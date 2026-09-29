@@ -108,6 +108,7 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         this.repository = repository;
         this.referenceRepository = referenceRepository;
         this.recorder = new VoiceNoteRecorder(application);
+        _categories.setValue(getDefaultCategories());
         setupVoiceNoteComponents();
         loadReferenceData();
         loadDraft();
@@ -339,16 +340,29 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         repository.deleteDraft();
     }
 
+    private List<CategoryDto> getDefaultCategories() {
+        List<CategoryDto> defaults = new ArrayList<>();
+        defaults.add(new CategoryDto("cat_water", getApplication().getString(R.string.category_water)));
+        defaults.add(new CategoryDto("cat_sanitation", getApplication().getString(R.string.category_sanitation)));
+        defaults.add(new CategoryDto("cat_roads", getApplication().getString(R.string.category_roads)));
+        defaults.add(new CategoryDto("cat_electricity", getApplication().getString(R.string.category_electricity)));
+        defaults.add(new CategoryDto("cat_security", getApplication().getString(R.string.category_security)));
+        defaults.add(new CategoryDto("cat_other", getApplication().getString(R.string.category_other)));
+        return defaults;
+    }
+
     private void loadReferenceData() {
         referenceRepository.getCategories(new ReferenceRepository.ReferenceCallback<List<CategoryDto>>() {
             @Override
             public void onSuccess(List<CategoryDto> data) {
-                _categories.setValue(data);
+                if (data != null && !data.isEmpty()) {
+                    _categories.setValue(data);
+                }
             }
 
             @Override
             public void onError(String message) {
-                _error.setValue(message);
+                android.util.Log.w("ComplaintVM", "Failed to fetch categories: " + message);
             }
         });
 

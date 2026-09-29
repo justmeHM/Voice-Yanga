@@ -26,6 +26,10 @@ public class NearbyIssuesViewModel extends ViewModel {
         this.sessionManager = sessionManager;
     }
 
+    public ComplaintRepository getRepository() {
+        return repository;
+    }
+
     public void setUserLocation(android.location.Location location) {
         userLocation.setValue(location);
     }

@@ -28,6 +28,14 @@ public interface ComplaintDao {
     @Query("DELETE FROM complaint_feed_membership WHERE feedType = :feedType")
     void deleteFeedMemberships(String feedType);
 
+    @Transaction
+    default void updateFeedMemberships(String feedType, List<com.voiceyanga.citizen.data.local.entity.ComplaintFeedMembership> memberships) {
+        deleteFeedMemberships(feedType);
+        if (memberships != null && !memberships.isEmpty()) {
+            insertFeedMemberships(memberships);
+        }
+    }
+
     @Update
     void update(Complaint complaint);
 
@@ -78,14 +86,23 @@ public interface ComplaintDao {
            "ORDER BY createdAt DESC")
     LiveData<List<Complaint>> getFilteredCommunityComplaints(String status, String category, String query, String ward, String district, String province);
 
-    @Query("SELECT * FROM complaints WHERE syncStatus != 'DRAFT' AND status != 'RESOLVED' AND (:district IS NULL OR district = :district OR location LIKE '%' || :district || '%') ORDER BY supportCount DESC LIMIT 10")
-    LiveData<List<Complaint>> getTrendingComplaints(String district);
+    @Query("SELECT * FROM complaints WHERE syncStatus != 'DRAFT' AND status != 'RESOLVED' " +
+           "AND (:ward IS NULL OR :ward = '' OR ward = :ward OR location LIKE '%' || :ward || '%') " +
+           "AND (:district IS NULL OR :district = '' OR district = :district OR location LIKE '%' || :district || '%') " +
+           "ORDER BY supportCount DESC, createdAt DESC LIMIT 5")
+    LiveData<List<Complaint>> getTrendingComplaints(String ward, String district);
 
     @Query("SELECT * FROM complaints WHERE syncStatus IN ('DRAFT', 'PENDING', 'FAILED') ORDER BY createdAt DESC")
     LiveData<List<Complaint>> getOutboxComplaints();
 
     @Query("SELECT * FROM complaints WHERE syncStatus = 'PENDING'")
     List<Complaint> getPendingComplaints();
+
+    @Query("SELECT * FROM complaints WHERE clientUuid = :id OR serverId = :id")
+    Complaint getComplaintById(String id);
+
+    @Query("SELECT * FROM complaints WHERE clientUuid = :id OR serverId = :id")
+    LiveData<Complaint> getComplaintByIdLiveData(String id);
 
     @Query("SELECT * FROM complaints WHERE clientUuid = :uuid")
     Complaint getComplaintByUuid(String uuid);
@@ -143,4 +160,35 @@ public interface ComplaintDao {
 
     @Query("DELETE FROM pending_actions WHERE id = :id")
     void deletePendingAction(int id);
+
+    @Query("DELETE FROM pending_actions WHERE complaintUuid = :clientUuid")
+    void deletePendingActionsForComplaint(String clientUuid);
+
+    @Query("DELETE FROM comments WHERE complaintUuid = :clientUuid")
+    void deleteCommentsForComplaint(String clientUuid);
+
+    @Query("DELETE FROM complaint_feed_membership WHERE serverId = :serverId")
+    void deleteFeedMembershipsForServerId(String serverId);
+
+    @Query("DELETE FROM complaints WHERE clientUuid = :clientUuid")
+    void deleteComplaintByClientUuid(String clientUuid);
+
+    @Query("SELECT * FROM complaints WHERE syncStatus = 'SYNCED' AND serverId IN (SELECT serverId FROM complaint_feed_membership WHERE feedType = :feedType)")
+    List<Complaint> getSyncedComplaintsByFeedType(String feedType);
+
+    @Transaction
+    default void purgeComplaintByServerId(String serverId) {
+        Complaint complaint = getComplaintByServerId(serverId);
+        if (complaint == null) {
+            deleteFeedMembershipsForServerId(serverId);
+            return;
+        }
+
+        String clientUuid = complaint.getClientUuid();
+        deletePendingActionsForComplaint(clientUuid);
+        deleteCommentsForComplaint(clientUuid);
+        deletePhotosForComplaint(clientUuid);
+        deleteFeedMembershipsForServerId(serverId);
+        deleteComplaintByClientUuid(clientUuid);
+    }
 }

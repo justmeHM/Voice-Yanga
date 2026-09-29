@@ -17,6 +17,7 @@
     <application
         android:name=".VoiceYangaApplication"
         android:allowBackup="true"
+        android:usesCleartextTraffic="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_voice_yanga"
@@ -73,11 +74,13 @@
         <activity
             android:name=".feature.complaints.CreateComplaintActivity"
             android:exported="false"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.VoiceYanga" />
 
         <activity
             android:name=".feature.complaints.ComplaintDetailActivity"
             android:exported="false"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.VoiceYanga" />
 
         <activity

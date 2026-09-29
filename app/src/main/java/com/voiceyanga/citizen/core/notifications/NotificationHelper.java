@@ -87,11 +87,11 @@ public class NotificationHelper {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification_bell_vector)
+                .setSmallIcon(R.drawable.ic_stat_notification)
                 .setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_voice_yanga))
                 .setColor(ContextCompat.getColor(context, R.color.primary_green))
-                .setContentTitle(title)
-                .setContentText(message)
+                .setContentTitle(title != null ? title : "Voice Yanga")
+                .setContentText(message != null ? message : "")
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true);

@@ -49,9 +49,16 @@ import dagger.hilt.android.AndroidEntryPoint;
 @AndroidEntryPoint
 public class CreateComplaintActivity extends AppCompatActivity {
 
+    @javax.inject.Inject
+    com.voiceyanga.citizen.data.repository.ComplaintRepository complaintRepository;
+
+    @javax.inject.Inject
+    com.voiceyanga.citizen.data.repository.AnalyticsRepository analyticsRepository;
+
     private ActivityCreateComplaintBinding binding;
     private ComplaintViewModel viewModel;
     private PhotoAdapter photoAdapter;
+    private CategoryAdapter categoryAdapter;
     private CategoryDto selectedCategory = null;
     private LocationDto currentLocation = null;
     private double currentLatitude = 0.0;
@@ -88,12 +95,18 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            int bottomPadding = Math.max(systemBars.bottom, ime.bottom);
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, bottomPadding);
             return insets;
         });
 
         viewModel = new ViewModelProvider(this).get(ComplaintViewModel.class);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        if (analyticsRepository != null) {
+            analyticsRepository.trackComplaintCreationStarted();
+        }
 
         setupPermissionLaunchers();
         setupToolbar();
@@ -142,8 +155,14 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 isGranted -> {
                     if (isGranted) {
                         HapticHelper.selection(binding.btnRecord);
+                        if (analyticsRepository != null) {
+                            analyticsRepository.trackMediaAttachmentStarted("VOICE_NOTE");
+                        }
                         viewModel.startRecording();
                     } else {
+                        if (analyticsRepository != null) {
+                            analyticsRepository.trackMediaAttachmentFailed("VOICE_NOTE", "PERMISSION");
+                        }
                         Toast.makeText(this, R.string.error_microphone_permission, Toast.LENGTH_SHORT).show();
                     }
                 }
@@ -154,7 +173,14 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 uri -> {
                     if (uri != null) {
                         HapticHelper.success(this);
+                        if (analyticsRepository != null) {
+                            analyticsRepository.trackMediaAttachmentStarted("PHOTO");
+                        }
                         viewModel.addPhoto(uri.toString());
+                    } else {
+                        if (analyticsRepository != null) {
+                            analyticsRepository.trackMediaAttachmentFailed("PHOTO", "CANCELLED");
+                        }
                     }
                 }
         );
@@ -164,7 +190,14 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 success -> {
                     if (success && cameraImageUri != null) {
                         HapticHelper.success(this);
+                        if (analyticsRepository != null) {
+                            analyticsRepository.trackMediaAttachmentStarted("PHOTO");
+                        }
                         viewModel.addPhoto(cameraImageUri.toString());
+                    } else {
+                        if (analyticsRepository != null) {
+                            analyticsRepository.trackMediaAttachmentFailed("PHOTO", "CANCELLED");
+                        }
                     }
                 }
         );
@@ -175,6 +208,9 @@ public class CreateComplaintActivity extends AppCompatActivity {
                     if (isGranted) {
                         launchCamera();
                     } else {
+                        if (analyticsRepository != null) {
+                            analyticsRepository.trackMediaAttachmentFailed("PHOTO", "PERMISSION");
+                        }
                         Toast.makeText(this, R.string.error_camera_permission, Toast.LENGTH_SHORT).show();
                     }
                 }
@@ -194,6 +230,9 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
         if (!title.isEmpty() || !desc.isEmpty()) {
             viewModel.saveDraft(title, desc, selectedCategory, customCat, currentLocation, detectedAddress);
+            if (analyticsRepository != null) {
+                analyticsRepository.trackComplaintDraftSaved();
+            }
         }
     }
 
@@ -232,6 +271,29 @@ public class CreateComplaintActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
+        categoryAdapter = new CategoryAdapter(category -> {
+            HapticHelper.selection(binding.rvCategories);
+            selectCategory(category.getName());
+            
+            // Auto fill Title problem field if empty
+            if (binding.etTitle.getText().toString().trim().isEmpty()) {
+                binding.etTitle.setText(category.getName());
+            }
+            
+            // Show details step
+            if (binding.llStepDetails.getVisibility() != View.VISIBLE) {
+                binding.llStepDetails.setVisibility(View.VISIBLE);
+                // Smooth scroll to details
+                binding.llStepDetails.post(() -> {
+                    int scrollTo = binding.llStepDetails.getTop();
+                    ((androidx.core.widget.NestedScrollView) binding.llStepDetails.getParent().getParent()).smoothScrollTo(0, scrollTo);
+                });
+            }
+        });
+        binding.rvCategories.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(this, 3));
+        binding.rvCategories.setAdapter(categoryAdapter);
+        binding.rvCategories.setNestedScrollingEnabled(false);
+
         photoAdapter = new PhotoAdapter(new PhotoAdapter.OnRemoveListener() {
             @Override
             public void onRemove(String uri) {
@@ -247,15 +309,16 @@ public class CreateComplaintActivity extends AppCompatActivity {
             public void onLabelChanged(String uri, String label) {
                 if (uri != null) viewModel.updatePhotoLabel(uri, label);
             }
-        });
+        }, complaintRepository);
         binding.rvPhotos.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         binding.rvPhotos.setAdapter(photoAdapter);
     }
 
     private void setupObservers() {
         viewModel.getCategories().observe(this, categories -> {
-            if (categories != null) {
+            if (categories != null && !categories.isEmpty()) {
                 this.availableCategories = categories;
+                categoryAdapter.setCategories(categories);
             }
         });
 
@@ -326,6 +389,9 @@ public class CreateComplaintActivity extends AppCompatActivity {
             binding.cardVoiceNote.setVisibility(state.isRecording || state.localFile != null ? View.VISIBLE : View.GONE);
             binding.llRecordControls.setVisibility(state.isRecording ? View.VISIBLE : View.GONE);
             binding.llPlaybackControls.setVisibility(state.localFile != null ? View.VISIBLE : View.GONE);
+
+            // Hide description if voice note is being recorded or is present
+            binding.tilDescription.setVisibility(state.isRecording || state.localFile != null ? View.GONE : View.VISIBLE);
             
             if (state.isRecording) {
                 int minutes = state.elapsedSeconds / 60;
@@ -353,7 +419,9 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (s != null) suggestCategory(s.toString());
+                if (s != null && s.length() > 0 && selectedCategory == null) {
+                    suggestCategory(s.toString());
+                }
                 populateSummary();
             }
 
@@ -378,6 +446,9 @@ public class CreateComplaintActivity extends AppCompatActivity {
             String customCategory = binding.etCustomCategory.getText().toString().trim();
             
             binding.btnSubmit.setEnabled(false);
+            if (analyticsRepository != null) {
+                analyticsRepository.trackComplaintSubmissionAttempted(null);
+            }
             viewModel.submitComplaint(title, description, selectedCategory, customCategory, currentLocation, 
                     detectedAddress, currentLatitude, currentLongitude);
             isSubmitted = true;
@@ -385,7 +456,6 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
         binding.btnManualLocation.setOnClickListener(v -> showManualLocationDialog());
         binding.btnAddPhotos.setOnClickListener(v -> showPhotoSourceDialog());
-        binding.cardCategorySelector.setOnClickListener(v -> showCategoryDialog());
         binding.cardReviewSummary.setOnClickListener(v -> showFullReviewDialog());
 
         binding.btnRecord.setOnClickListener(v -> checkVoicePermission());
@@ -553,6 +623,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
         // Safety timeout to hide progress bar and notify user if GPS takes too long
         binding.tvDetectedLocation.postDelayed(() -> {
+            if (isFinishing() || isDestroyed() || binding == null) return;
             if (binding.pbLocationLoading.getVisibility() == View.VISIBLE) {
                 fusedLocationClient.removeLocationUpdates(locationCallback);
                 binding.pbLocationLoading.setVisibility(View.GONE);
@@ -572,6 +643,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
             try {
                 List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
                 runOnUiThread(() -> {
+                    if (binding == null) return;
                     if (addresses != null && !addresses.isEmpty()) {
                         Address address = addresses.get(0);
                         StringBuilder sb = new StringBuilder();
@@ -605,6 +677,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 });
             } catch (IOException e) {
                 runOnUiThread(() -> {
+                    if (binding == null) return;
                     String coords = String.format(Locale.getDefault(), "%.5f, %.5f", location.getLatitude(), location.getLongitude());
                     binding.tvDetectedLocation.setText(coords);
                     binding.tvDetectedLocation.setVisibility(View.VISIBLE);
@@ -615,28 +688,18 @@ public class CreateComplaintActivity extends AppCompatActivity {
         }).start();
     }
 
-    private void showCategoryDialog() {
-        String[] items = {
-            getString(R.string.category_water),
-            getString(R.string.category_sanitation),
-            getString(R.string.category_roads),
-            getString(R.string.category_electricity),
-            getString(R.string.category_security),
-            getString(R.string.category_other)
-        };
-        
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.category_label)
-                .setItems(items, (dialog, which) -> {
-                    selectCategory(items[which]);
-                })
-                .show();
-    }
-
     private void selectCategory(String categoryName) {
         boolean isOther = categoryName.equalsIgnoreCase(getString(R.string.category_other));
         binding.tilCustomCategory.setVisibility(isOther ? View.VISIBLE : View.GONE);
         
+        if (binding.llStepDetails.getVisibility() != View.VISIBLE) {
+            binding.llStepDetails.setVisibility(View.VISIBLE);
+        }
+
+        if (categoryAdapter != null) {
+            categoryAdapter.setSelectedCategory(categoryName);
+        }
+
         selectedCategory = null;
         if (availableCategories != null) {
             for (CategoryDto dto : availableCategories) {
@@ -652,23 +715,12 @@ public class CreateComplaintActivity extends AppCompatActivity {
             selectedCategory = new CategoryDto(null, categoryName);
         }
         
-        binding.tvCategoryName.setText(categoryName);
-        
-        int iconRes = R.drawable.about;
-        if (categoryName.equalsIgnoreCase(getString(R.string.category_water))) iconRes = R.drawable.water;
-        else if (categoryName.equalsIgnoreCase(getString(R.string.category_sanitation))) iconRes = R.drawable.sanitary;
-        else if (categoryName.equalsIgnoreCase(getString(R.string.category_roads))) iconRes = R.drawable.road;
-        else if (categoryName.equalsIgnoreCase(getString(R.string.category_electricity))) iconRes = R.drawable.electricity;
-        else if (categoryName.equalsIgnoreCase(getString(R.string.category_security))) iconRes = R.drawable.security;
-        
-        binding.ivCategoryIcon.setImageResource(iconRes);
         populateSummary();
     }
 
     private void suggestCategory(String title) {
         String lowerTitle = title.toLowerCase();
-        binding.badgeSuggestion.setVisibility(View.GONE);
-
+        
         String suggested = null;
         if (lowerTitle.contains("water") || lowerTitle.contains("leak") || lowerTitle.contains("pipe") || lowerTitle.contains("burst")) {
             suggested = getString(R.string.category_water);
@@ -684,7 +736,6 @@ public class CreateComplaintActivity extends AppCompatActivity {
         
         if (suggested != null) {
             selectCategory(suggested);
-            binding.badgeSuggestion.setVisibility(View.VISIBLE);
         }
     }
 
@@ -721,7 +772,10 @@ public class CreateComplaintActivity extends AppCompatActivity {
         iv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
         iv.setBackgroundColor(android.graphics.Color.BLACK);
         
-        com.bumptech.glide.Glide.with(this).load(uri).into(iv);
+        com.bumptech.glide.Glide.with(this)
+                .load(uri)
+                .listener(com.voiceyanga.citizen.core.utils.PhotoLogger.listener())
+                .into(iv);
         
         dialog.setContentView(iv);
         iv.setOnClickListener(v -> dialog.dismiss());
@@ -747,7 +801,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
         List<String> photos = viewModel.getSelectedPhotos().getValue();
         if (photos != null && !photos.isEmpty()) {
             androidx.recyclerview.widget.RecyclerView rv = view.findViewById(R.id.rvReviewPhotos);
-            PhotoAdapter previewAdapter = new PhotoAdapter(null); // No removal in preview
+            PhotoAdapter previewAdapter = new PhotoAdapter(null, complaintRepository); // No removal in preview
             previewAdapter.setPhotos(photos);
             rv.setAdapter(previewAdapter);
         } else {

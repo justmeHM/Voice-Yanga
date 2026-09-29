@@ -60,6 +60,14 @@ public class FakeAuthRepository implements AuthRepository {
     }
 
     @Override
+    public void deleteAccount(LogoutCallback callback) {
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            sessionManager.clearSession();
+            callback.onResult(true);
+        }, 1500);
+    }
+
+    @Override
     public void resetPassword(String email, LogoutCallback callback) {
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
             callback.onResult(true);

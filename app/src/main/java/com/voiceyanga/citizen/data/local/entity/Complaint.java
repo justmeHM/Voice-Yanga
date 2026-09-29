@@ -39,7 +39,9 @@ public class Complaint {
     private String district;
     private String province;
     private String firstPhotoUri;
+    private String firstPhotoMediaId;
     private String proofOfResolutionUri;
+    private String proofOfResolutionMediaId;
     private String voiceNoteLocalPath;
     private String voiceNoteUrl;
     private int voiceNoteDuration;
@@ -147,8 +149,14 @@ public class Complaint {
     public String getFirstPhotoUri() { return firstPhotoUri; }
     public void setFirstPhotoUri(String firstPhotoUri) { this.firstPhotoUri = firstPhotoUri; }
 
+    public String getFirstPhotoMediaId() { return firstPhotoMediaId; }
+    public void setFirstPhotoMediaId(String firstPhotoMediaId) { this.firstPhotoMediaId = firstPhotoMediaId; }
+
     public String getProofOfResolutionUri() { return proofOfResolutionUri; }
     public void setProofOfResolutionUri(String proofOfResolutionUri) { this.proofOfResolutionUri = proofOfResolutionUri; }
+
+    public String getProofOfResolutionMediaId() { return proofOfResolutionMediaId; }
+    public void setProofOfResolutionMediaId(String proofOfResolutionMediaId) { this.proofOfResolutionMediaId = proofOfResolutionMediaId; }
 
     public String getVoiceNoteLocalPath() { return voiceNoteLocalPath; }
     public void setVoiceNoteLocalPath(String voiceNoteLocalPath) { this.voiceNoteLocalPath = voiceNoteLocalPath; }

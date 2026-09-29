@@ -27,15 +27,33 @@
             android:paddingTop="12dp"
             android:paddingBottom="8dp">
 
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/ivUserAvatar"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="@color/neutral_100"
-                android:padding="8dp"
-                android:src="@drawable/profile"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
-                app:tint="@color/primary_green" />
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:id="@+id/ivUserAvatar"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_status_chip"
+                    android:backgroundTint="@color/primary_green_light"
+                    android:gravity="center"
+                    android:textColor="@color/primary_green"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    tools:text="SA" />
+                <ImageView
+                    android:id="@+id/ivSupportedIndicator"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_gravity="bottom|end"
+                    android:src="@drawable/bg_status_chip"
+                    android:backgroundTint="@color/primary_red"
+                    android:padding="2dp"
+                    app:tint="@color/white"
+                    app:srcCompat="@drawable/ic_mic"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -57,11 +75,13 @@
 
                 <TextView
                     android:id="@+id/tvHeaderSub"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textColor="?android:attr/textColorSecondary"
                     android:textSize="11sp"
-                    tools:text="ROADS • 2 hours ago • Lusaka Central" />
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    tools:text="2 hours ago • Lusaka Central • #VY-00001" />
 
             </LinearLayout>
 
@@ -95,6 +115,13 @@
 
         </LinearLayout>
 
+        <!-- mandatory hidden text for logic compatibility -->
+        <TextView
+            android:id="@+id/tvSyncStatus"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone" />
+
         <!-- Description -->
         <TextView
             android:id="@+id/tvDescriptionSnippet"
@@ -103,16 +130,16 @@
             android:paddingHorizontal="12dp"
             android:paddingBottom="10dp"
             android:textColor="?android:attr/textColorPrimary"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:ellipsize="end"
             android:maxLines="2"
             tools:text="The road has become completely impassable for small cars after the heavy rains." />
 
-        <!-- Media Section (Large Image) -->
+        <!-- Media Section (Edge to edge - no horizontal padding) -->
         <FrameLayout
             android:id="@+id/flPhotoContainer"
             android:layout_width="match_parent"
-            android:layout_height="280dp"
+            android:layout_height="240dp"
             android:background="@color/neutral_100"
             android:visibility="visible">
 
@@ -155,12 +182,12 @@
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="14dp">
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="10dp">
 
             <ImageView
-                android:layout_width="18dp"
-                android:layout_height="18dp"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
                 android:src="@drawable/people_support_icon"
                 app:tint="@color/primary_green" />
 
@@ -168,9 +195,9 @@
                 android:id="@+id/tvSupportCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="6dp"
                 android:textColor="?android:attr/textColorSecondary"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 tools:text="24 supports" />
 
             <View
@@ -183,7 +210,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="?android:attr/textColorSecondary"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 tools:text="12 comments" />
 
         </LinearLayout>
@@ -191,7 +218,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="16dp"
+            android:layout_marginHorizontal="12dp"
             android:background="@color/neutral_200" />
 
         <!-- Quick Actions -->
@@ -211,10 +238,12 @@
                 android:textColor="@color/neutral_600"
                 android:text="Support"
                 android:textSize="12sp"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:contentDescription="@string/action_support"
                 app:icon="@drawable/people_support_icon"
                 app:iconGravity="textStart"
-                app:iconSize="20dp"
+                app:iconSize="18dp"
                 app:iconTint="@color/neutral_600"
                 app:rippleColor="@color/primary_green_light"
                 android:insetTop="0dp"
@@ -229,10 +258,12 @@
                 android:textColor="@color/neutral_600"
                 android:text="Comment"
                 android:textSize="12sp"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:contentDescription="@string/action_comment"
                 app:icon="@drawable/ic_comment_vector"
                 app:iconGravity="textStart"
-                app:iconSize="20dp"
+                app:iconSize="18dp"
                 app:iconTint="@color/neutral_600"
                 android:insetTop="0dp"
                 android:insetBottom="0dp" />
@@ -246,25 +277,17 @@
                 android:textColor="@color/neutral_600"
                 android:text="Share"
                 android:textSize="12sp"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:contentDescription="@string/action_share"
                 app:icon="@android:drawable/ic_menu_share"
                 app:iconGravity="textStart"
-                app:iconSize="20dp"
+                app:iconSize="18dp"
                 app:iconTint="@color/neutral_600"
                 android:insetTop="0dp"
                 android:insetBottom="0dp" />
 
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/tvSyncStatus"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:paddingBottom="10dp"
-            android:textColor="?android:attr/textColorSecondary"
-            android:textSize="10sp"
-            tools:text="REF-12345" />
 
     </LinearLayout>
 

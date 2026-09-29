@@ -19,6 +19,7 @@ import dagger.hilt.InstallIn;
 import dagger.hilt.android.qualifiers.ApplicationContext;
 import dagger.hilt.components.SingletonComponent;
 import okhttp3.Authenticator;
+import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -47,54 +48,82 @@ public class NetworkModule {
             @ApplicationContext Context context,
             HttpLoggingInterceptor loggingInterceptor, 
             SessionManager sessionManager) {
-        
+        return createOkHttpClient(
+                context,
+                loggingInterceptor,
+                sessionManager,
+                BuildConfig.API_BASE_URL,
+                BuildConfig.API_ORIGIN);
+    }
+
+    public OkHttpClient createOkHttpClient(
+            Context context,
+            HttpLoggingInterceptor loggingInterceptor,
+            SessionManager sessionManager,
+            String apiBaseUrl,
+            String apiOrigin) {
         Interceptor bearerInterceptor = chain -> {
             Request original = chain.request();
             String path = original.url().encodedPath();
+            String host = original.url().host();
+            String apiOriginHost = HttpUrl.get(apiOrigin).host();
+            boolean isApiHost = host.equalsIgnoreCase(apiOriginHost);
 
             // Do not attach access token to login, register, or refresh endpoints
             if (path.contains("/auth/login") || path.contains("/auth/register") || path.contains("/auth/refresh")) {
                 return chain.proceed(original);
             }
 
-            String host = original.url().host();
-            String apiHost = android.net.Uri.parse(BuildConfig.API_BASE_URL).getHost();
-
             Request.Builder requestBuilder = original.newBuilder();
+            boolean authAttached = false;
             
-            if (host.equalsIgnoreCase(apiHost)) {
-                requestBuilder.header("Accept", "application/json");
+            if (isApiHost) {
                 String token = sessionManager.getAccessToken();
                 if (token != null && !token.isEmpty()) {
-                    android.util.Log.d("NetworkModule", "Attaching token to request: " + path);
                     requestBuilder.header("Authorization", "Bearer " + token);
-                } else {
-                    android.util.Log.w("NetworkModule", "Token is missing for request: " + path);
+                    authAttached = true;
+                }
+                
+                if (path.startsWith("/api/v1")) {
+                    requestBuilder.header("Accept", "application/json");
                 }
             }
             
             Response response = chain.proceed(requestBuilder.build());
-            if (!response.isSuccessful()) {
-                android.util.Log.e("NetworkModule", "Request failed: " + path + " | Code: " + response.code());
+            
+            boolean isPhotoPath = path.startsWith("/uploads") || (path.contains("/media/") && path.endsWith("/access"));
+            if (isPhotoPath && BuildConfig.DEBUG) {
+                boolean redirected = response.priorResponse() != null || response.code() == 307 || response.code() == 302;
+                android.util.Log.d("PHOTO_HTTP", String.format("apiHost=%b authAttached=%b result=%d redirected=%b",
+                        isApiHost, authAttached, response.code(), redirected));
             }
+
             return response;
         };
 
         Authenticator authenticator = new Authenticator() {
             @Override
             public Request authenticate(Route route, Response response) throws IOException {
-                // responseCount >= 2 prevents infinite retry loops
                 if (responseCount(response) >= 2) {
                     return null;
                 }
 
-                // Only handle TOKEN_EXPIRED specifically
-                String errorBody = "";
-                try (ResponseBody peekBody = response.peekBody(1024)) {
-                    errorBody = peekBody.string();
-                } catch (Exception ignored) {}
+                if (response.code() != 401) {
+                    return null;
+                }
 
-                if (!errorBody.contains("TOKEN_EXPIRED")) {
+                String path = response.request().url().encodedPath();
+                boolean isPhoto = path.startsWith("/uploads") || (path.contains("/media/") && path.endsWith("/access"));
+
+                boolean isTokenExpired;
+                try (ResponseBody peekBody = response.peekBody(1024)) {
+                    String errorBody = peekBody.string();
+                    isTokenExpired = errorBody.contains("TOKEN_EXPIRED") || errorBody.isEmpty();
+                } catch (Exception ignored) {
+                    isTokenExpired = true;
+                }
+
+                if (!isTokenExpired) {
                     return null;
                 }
 
@@ -102,8 +131,10 @@ public class NetworkModule {
                     String currentToken = sessionManager.getAccessToken();
                     String requestToken = response.request().header("Authorization");
 
-                    // Check if token was already refreshed by a concurrent request
-                    if (requestToken != null && !requestToken.contains(currentToken)) {
+                    if (requestToken != null && currentToken != null && !requestToken.contains(currentToken)) {
+                        if (isPhoto && BuildConfig.DEBUG) {
+                            android.util.Log.d("PHOTO_REFRESH", "attempted=false shared=true result=success");
+                        }
                         return response.request().newBuilder()
                                 .header("Authorization", "Bearer " + currentToken)
                                 .build();
@@ -111,13 +142,15 @@ public class NetworkModule {
 
                     String refreshToken = sessionManager.getRefreshToken();
                     if (refreshToken == null || refreshToken.isEmpty()) {
+                        if (isPhoto && BuildConfig.DEBUG) {
+                            android.util.Log.d("PHOTO_REFRESH", "attempted=true shared=false result=failure");
+                        }
                         handleSessionExpired(sessionManager, context);
                         return null;
                     }
 
-                    // Attempt token refresh using a dedicated Retrofit instance to avoid interceptor recursion
                     Retrofit refreshRetrofit = new Retrofit.Builder()
-                            .baseUrl(BuildConfig.API_BASE_URL)
+                            .baseUrl(apiBaseUrl)
                             .addConverterFactory(GsonConverterFactory.create())
                             .build();
 
@@ -127,24 +160,43 @@ public class NetworkModule {
 
                     if (refreshResponse.isSuccessful() && refreshResponse.body() != null && refreshResponse.body().success) {
                         RefreshData data = refreshResponse.body().data;
-                        // Atomically save rotated tokens
                         sessionManager.saveTokens(data.accessToken, data.refreshToken);
+
+                        if (isPhoto && BuildConfig.DEBUG) {
+                            android.util.Log.d("PHOTO_REFRESH", "attempted=true shared=false result=success");
+                        }
 
                         return response.request().newBuilder()
                                 .header("Authorization", "Bearer " + data.accessToken)
                                 .build();
                     } else {
-                        // Refresh failed (e.g. 400 or 401)
+                        if (isPhoto && BuildConfig.DEBUG) {
+                            android.util.Log.d("PHOTO_REFRESH", "attempted=true shared=false result=failure");
+                        }
                         handleSessionExpired(sessionManager, context);
                         return null;
                     }
                 }
             }
         };
+
+        Interceptor redirectScrubber = chain -> {
+            Request request = chain.request();
+            HttpUrl originUrl = HttpUrl.get(apiOrigin);
+            boolean isApiHost = request.url().host().equalsIgnoreCase(originUrl.host()) && request.url().port() == originUrl.port();
+            
+            if (!isApiHost) {
+                return chain.proceed(request.newBuilder()
+                        .removeHeader("Authorization")
+                        .build());
+            }
+            return chain.proceed(request);
+        };
         
         return new OkHttpClient.Builder()
                 .addInterceptor(loggingInterceptor)
                 .addInterceptor(bearerInterceptor)
+                .addNetworkInterceptor(redirectScrubber)
                 .authenticator(authenticator)
                 .followRedirects(true)
                 .connectTimeout(30, TimeUnit.SECONDS)

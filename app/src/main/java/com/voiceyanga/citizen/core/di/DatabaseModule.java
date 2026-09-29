@@ -35,7 +35,9 @@ public class DatabaseModule {
                         AppDatabase.MIGRATION_17_18,
                         AppDatabase.MIGRATION_18_19,
                         AppDatabase.MIGRATION_19_20,
-                        AppDatabase.MIGRATION_20_21)
+                        AppDatabase.MIGRATION_20_21,
+                        AppDatabase.MIGRATION_21_22,
+                        AppDatabase.MIGRATION_22_23)
                 .build();
     }
 
@@ -47,5 +49,10 @@ public class DatabaseModule {
     @Provides
     public NotificationDao provideNotificationDao(AppDatabase database) {
         return database.notificationDao();
+    }
+
+    @Provides
+    public com.voiceyanga.citizen.data.local.dao.AnalyticsEventDao provideAnalyticsEventDao(AppDatabase database) {
+        return database.analyticsEventDao();
     }
 }

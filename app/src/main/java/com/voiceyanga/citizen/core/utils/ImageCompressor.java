@@ -16,9 +16,16 @@ public class ImageCompressor {
 
     public static File compress(Context context, String uriString) {
         try {
-            Uri uri = Uri.parse(uriString);
-            InputStream input = context.getContentResolver().openInputStream(uri);
+            InputStream input;
+            if (uriString.startsWith("/")) {
+                input = new java.io.FileInputStream(uriString);
+            } else {
+                Uri uri = Uri.parse(uriString);
+                input = context.getContentResolver().openInputStream(uri);
+            }
             
+            if (input == null) return null;
+
             // Decode with inJustDecodeBounds=true to check dimensions
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
@@ -43,7 +50,14 @@ public class ImageCompressor {
             options.inJustDecodeBounds = false;
             options.inSampleSize = inSampleSize;
             
-            input = context.getContentResolver().openInputStream(uri);
+            if (uriString.startsWith("/")) {
+                input = new java.io.FileInputStream(uriString);
+            } else {
+                input = context.getContentResolver().openInputStream(Uri.parse(uriString));
+            }
+            
+            if (input == null) return null;
+            
             Bitmap bitmap = BitmapFactory.decodeStream(input, null, options);
             input.close();
 

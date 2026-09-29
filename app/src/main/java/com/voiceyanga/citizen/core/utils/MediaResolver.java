@@ -22,23 +22,26 @@ public class MediaResolver {
             return null;
         }
 
-        // If it's already an absolute URL, return it
-        if (fileUrl.startsWith("http")) {
-            return fileUrl;
+        String resolved = MediaUtils.resolvePhotoUrl(fileUrl);
+        if (resolved != null && resolved.startsWith("http")) {
+            return resolved;
         }
 
+        String targetUrl = resolved != null ? resolved : (BuildConfig.API_ORIGIN + (fileUrl.startsWith("/") ? fileUrl : "/" + fileUrl));
+
         Request request = new Request.Builder()
-                .url(BuildConfig.API_ORIGIN + fileUrl)
+                .url(targetUrl)
                 .header("Authorization", "Bearer " + sessionManager.getAccessToken())
                 .build();
 
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                throw new IOException("Media request failed: " + response.code());
+                return targetUrl;
             }
 
-            // OkHttp follows redirects by default, so the final URL will be the signed one
             return response.request().url().toString();
+        } catch (Exception e) {
+            return targetUrl;
         }
     }
 }

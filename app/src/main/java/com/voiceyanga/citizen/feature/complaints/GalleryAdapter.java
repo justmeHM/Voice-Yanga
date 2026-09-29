@@ -18,8 +18,9 @@ public class GalleryAdapter extends ListAdapter<Complaint, GalleryAdapter.ViewHo
     }
 
     private final OnStoryClickListener listener;
+    private final com.voiceyanga.citizen.data.repository.ComplaintRepository repository;
 
-    public GalleryAdapter(OnStoryClickListener listener) {
+    public GalleryAdapter(OnStoryClickListener listener, com.voiceyanga.citizen.data.repository.ComplaintRepository repository) {
         super(new DiffUtil.ItemCallback<Complaint>() {
             @Override
             public boolean areItemsTheSame(@NonNull Complaint oldItem, @NonNull Complaint newItem) {
@@ -34,6 +35,7 @@ public class GalleryAdapter extends ListAdapter<Complaint, GalleryAdapter.ViewHo
             }
         });
         this.listener = listener;
+        this.repository = repository;
     }
 
     @NonNull
@@ -45,10 +47,10 @@ public class GalleryAdapter extends ListAdapter<Complaint, GalleryAdapter.ViewHo
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(getItem(position));
+        holder.bind(getItem(position), repository);
     }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
+    static class ViewHolder extends androidx.recyclerview.widget.RecyclerView.ViewHolder {
         private final ItemGalleryStoryBinding binding;
         private final OnStoryClickListener listener;
 
@@ -58,31 +60,19 @@ public class GalleryAdapter extends ListAdapter<Complaint, GalleryAdapter.ViewHo
             this.listener = listener;
         }
 
-        void bind(Complaint complaint) {
+        void bind(Complaint complaint, com.voiceyanga.citizen.data.repository.ComplaintRepository repository) {
             binding.tvTitle.setText(complaint.getTitle());
             binding.tvLocation.setText(complaint.getLocation());
             binding.tvDescription.setText(complaint.getDescription());
 
-            loadImage(complaint.getFirstPhotoUri(), binding.ivBefore);
-            loadImage(complaint.getProofOfResolutionUri(), binding.ivAfter);
+            com.voiceyanga.citizen.core.utils.PhotoLoader.loadPhoto(
+                    complaint, complaint.getFirstPhotoUri(), complaint.getFirstPhotoMediaId(), repository, binding.ivBefore, R.color.neutral_400);
+            com.voiceyanga.citizen.core.utils.PhotoLoader.loadPhoto(
+                    complaint, complaint.getProofOfResolutionUri(), complaint.getProofOfResolutionMediaId(), repository, binding.ivAfter, R.color.neutral_400);
             
             binding.getRoot().setOnClickListener(v -> {
                 if (listener != null) listener.onStoryClick(complaint);
             });
-        }
-
-        private void loadImage(String url, android.widget.ImageView imageView) {
-            if (url != null && !url.isEmpty()) {
-                String fullUrl = com.voiceyanga.citizen.core.utils.MediaUtils.resolvePhotoUrl(url);
-                Glide.with(imageView)
-                        .load(fullUrl)
-                        .placeholder(R.color.neutral_400)
-                        .error(R.drawable.vote_icon)
-                        .centerCrop()
-                        .into(imageView);
-            } else {
-                imageView.setImageResource(R.color.neutral_300);
-            }
         }
     }
 }

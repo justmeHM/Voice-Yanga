@@ -294,6 +294,7 @@
     <string name="btn_change_location">Change</string>
 
     <string name="title_trending">Trending in Your Ward</string>
+    <string name="title_trending_ward">Trending in %1$s</string>
     <string name="title_success_stories">Success Stories</string>
     <string name="subtitle_success_stories">See how our community is improving</string>
     <string name="btn_explore_stories">Explore Stories</string>

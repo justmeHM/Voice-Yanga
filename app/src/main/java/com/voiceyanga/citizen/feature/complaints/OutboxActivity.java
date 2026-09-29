@@ -57,7 +57,7 @@ public class OutboxActivity extends AppCompatActivity {
                 viewModel.retryComplaint(complaint.getClientUuid());
                 Toast.makeText(OutboxActivity.this, "Retrying sync...", Toast.LENGTH_SHORT).show();
             }
-        });
+        }, viewModel.getRepository());
         binding.rvOutbox.setLayoutManager(new LinearLayoutManager(this));
         binding.rvOutbox.setAdapter(adapter);
     }

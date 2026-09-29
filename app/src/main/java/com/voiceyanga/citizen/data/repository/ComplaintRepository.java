@@ -67,6 +67,23 @@ public class ComplaintRepository {
         this.workManager = workManager;
         this.notificationHelper = notificationHelper;
         this.executorService = Executors.newSingleThreadExecutor();
+        
+        // Initial health and origin check
+        checkHealth();
+    }
+
+    private void checkHealth() {
+        android.util.Log.d("ComplaintRepo", "API_BASE_URL host=" + com.voiceyanga.citizen.BuildConfig.API_BASE_URL);
+        executorService.execute(() -> {
+            try {
+                Response<com.voiceyanga.citizen.data.remote.dto.HealthResponse> response = apiService.ready().execute();
+                if (response.isSuccessful() && response.body() != null) {
+                    android.util.Log.d("ComplaintRepo", "HEALTH communityReadPolicy=" + response.body().getCommunityReadPolicy());
+                }
+            } catch (Exception e) {
+                android.util.Log.e("ComplaintRepo", "Health check failed", e);
+            }
+        });
     }
 
     public LiveData<List<Complaint>> getAllComplaints() {
@@ -78,12 +95,17 @@ public class ComplaintRepository {
     }
 
     public void refreshCommunityFeed() {
+        com.voiceyanga.citizen.feature.home.CommunityFeedState current = communityFeedState.getValue();
+        if (current != null && current.isRefreshing()) {
+            android.util.Log.d("ComplaintRepo", "Community feed refresh already in progress, skipping");
+            return;
+        }
+
         executorService.execute(() -> {
-            com.voiceyanga.citizen.feature.home.CommunityFeedState current = communityFeedState.getValue();
             boolean isInitial = (current == null || current.getItems().isEmpty());
             communityFeedState.postValue(new com.voiceyanga.citizen.feature.home.CommunityFeedState(
                 current != null ? current.getItems() : java.util.Collections.emptyList(),
-                isInitial, !isInitial, current != null && current.hasCompletedSuccessfulRefresh(),
+                isInitial, true, current != null && current.hasCompletedSuccessfulRefresh(),
                 false, null, 0, current != null ? current.getTotalPages() : 0, current != null ? current.getTotalItems() : 0
             ));
 
@@ -93,8 +115,6 @@ public class ComplaintRepository {
                 int totalItems = 0;
                 int accumulatedUpserted = 0;
                 java.util.List<com.voiceyanga.citizen.data.local.entity.ComplaintFeedMembership> allMemberships = new java.util.ArrayList<>();
-
-                complaintDao.deleteFeedMemberships("COMMUNITY");
 
                 while (currentPage < totalPages) {
                     android.util.Log.d("ComplaintRepo", "Refreshing community feed... page=" + currentPage);
@@ -129,9 +149,20 @@ public class ComplaintRepository {
                     currentPage++;
                 }
 
-                if (!allMemberships.isEmpty()) {
-                    complaintDao.insertFeedMemberships(allMemberships);
+                java.util.Set<String> serverIdsReturned = new java.util.HashSet<>();
+                for (com.voiceyanga.citizen.data.local.entity.ComplaintFeedMembership m : allMemberships) {
+                    serverIdsReturned.add(m.getServerId());
                 }
+                java.util.List<Complaint> localSynced = complaintDao.getSyncedComplaintsByFeedType("COMMUNITY");
+                if (localSynced != null) {
+                    for (Complaint comp : localSynced) {
+                        if (comp.getServerId() != null && !serverIdsReturned.contains(comp.getServerId())) {
+                            complaintDao.purgeComplaintByServerId(comp.getServerId());
+                        }
+                    }
+                }
+
+                complaintDao.updateFeedMemberships("COMMUNITY", allMemberships);
 
                 int observedCount = complaintDao.getCommunityCountSync();
                 android.util.Log.d("ComplaintRepo", String.format("COMMUNITY_DB upserted=%d membershipCount=%d observedCount=%d", 
@@ -159,12 +190,17 @@ public class ComplaintRepository {
     }
 
     public void refreshMyComplaints() {
+        com.voiceyanga.citizen.feature.home.MyComplaintsState current = myComplaintsState.getValue();
+        if (current != null && current.isRefreshing()) {
+            android.util.Log.d("ComplaintRepo", "My complaints refresh already in progress, skipping");
+            return;
+        }
+
         executorService.execute(() -> {
-            com.voiceyanga.citizen.feature.home.MyComplaintsState current = myComplaintsState.getValue();
             boolean isInitial = (current == null || current.getItems().isEmpty());
             myComplaintsState.postValue(new com.voiceyanga.citizen.feature.home.MyComplaintsState(
                 current != null ? current.getItems() : java.util.Collections.emptyList(),
-                isInitial, !isInitial, current != null && current.hasCompletedSuccessfulRefresh(),
+                isInitial, true, current != null && current.hasCompletedSuccessfulRefresh(),
                 false, null, 0, current != null ? current.getTotalPages() : 0, current != null ? current.getTotalItems() : 0
             ));
 
@@ -174,8 +210,6 @@ public class ComplaintRepository {
                 int totalItems = 0;
                 int accumulatedUpserted = 0;
                 java.util.List<com.voiceyanga.citizen.data.local.entity.ComplaintFeedMembership> allMemberships = new java.util.ArrayList<>();
-
-                complaintDao.deleteFeedMemberships("MY_COMPLAINTS");
 
                 while (currentPage < totalPages) {
                     android.util.Log.d("ComplaintRepo", "Refreshing my complaints... page=" + currentPage);
@@ -210,9 +244,20 @@ public class ComplaintRepository {
                     currentPage++;
                 }
 
-                if (!allMemberships.isEmpty()) {
-                    complaintDao.insertFeedMemberships(allMemberships);
+                java.util.Set<String> serverIdsReturned = new java.util.HashSet<>();
+                for (com.voiceyanga.citizen.data.local.entity.ComplaintFeedMembership m : allMemberships) {
+                    serverIdsReturned.add(m.getServerId());
                 }
+                java.util.List<Complaint> localSynced = complaintDao.getSyncedComplaintsByFeedType("MY_COMPLAINTS");
+                if (localSynced != null) {
+                    for (Complaint comp : localSynced) {
+                        if (comp.getServerId() != null && !serverIdsReturned.contains(comp.getServerId())) {
+                            complaintDao.purgeComplaintByServerId(comp.getServerId());
+                        }
+                    }
+                }
+
+                complaintDao.updateFeedMemberships("MY_COMPLAINTS", allMemberships);
 
                 int observedCount = complaintDao.getMyCountSync();
                 android.util.Log.d("ComplaintRepo", String.format("MY_DB upserted=%d membershipCount=%d observedCount=%d", 
@@ -254,16 +299,19 @@ public class ComplaintRepository {
                 action, response.code(), (response.body() instanceof ApiEnvelope ? ((ApiEnvelope<?>)response.body()).success : "N/A"), errorBody));
     }
 
-    public void refreshComplaintDetail(String complaintUuid) {
+    public void refreshComplaintDetail(String identifier) {
         executorService.execute(() -> {
             try {
                 // Fetch specific complaint from server (using its UUID or serverId if known)
-                // If we only have clientUuid, we might need a search or the list refresh is safer
-                // However, the API usually allows GET /complaints/{id}
-                // Let's check the local DB first to get the serverId
-                Complaint local = complaintDao.getComplaintByUuid(complaintUuid);
-                if (local != null && local.getServerId() != null) {
-                    Response<com.google.gson.JsonElement> response = apiService.getComplaint(local.getServerId()).execute();
+                Complaint local = complaintDao.getComplaintById(identifier);
+                String serverId = (local != null && local.getServerId() != null) ? local.getServerId() : identifier;
+                
+                if (serverId != null) {
+                    Response<com.google.gson.JsonElement> response = apiService.getComplaint(serverId).execute();
+                    if (response.code() == 404) {
+                        complaintDao.purgeComplaintByServerId(serverId);
+                        return;
+                    }
                     if (response.isSuccessful() && response.body() != null) {
                         com.google.gson.Gson gson = new com.google.gson.Gson();
                         com.google.gson.JsonElement body = response.body();
@@ -275,13 +323,16 @@ public class ComplaintRepository {
                         }
                         if (dto != null) {
                             processServerComplaints(Collections.singletonList(dto));
+                            
+                            // Get the final UUID to refresh comments correctly
+                            Complaint updated = complaintDao.getComplaintById(serverId);
+                            if (updated != null) {
+                                refreshComments(serverId, updated.getClientUuid());
+                            }
                         }
                     }
-                    
-                    // Also refresh comments and history
-                    refreshComments(local.getServerId(), complaintUuid);
                 } else {
-                    // Fallback to full refresh if we don't have the server link yet
+                    // Fallback to full refresh if we don't have a server link
                     refreshComplaints();
                 }
             } catch (Exception e) {
@@ -298,7 +349,7 @@ public class ComplaintRepository {
         
         android.util.Log.d("ComplaintRepo", "Processing " + serverComplaints.size() + " server complaints");
         java.util.List<Complaint> processedComplaints = new java.util.ArrayList<>();
-        java.util.Map<String, java.util.List<String>> photoMap = new java.util.HashMap<>();
+        java.util.Map<String, java.util.List<com.voiceyanga.citizen.data.remote.dto.ComplaintMedia>> mediaMap = new java.util.HashMap<>();
         int upsertCount = 0;
         
         for (ComplaintDto dto : serverComplaints) {
@@ -347,14 +398,38 @@ public class ComplaintRepository {
             serverComplaint.setReferenceCode(dto.getReferenceCode());
             serverComplaint.setUserId(dto.getUserId());
             serverComplaint.setStatus(dto.getStatus() != null ? dto.getStatus() : "SUBMITTED");
-            serverComplaint.setProofOfResolutionUri(dto.getProofOfResolutionUrl());
             serverComplaint.setAssignedTo(dto.getAssignedToName());
             serverComplaint.setAssignedOrganization(dto.getOrganizationName());
             serverComplaint.setAuthorEmail(dto.getAuthorEmail());
             
-            if (dto.getPhotos() != null && !dto.getPhotos().isEmpty()) {
-                serverComplaint.setFirstPhotoUri(dto.getPhotos().get(0));
-                photoMap.put(targetUuid, dto.getPhotos());
+            if (dto.getVoiceNoteUrl() != null && !dto.getVoiceNoteUrl().isEmpty()) {
+                serverComplaint.setVoiceNoteUrl(dto.getVoiceNoteUrl());
+                serverComplaint.setVoiceNoteDuration(dto.getVoiceNoteDuration());
+            }
+            
+            if (dto.getMedia() != null && !dto.getMedia().isEmpty()) {
+                boolean firstPhotoSet = false;
+                for (com.voiceyanga.citizen.data.remote.dto.ComplaintMedia m : dto.getMedia()) {
+                    String mediaUrl = m.getFileUrl();
+                    if ("AUDIO".equalsIgnoreCase(m.type) || "VOICE_NOTE".equalsIgnoreCase(m.type)) {
+                        if (mediaUrl != null && !mediaUrl.isEmpty()) {
+                            serverComplaint.setVoiceNoteUrl(mediaUrl);
+                        }
+                    } else if (m.type == null || "PHOTO".equalsIgnoreCase(m.type)) {
+                        if (!firstPhotoSet && mediaUrl != null && !mediaUrl.isEmpty()) {
+                            serverComplaint.setFirstPhotoUri(mediaUrl);
+                            serverComplaint.setFirstPhotoMediaId(m.id);
+                            firstPhotoSet = true;
+                        }
+                    } else if ("PROOF_OF_RESOLUTION".equalsIgnoreCase(m.type)) {
+                        serverComplaint.setProofOfResolutionUri(mediaUrl);
+                        serverComplaint.setProofOfResolutionMediaId(m.id);
+                    }
+                }
+                if (!firstPhotoSet && localPreview != null && !localPreview.isEmpty()) {
+                    serverComplaint.setFirstPhotoUri(localPreview);
+                }
+                mediaMap.put(targetUuid, dto.getMedia());
             } else {
                 serverComplaint.setFirstPhotoUri(localPreview);
             }
@@ -377,24 +452,38 @@ public class ComplaintRepository {
 
             Complaint existing = complaintDao.getComplaintByUuid(targetUuid);
             if (existing != null) {
+                // CRITICAL: Preserve local 'supportedByMe' state if a sync is pending
+                // or if we just toggled it locally, to prevent server refresh overwriting UI state
                 serverComplaint.setSupportedByMe(existing.isSupportedByMe());
+                
                 serverComplaint.setCommentCount(existing.getCommentCount());
                 serverComplaint.setSupportCount(dto.getSupportCount());
                 
                 if (serverComplaint.getFirstPhotoUri() == null || serverComplaint.getFirstPhotoUri().isEmpty()) {
                     serverComplaint.setFirstPhotoUri(existing.getFirstPhotoUri());
+                    serverComplaint.setFirstPhotoMediaId(existing.getFirstPhotoMediaId());
+                }
+
+                if (serverComplaint.getVoiceNoteUrl() == null || serverComplaint.getVoiceNoteUrl().isEmpty()) {
+                    serverComplaint.setVoiceNoteUrl(existing.getVoiceNoteUrl());
+                }
+                if (existing.getVoiceNoteLocalPath() != null && !existing.getVoiceNoteLocalPath().isEmpty()) {
+                    serverComplaint.setVoiceNoteLocalPath(existing.getVoiceNoteLocalPath());
+                }
+                if (serverComplaint.getVoiceNoteDuration() == 0 && existing.getVoiceNoteDuration() > 0) {
+                    serverComplaint.setVoiceNoteDuration(existing.getVoiceNoteDuration());
                 }
 
                 // Milestone Notification Logic
                 String userEmail = sessionManager.getUserEmail();
-                if (Objects.equals(userEmail, dto.getAuthorEmail())) {
+                if (userEmail != null && Objects.equals(userEmail, dto.getAuthorEmail())) {
                     int oldCount = existing.getSupportCount();
                     int newCount = dto.getSupportCount();
                     if (newCount > oldCount && newCount >= 10 && (newCount / 10) > (oldCount / 10)) {
                         int milestone = (newCount / 10) * 10;
                     notificationHelper.showMilestoneNotification(
                             "New Milestone Reached!",
-                            dto.getTitle(),
+                            dto.getTitle() != null ? dto.getTitle() : "Your Report",
                             milestone,
                             targetUuid
                     );
@@ -417,12 +506,19 @@ public class ComplaintRepository {
             android.util.Log.d("ComplaintRepo", "Upserted " + upsertCount + " complaints to Room");
 
             // Now handle associated photos
-            for (java.util.Map.Entry<String, java.util.List<String>> entry : photoMap.entrySet()) {
+            for (java.util.Map.Entry<String, java.util.List<com.voiceyanga.citizen.data.remote.dto.ComplaintMedia>> entry : mediaMap.entrySet()) {
                 String uuid = entry.getKey();
-                java.util.List<String> photos = entry.getValue();
-                complaintDao.deletePhotosForComplaint(uuid);
-                for (String photoUrl : photos) {
-                    complaintDao.insertPhoto(new ComplaintPhoto(uuid, photoUrl));
+                java.util.List<com.voiceyanga.citizen.data.remote.dto.ComplaintMedia> mediaList = entry.getValue();
+                if (mediaList != null && !mediaList.isEmpty()) {
+                    complaintDao.deletePhotosForComplaint(uuid);
+                    for (com.voiceyanga.citizen.data.remote.dto.ComplaintMedia m : mediaList) {
+                        String photoPath = m.getFileUrl();
+                        if (photoPath != null && !photoPath.isEmpty() && (m.type == null || "PHOTO".equalsIgnoreCase(m.type))) {
+                            ComplaintPhoto photo = new ComplaintPhoto(uuid, photoPath);
+                            photo.setMediaId(m.id);
+                            complaintDao.insertPhoto(photo);
+                        }
+                    }
                 }
             }
         }
@@ -433,31 +529,53 @@ public class ComplaintRepository {
         processServerComplaintsInternal(serverComplaints);
     }
 
+    public interface CommentsRefreshCallback {
+        void onResult(com.voiceyanga.citizen.feature.complaints.ComplaintDetailViewModel.CommentsState state);
+    }
+
     public void refreshComments(String serverId, String complaintUuid) {
+        refreshComments(serverId, complaintUuid, null);
+    }
+
+    public void refreshComments(String serverId, String complaintUuid, CommentsRefreshCallback callback) {
         executorService.execute(() -> {
             try {
                 Response<List<CommentResponse>> response = apiService.getComments(serverId).execute();
+                int statusCode = response.code();
+                
                 if (response.isSuccessful() && response.body() != null) {
-                    for (CommentResponse dto : response.body()) {
-                        complaintDao.deleteLocalComment(complaintUuid, dto.getAuthorName(), dto.getMessage());
+                    List<CommentResponse> comments = response.body();
+                    android.util.Log.d("ComplaintRepo", String.format("COMMENTS_HTTP serverIdPresent=true authAttached=true parsedCount=%d result=%d",
+                            comments.size(), statusCode));
+                            
+                    for (CommentResponse dto : comments) {
+                        complaintDao.deleteLocalComment(complaintUuid, dto.getAuthorName(), dto.getContent());
                         
-                        String message = dto.getMessage();
-                        if (message == null || message.isEmpty()) message = "(No content)";
+                        String content = dto.getContent();
+                        if (content == null || content.isEmpty()) content = "(No content)";
 
                         Comment comment = new Comment(
                                 dto.getId(),
                                 complaintUuid,
                                 dto.getAuthorName(),
-                                message,
+                                content,
                                 dto.isOfficial(),
                                 dto.getCreatedAt() != null ? dto.getCreatedAt() : System.currentTimeMillis()
                         );
                         complaintDao.insertComment(comment);
                     }
                     complaintDao.updateCommentCount(complaintUuid);
+                    if (callback != null) callback.onResult(com.voiceyanga.citizen.feature.complaints.ComplaintDetailViewModel.CommentsState.SUCCESS);
+                } else if (statusCode == 403) {
+                    android.util.Log.e("ComplaintRepo", "COMMENTS_HTTP ownership=community serverIdPresent=true authAttached=true result=403");
+                    if (callback != null) callback.onResult(com.voiceyanga.citizen.feature.complaints.ComplaintDetailViewModel.CommentsState.RESTRICTED);
+                } else {
+                    android.util.Log.e("ComplaintRepo", "COMMENTS_HTTP failed result=" + statusCode);
+                    if (callback != null) callback.onResult(com.voiceyanga.citizen.feature.complaints.ComplaintDetailViewModel.CommentsState.ERROR);
                 }
             } catch (Exception e) {
                 android.util.Log.e("ComplaintRepo", "Comment refresh failed", e);
+                if (callback != null) callback.onResult(com.voiceyanga.citizen.feature.complaints.ComplaintDetailViewModel.CommentsState.ERROR);
             }
         });
     }
@@ -494,6 +612,29 @@ public class ComplaintRepository {
         });
     }
 
+    public void getMediaAccess(String serverId, String mediaId, ReferenceCallback<String> callback) {
+        if (serverId == null || mediaId == null) {
+            callback.onError("Missing IDs");
+            return;
+        }
+        apiService.getMediaAccess(serverId, mediaId).enqueue(new retrofit2.Callback<ApiEnvelope<com.voiceyanga.citizen.data.remote.dto.MediaAccessData>>() {
+            @Override
+            public void onResponse(retrofit2.Call<ApiEnvelope<com.voiceyanga.citizen.data.remote.dto.MediaAccessData>> call, Response<ApiEnvelope<com.voiceyanga.citizen.data.remote.dto.MediaAccessData>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().success) {
+                    callback.onSuccess(response.body().data.url);
+                } else {
+                    callback.onError("Failed to get media access: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<ApiEnvelope<com.voiceyanga.citizen.data.remote.dto.MediaAccessData>> call, Throwable t) {
+                callback.onError(t.getMessage());
+            }
+        });
+    }
+
+    private static final Object DATE_LOCK = new Object();
     public static long parseServerDate(String dateStr) {
         if (dateStr == null || dateStr.isEmpty()) return System.currentTimeMillis();
         
@@ -504,15 +645,17 @@ public class ComplaintRepository {
             "yyyy-MM-dd"
         };
 
-        for (String format : formats) {
-            SimpleDateFormat sdf = new SimpleDateFormat(format, Locale.US);
-            if (format.endsWith("'Z'")) {
-                sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+        synchronized (DATE_LOCK) {
+            for (String format : formats) {
+                SimpleDateFormat sdf = new SimpleDateFormat(format, Locale.US);
+                if (format.endsWith("'Z'")) {
+                    sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                }
+                try {
+                    Date date = sdf.parse(dateStr);
+                    if (date != null) return date.getTime();
+                } catch (ParseException ignored) {}
             }
-            try {
-                Date date = sdf.parse(dateStr);
-                if (date != null) return date.getTime();
-            } catch (ParseException ignored) {}
         }
 
         return System.currentTimeMillis();
@@ -584,16 +727,16 @@ public class ComplaintRepository {
         return complaintDao.getFilteredCommunityComplaints(status, category, query, ward, district, province);
     }
 
-    public LiveData<List<Complaint>> getTrendingComplaints(String district) {
-        return complaintDao.getTrendingComplaints(district);
+    public LiveData<List<Complaint>> getTrendingComplaints(String ward, String district) {
+        return complaintDao.getTrendingComplaints(ward, district);
     }
 
-    public LiveData<Complaint> getComplaint(String uuid) {
-        return complaintDao.getComplaintByUuidLiveData(uuid);
+    public LiveData<Complaint> getComplaint(String identifier) {
+        return complaintDao.getComplaintByIdLiveData(identifier);
     }
 
-    public Complaint getComplaintSync(String uuid) {
-        return complaintDao.getComplaintByUuid(uuid);
+    public Complaint getComplaintSync(String identifier) {
+        return complaintDao.getComplaintById(identifier);
     }
 
     public LiveData<List<Comment>> getComments(String complaintUuid) {

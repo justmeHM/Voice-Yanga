@@ -8,6 +8,7 @@ import com.voiceyanga.citizen.data.remote.dto.CommentResponse;
 import com.voiceyanga.citizen.data.remote.dto.ComplaintDto;
 import com.voiceyanga.citizen.data.remote.dto.ComplaintRequest;
 import com.voiceyanga.citizen.data.remote.dto.CreateComplaintResponse;
+import com.voiceyanga.citizen.data.remote.dto.DeleteAccountResponse;
 import com.voiceyanga.citizen.data.remote.dto.HealthResponse;
 import com.voiceyanga.citizen.data.remote.dto.HistoryItem;
 import com.voiceyanga.citizen.data.remote.dto.LocationDto;
@@ -30,11 +31,13 @@ import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.DELETE;
 import retrofit2.http.GET;
 import retrofit2.http.Multipart;
 import retrofit2.http.PATCH;
 import retrofit2.http.POST;
 import retrofit2.http.Part;
+import retrofit2.http.PartMap;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
 
@@ -61,6 +64,9 @@ public interface ApiService {
     @GET("users/profile")
     Call<UserDto> getProfile();
 
+    @DELETE("users/profile")
+    Call<ApiEnvelope<DeleteAccountResponse>> deleteMyAccount();
+
     @PATCH("users/profile")
     Call<ApiEnvelope<UserDto>> updateProfile(@Body Map<String, Object> body);
 
@@ -76,14 +82,7 @@ public interface ApiService {
     @Multipart
     @POST("complaints")
     Call<CreateComplaintResponse> createComplaintWithPhotos(
-        @Part("title") RequestBody title,
-        @Part("description") RequestBody description,
-        @Part("category") RequestBody category,
-        @Part("location") RequestBody location,
-        @Part("priority") RequestBody priority,
-        @Part("clientUuid") RequestBody clientUuid,
-        @Part("voiceNoteUrl") RequestBody voiceNoteUrl,
-        @Part("voiceNoteDurationSeconds") RequestBody voiceNoteDurationSeconds,
+        @PartMap Map<String, RequestBody> parts,
         @Part List<MultipartBody.Part> photos
     );
 
@@ -118,6 +117,12 @@ public interface ApiService {
     @GET("complaints/{id}/history")
     Call<com.google.gson.JsonElement> getHistory(@Path("id") String id);
 
+    @GET("complaints/{serverId}/media/{mediaId}/access")
+    Call<ApiEnvelope<com.voiceyanga.citizen.data.remote.dto.MediaAccessData>> getMediaAccess(
+        @Path("serverId") String serverId,
+        @Path("mediaId") String mediaId
+    );
+
     @GET("complaints/{id}/comments")
     Call<List<CommentResponse>> getComments(@Path("id") String id);
 
@@ -145,4 +150,7 @@ public interface ApiService {
 
     @PATCH("notifications/read-all")
     Call<ApiEnvelope<Object>> markAllNotificationsRead();
+
+    @POST("analytics/events")
+    Call<com.voiceyanga.citizen.data.remote.dto.AnalyticsResponse> sendAnalyticsEvent(@Body com.voiceyanga.citizen.data.remote.dto.AnalyticsEvent event);
 }

@@ -10,6 +10,9 @@ import dagger.hilt.android.AndroidEntryPoint;
 @AndroidEntryPoint
 public class SuccessGalleryActivity extends AppCompatActivity {
 
+    @javax.inject.Inject
+    com.voiceyanga.citizen.data.repository.ComplaintRepository complaintRepository;
+
     private ActivitySuccessGalleryBinding binding;
     private GalleryAdapter adapter;
 
@@ -33,7 +36,7 @@ public class SuccessGalleryActivity extends AppCompatActivity {
             android.content.Intent intent = new android.content.Intent(this, ComplaintDetailActivity.class);
             intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaint.getClientUuid());
             startActivity(intent);
-        });
+        }, complaintRepository);
         binding.rvGallery.setLayoutManager(new LinearLayoutManager(this));
         binding.rvGallery.setAdapter(adapter);
     }

@@ -27,6 +27,8 @@ public class SessionManager {
     private static final String KEY_USER_ROLE = "user_role";
     private static final String KEY_BIOMETRIC_ENABLED = "biometric_enabled";
     private static final String KEY_FIRST_LAUNCH = "first_launch";
+    private static final String KEY_ANONYMOUS_USER_ID = "anonymous_user_id";
+    private static final String KEY_SESSION_ID = "session_id";
 
     private SharedPreferences prefs;
 
@@ -44,7 +46,11 @@ public class SessionManager {
                     EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             );
-        } catch (GeneralSecurityException | IOException e) {
+        } catch (Throwable e) {
+            android.util.Log.e("SessionManager", "EncryptedSharedPreferences creation failed, falling back to standard prefs", e);
+            try {
+                context.deleteSharedPreferences(PREF_NAME);
+            } catch (Throwable ignored) {}
             prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         }
     }
@@ -83,11 +89,21 @@ public class SessionManager {
     }
 
     public String getAccessToken() {
-        return prefs.getString(KEY_TOKEN, null);
+        try {
+            return prefs.getString(KEY_TOKEN, null);
+        } catch (Throwable t) {
+            android.util.Log.e("SessionManager", "Error reading access token", t);
+            return null;
+        }
     }
 
     public String getRefreshToken() {
-        return prefs.getString(KEY_REFRESH_TOKEN, null);
+        try {
+            return prefs.getString(KEY_REFRESH_TOKEN, null);
+        } catch (Throwable t) {
+            android.util.Log.e("SessionManager", "Error reading refresh token", t);
+            return null;
+        }
     }
 
     public String getUserName() {
@@ -141,5 +157,33 @@ public class SessionManager {
 
     public void setFirstLaunch(boolean isFirst) {
         prefs.edit().putBoolean(KEY_FIRST_LAUNCH, isFirst).apply();
+    }
+
+    public synchronized String getAnonymousUserId() {
+        String id = prefs.getString(KEY_ANONYMOUS_USER_ID, null);
+        if (id == null || id.isEmpty()) {
+            id = java.util.UUID.randomUUID().toString();
+            prefs.edit().putString(KEY_ANONYMOUS_USER_ID, id).commit();
+        }
+        return id;
+    }
+
+    public synchronized String getSessionId() {
+        String id = prefs.getString(KEY_SESSION_ID, null);
+        if (id == null || id.isEmpty()) {
+            id = java.util.UUID.randomUUID().toString();
+            prefs.edit().putString(KEY_SESSION_ID, id).commit();
+        }
+        return id;
+    }
+
+    public synchronized String rotateSessionId() {
+        String newSessionId = java.util.UUID.randomUUID().toString();
+        prefs.edit().putString(KEY_SESSION_ID, newSessionId).commit();
+        return newSessionId;
+    }
+
+    public synchronized void clearAnonymousUserId() {
+        prefs.edit().remove(KEY_ANONYMOUS_USER_ID).remove(KEY_SESSION_ID).apply();
     }
 }

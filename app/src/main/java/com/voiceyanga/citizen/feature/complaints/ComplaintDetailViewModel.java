@@ -3,6 +3,7 @@ package com.voiceyanga.citizen.feature.complaints;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
+import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.data.local.entity.Comment;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.data.remote.dto.HistoryItem;
@@ -15,33 +16,44 @@ import dagger.hilt.android.lifecycle.HiltViewModel;
 public class ComplaintDetailViewModel extends ViewModel {
 
     private final ComplaintRepository repository;
+    private final SessionManager sessionManager;
     private final MutableLiveData<Boolean> _commentSuccess = new MutableLiveData<>();
     public LiveData<Boolean> getCommentSuccess() { return _commentSuccess; }
 
     private final MutableLiveData<List<HistoryItem>> _history = new MutableLiveData<>();
     public LiveData<List<HistoryItem>> getHistory() { return _history; }
 
+    public enum CommentsState { LOADING, SUCCESS, RESTRICTED, ERROR }
+    private final MutableLiveData<CommentsState> _commentsState = new MutableLiveData<>(CommentsState.LOADING);
+    public LiveData<CommentsState> getCommentsState() { return _commentsState; }
+
     @Inject
-    public ComplaintDetailViewModel(ComplaintRepository repository) {
+    public ComplaintDetailViewModel(ComplaintRepository repository, SessionManager sessionManager) {
         this.repository = repository;
+        this.sessionManager = sessionManager;
     }
 
     public LiveData<Complaint> getComplaint(String uuid) {
         repository.refreshComplaintDetail(uuid);
         
-        // Also fetch history
+        // Only fetch history if it's our own complaint (community history is restricted)
         new Thread(() -> {
             Complaint c = repository.getComplaintSync(uuid);
             if (c != null && c.getServerId() != null) {
-                repository.getHistory(c.getServerId(), new ComplaintRepository.ReferenceCallback<List<HistoryItem>>() {
-                    @Override
-                    public void onSuccess(List<HistoryItem> data) {
-                        _history.postValue(data);
-                    }
+                String currentUser = sessionManager.getUserEmail();
+                if (currentUser != null && currentUser.equalsIgnoreCase(c.getAuthorEmail())) {
+                    repository.getHistory(c.getServerId(), new ComplaintRepository.ReferenceCallback<List<HistoryItem>>() {
+                        @Override
+                        public void onSuccess(List<HistoryItem> data) {
+                            _history.postValue(data);
+                        }
 
-                    @Override
-                    public void onError(String message) {}
-                });
+                        @Override
+                        public void onError(String message) {}
+                    });
+                } else {
+                    android.util.Log.d("ComplaintDetailVM", "Skipping history fetch for community complaint: " + uuid);
+                }
             }
         }).start();
         
@@ -52,28 +64,32 @@ public class ComplaintDetailViewModel extends ViewModel {
         new Thread(() -> {
             Complaint c = repository.getComplaintSync(uuid);
             if (c != null && c.getServerId() != null) {
-                repository.getHistory(c.getServerId(), new ComplaintRepository.ReferenceCallback<List<HistoryItem>>() {
-                    @Override
-                    public void onSuccess(List<HistoryItem> data) {
-                        _history.postValue(data);
-                    }
+                String currentUser = sessionManager.getUserEmail();
+                if (currentUser != null && currentUser.equalsIgnoreCase(c.getAuthorEmail())) {
+                    repository.getHistory(c.getServerId(), new ComplaintRepository.ReferenceCallback<List<HistoryItem>>() {
+                        @Override
+                        public void onSuccess(List<HistoryItem> data) {
+                            _history.postValue(data);
+                        }
 
-                    @Override
-                    public void onError(String message) {}
-                });
+                        @Override
+                        public void onError(String message) {}
+                    });
+                }
             }
         }).start();
     }
 
-    public LiveData<List<Comment>> getComments(String uuid) {
+    public LiveData<List<Comment>> getComments(String identifier) {
         // Trigger a background refresh if we have a server ID
         new Thread(() -> {
-            Complaint complaint = repository.getComplaintSync(uuid);
+            Complaint complaint = repository.getComplaintSync(identifier);
             if (complaint != null && complaint.getServerId() != null) {
-                repository.refreshComments(complaint.getServerId(), uuid);
+                _commentsState.postValue(CommentsState.LOADING);
+                repository.refreshComments(complaint.getServerId(), complaint.getClientUuid(), _commentsState::postValue);
             }
         }).start();
-        return repository.getComments(uuid);
+        return repository.getComments(identifier);
     }
 
     public void postComment(String uuid, String message) {
