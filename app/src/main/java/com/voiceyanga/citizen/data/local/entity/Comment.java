@@ -2,19 +2,12 @@ package com.voiceyanga.citizen.data.local.entity;
 
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
-import androidx.room.ForeignKey;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
 @Entity(
     tableName = "comments",
-    foreignKeys = @ForeignKey(
-        entity = Complaint.class,
-        parentColumns = "clientUuid",
-        childColumns = "complaintUuid",
-        onDelete = ForeignKey.CASCADE
-    ),
-    indices = {@Index(value = {"complaintUuid", "authorName", "content"}, unique = true)}
+    indices = {@Index("complaintUuid")}
 )
 public class Comment {
 

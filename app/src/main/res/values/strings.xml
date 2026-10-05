@@ -142,7 +142,10 @@
     <string name="about_version_label">Version %1$s</string>
     <string name="support_contact_label">Contact Support</string>
     <string name="support_email">support@voiceyanga.com</string>
-    <string name="support_phone">0770435328,077004980,0771209570</string>
+    <string name="support_phone">0770 435 328 • 0770 049 800 • 0771 209 570</string>
+    <string name="support_phone_1">0770 435 328</string>
+    <string name="support_phone_2">0770 049 800</string>
+    <string name="support_phone_3">0771 209 570</string>
     <string name="support_description">For urgent issues or feedback regarding the Voice Yanga platform, please contact our support team.</string>
     <string name="label_email">EMAIL</string>
     <string name="label_phone">PHONE</string>
@@ -271,8 +274,8 @@
     <string name="support_community_desc">Connect with other citizens and stay updated on community initiatives.</string>
     <string name="btn_send_email">SEND EMAIL</string>
     <string name="btn_call_now">CALL NOW</string>
-    <string name="btn_join_whatsapp">JOIN WHATSAPP</string>
-    <string name="community_whatsapp_url">https://chat.whatsapp.com/voiceyanga</string>
+    <string name="btn_join_whatsapp">JOIN WHATSAPP GROUP</string>
+    <string name="community_whatsapp_url">https://chat.whatsapp.com/DG4bFopXMis4v02XZK5CNA</string>
 
     <!-- Create Complaint Stepper -->
     <string name="step_details">Issue Details</string>

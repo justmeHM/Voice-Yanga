@@ -29,8 +29,8 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000/api/v1/\"")
-            buildConfigField("String", "API_ORIGIN", "\"http://10.0.2.2:3000\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://voice-yanga-api.vercel.app/api/v1/\"")
+            buildConfigField("String", "API_ORIGIN", "\"https://voice-yanga-api.vercel.app\"")
         }
         release {
             isMinifyEnabled = false
@@ -38,8 +38,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "API_BASE_URL", "\"https://api.voiceyanga.com/api/v1/\"")
-            buildConfigField("String", "API_ORIGIN", "\"https://api.voiceyanga.com\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://voice-yanga-api.vercel.app/api/v1/\"")
+            buildConfigField("String", "API_ORIGIN", "\"https://voice-yanga-api.vercel.app\"")
         }
     }
     compileOptions {

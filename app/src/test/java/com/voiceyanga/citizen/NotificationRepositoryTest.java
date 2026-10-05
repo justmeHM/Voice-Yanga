@@ -27,6 +27,9 @@ public class NotificationRepositoryTest {
     private ApiService apiService;
 
     @Mock
+    private com.voiceyanga.citizen.core.notifications.NotificationHelper notificationHelper;
+
+    @Mock
     private retrofit2.Call<Void> voidCall;
 
     private NotificationRepository repository;
@@ -34,7 +37,7 @@ public class NotificationRepositoryTest {
     @Before
     public void setup() {
         MockitoAnnotations.openMocks(this);
-        repository = new NotificationRepository(notificationDao, apiService);
+        repository = new NotificationRepository(notificationDao, apiService, notificationHelper);
         
         // Default mocks for API calls
         // when(apiService.markNotificationRead(anyString())).thenReturn(voidCall);

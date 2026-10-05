@@ -467,10 +467,34 @@ public class ComplaintDetailActivity extends AppCompatActivity {
             int duration = complaint.getVoiceNoteDuration();
             binding.tvVoiceDuration.setText(String.format(Locale.getDefault(), "%d:%02d", duration / 60, duration % 60));
 
+            voiceNotePlayer.setListener(new VoiceNotePlayer.PlayerListener() {
+                @Override
+                public void onCompletion() {
+                    runOnUiThread(() -> {
+                        if (binding != null) {
+                            binding.btnPlayVoice.setIconResource(R.drawable.ic_play);
+                        }
+                    });
+                }
+
+                @Override
+                public void onError(String message) {
+                    runOnUiThread(() -> {
+                        if (binding != null) {
+                            binding.btnPlayVoice.setIconResource(R.drawable.ic_play);
+                            Toast.makeText(ComplaintDetailActivity.this, message, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            });
+
             binding.btnPlayVoice.setOnClickListener(v -> {
                 if (voiceNotePlayer.isPlaying()) {
                     voiceNotePlayer.pause();
                     binding.btnPlayVoice.setIconResource(R.drawable.ic_play);
+                } else if (voiceNotePlayer.isPaused()) {
+                    voiceNotePlayer.resume();
+                    binding.btnPlayVoice.setIconResource(R.drawable.ic_pause);
                 } else {
                     playVoiceNote(complaint);
                 }
@@ -487,20 +511,28 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         if (localPath != null && new File(localPath).exists()) {
             voiceNotePlayer.play(localPath);
             binding.btnPlayVoice.setIconResource(R.drawable.ic_pause);
-        } else if (voiceUrl != null) {
+        } else if (voiceUrl != null && !voiceUrl.trim().isEmpty()) {
             binding.btnPlayVoice.setEnabled(false);
             new Thread(() -> {
                 try {
-                    String resolvedUrl = MediaResolver.resolveMediaUrl(voiceUrl, sessionManager, okHttpClient);
+                    String cachedFilePath = MediaResolver.resolveAudioFile(this, voiceUrl, sessionManager, okHttpClient);
                     runOnUiThread(() -> {
-                        binding.btnPlayVoice.setEnabled(true);
-                        voiceNotePlayer.play(resolvedUrl);
-                        binding.btnPlayVoice.setIconResource(R.drawable.ic_pause);
+                        if (binding != null) {
+                            binding.btnPlayVoice.setEnabled(true);
+                            if (cachedFilePath != null) {
+                                voiceNotePlayer.play(cachedFilePath);
+                                binding.btnPlayVoice.setIconResource(R.drawable.ic_pause);
+                            } else {
+                                Toast.makeText(this, "Voice note recording unavailable", Toast.LENGTH_SHORT).show();
+                            }
+                        }
                     });
-                } catch (IOException e) {
+                } catch (Exception e) {
                     runOnUiThread(() -> {
-                        binding.btnPlayVoice.setEnabled(true);
-                        Toast.makeText(this, "Failed to resolve recording: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        if (binding != null) {
+                            binding.btnPlayVoice.setEnabled(true);
+                            Toast.makeText(this, "Failed to load voice note: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
                     });
                 }
             }).start();

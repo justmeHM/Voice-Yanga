@@ -7,7 +7,9 @@
         </trust-anchors>
     </base-config>
     <domain-config cleartextTrafficPermitted="true">
-        <!-- Localhost & Local Network Subnets for Emulator & Physical Devices -->
+        <!-- Live Vercel API Domain & Localhost/Local Network Subnets -->
+        <domain includeSubdomains="true">voice-yanga-api.vercel.app</domain>
+        <domain includeSubdomains="true">vercel.app</domain>
         <domain includeSubdomains="true">10.0.2.2</domain>
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">10.54.58.10</domain>

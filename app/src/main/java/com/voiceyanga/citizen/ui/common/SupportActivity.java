@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.voiceyanga.citizen.R;
 import com.voiceyanga.citizen.databinding.ActivitySupportBinding;
 import dagger.hilt.android.AndroidEntryPoint;
@@ -35,7 +36,15 @@ public class SupportActivity extends AppCompatActivity {
 
     private void setupContactActions() {
         binding.cardEmail.setOnClickListener(v -> sendEmail());
+        if (binding.btnSendEmail != null) {
+            binding.btnSendEmail.setOnClickListener(v -> sendEmail());
+        }
+        
         binding.cardPhone.setOnClickListener(v -> makeCall());
+        if (binding.btnCallNow != null) {
+            binding.btnCallNow.setOnClickListener(v -> makeCall());
+        }
+
         binding.btnJoinWhatsApp.setOnClickListener(v -> openWhatsApp());
     }
 
@@ -51,19 +60,33 @@ public class SupportActivity extends AppCompatActivity {
     }
 
     private void makeCall() {
-        // Just picking the first number if multiple
-        String phones = getString(R.string.support_phone);
-        String firstPhone = phones.contains(",") ? phones.split(",")[0] : phones;
-        Intent intent = new Intent(Intent.ACTION_DIAL);
-        intent.setData(Uri.parse("tel:" + firstPhone));
-        startActivity(intent);
+        String[] phoneNumbers = {
+            getString(R.string.support_phone_1),
+            getString(R.string.support_phone_2),
+            getString(R.string.support_phone_3)
+        };
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.label_phone)
+                .setItems(phoneNumbers, (dialog, which) -> {
+                    String number = phoneNumbers[which].replaceAll("\\s+", "");
+                    Intent intent = new Intent(Intent.ACTION_DIAL);
+                    intent.setData(Uri.parse("tel:" + number));
+                    startActivity(intent);
+                })
+                .setNegativeButton(R.string.btn_cancel, null)
+                .show();
     }
 
     private void openWhatsApp() {
         String url = getString(R.string.community_whatsapp_url);
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setData(Uri.parse(url));
-        startActivity(intent);
+        try {
+            startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(this, "Could not open WhatsApp link", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void setupFaqLogic() {

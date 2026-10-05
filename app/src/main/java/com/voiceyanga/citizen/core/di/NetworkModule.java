@@ -66,26 +66,33 @@ public class NetworkModule {
             Request original = chain.request();
             String path = original.url().encodedPath();
             String host = original.url().host();
-            String apiOriginHost = HttpUrl.get(apiOrigin).host();
-            boolean isApiHost = host.equalsIgnoreCase(apiOriginHost);
-
-            // Do not attach access token to login, register, or refresh endpoints
-            if (path.contains("/auth/login") || path.contains("/auth/register") || path.contains("/auth/refresh")) {
-                return chain.proceed(original);
-            }
+            
+            String apiOriginHost = "";
+            try {
+                if (apiOrigin != null && !apiOrigin.isEmpty()) {
+                    HttpUrl parsed = HttpUrl.get(apiOrigin);
+                    if (parsed != null) apiOriginHost = parsed.host();
+                }
+            } catch (Exception ignored) {}
+            
+            boolean isApiHost = !apiOriginHost.isEmpty() && host.equalsIgnoreCase(apiOriginHost);
 
             Request.Builder requestBuilder = original.newBuilder();
             boolean authAttached = false;
             
             if (isApiHost) {
-                String token = sessionManager.getAccessToken();
-                if (token != null && !token.isEmpty()) {
-                    requestBuilder.header("Authorization", "Bearer " + token);
-                    authAttached = true;
-                }
-                
                 if (path.startsWith("/api/v1")) {
                     requestBuilder.header("Accept", "application/json");
+                }
+
+                // Do not attach access token to login, register, or refresh endpoints
+                boolean isAuthEndpoint = path.contains("/auth/login") || path.contains("/auth/register") || path.contains("/auth/refresh");
+                if (!isAuthEndpoint) {
+                    String token = sessionManager.getAccessToken();
+                    if (token != null && !token.isEmpty()) {
+                        requestBuilder.header("Authorization", "Bearer " + token);
+                        authAttached = true;
+                    }
                 }
             }
             
@@ -182,8 +189,15 @@ public class NetworkModule {
 
         Interceptor redirectScrubber = chain -> {
             Request request = chain.request();
-            HttpUrl originUrl = HttpUrl.get(apiOrigin);
-            boolean isApiHost = request.url().host().equalsIgnoreCase(originUrl.host()) && request.url().port() == originUrl.port();
+            boolean isApiHost = false;
+            try {
+                if (apiOrigin != null && !apiOrigin.isEmpty()) {
+                    HttpUrl originUrl = HttpUrl.get(apiOrigin);
+                    if (originUrl != null) {
+                        isApiHost = request.url().host().equalsIgnoreCase(originUrl.host()) && request.url().port() == originUrl.port();
+                    }
+                }
+            } catch (Exception ignored) {}
             
             if (!isApiHost) {
                 return chain.proceed(request.newBuilder()
@@ -196,11 +210,14 @@ public class NetworkModule {
         return new OkHttpClient.Builder()
                 .addInterceptor(loggingInterceptor)
                 .addInterceptor(bearerInterceptor)
-                .addNetworkInterceptor(redirectScrubber)
+                .addInterceptor(redirectScrubber)
                 .authenticator(authenticator)
                 .followRedirects(true)
+                .followSslRedirects(true)
+                .retryOnConnectionFailure(true)
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
                 .build();
     }
 

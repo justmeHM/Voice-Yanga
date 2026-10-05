@@ -59,7 +59,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
                 Toast.makeText(this, R.string.reset_link_sent, Toast.LENGTH_LONG).show();
                 finish();
             } else {
-                Toast.makeText(this, "Failed to send reset link", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Password reset via email is currently unavailable in the pilot deployment.", Toast.LENGTH_LONG).show();
             }
         });
     }

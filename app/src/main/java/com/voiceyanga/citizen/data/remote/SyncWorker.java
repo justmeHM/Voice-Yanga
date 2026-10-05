@@ -337,6 +337,11 @@ public class SyncWorker extends Worker {
             File compressedFile = com.voiceyanga.citizen.core.utils.ImageCompressor.compress(context, uriString);
             if (compressedFile == null) return null;
 
+            if (compressedFile.length() > 4_000_000L) {
+                Log.e(TAG, "Compressed photo exceeds 4MB limit: " + compressedFile.length() + " bytes");
+                return null;
+            }
+
             android.net.Uri uri = android.net.Uri.parse(uriString);
             String mimeType = context.getContentResolver().getType(uri);
             if (mimeType == null) mimeType = "image/jpeg";

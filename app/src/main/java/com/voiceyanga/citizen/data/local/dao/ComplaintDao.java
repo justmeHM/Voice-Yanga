@@ -137,8 +137,14 @@ public interface ComplaintDao {
     @Query("DELETE FROM comments WHERE complaintUuid = :complaintUuid AND authorName = :author AND content = :content")
     void deleteLocalComment(String complaintUuid, String author, String content);
 
-    @Query("SELECT * FROM comments WHERE complaintUuid = :complaintUuid ORDER BY createdAt ASC")
-    LiveData<List<Comment>> getCommentsForComplaint(String complaintUuid);
+    @Query("DELETE FROM comments WHERE (complaintUuid = :identifier OR complaintUuid = (SELECT clientUuid FROM complaints WHERE serverId = :identifier LIMIT 1) OR complaintUuid = (SELECT serverId FROM complaints WHERE clientUuid = :identifier LIMIT 1)) AND id NOT LIKE 'local_%'")
+    void clearSyncedCommentsForComplaint(String identifier);
+
+    @Query("SELECT COUNT(*) FROM comments WHERE (complaintUuid = :complaintUuid OR complaintUuid = (SELECT clientUuid FROM complaints WHERE serverId = :complaintUuid LIMIT 1) OR complaintUuid = (SELECT serverId FROM complaints WHERE clientUuid = :complaintUuid LIMIT 1)) AND (authorName = :authorName OR authorName = :userEmail) LIMIT 1")
+    int getUserCommentCountOnComplaint(String complaintUuid, String authorName, String userEmail);
+
+    @Query("SELECT * FROM comments WHERE complaintUuid = :identifier OR complaintUuid = (SELECT clientUuid FROM complaints WHERE serverId = :identifier LIMIT 1) OR complaintUuid = (SELECT serverId FROM complaints WHERE clientUuid = :identifier LIMIT 1) ORDER BY createdAt ASC")
+    LiveData<List<Comment>> getCommentsForComplaint(String identifier);
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertPhoto(ComplaintPhoto photo);
@@ -164,8 +170,8 @@ public interface ComplaintDao {
     @Query("DELETE FROM pending_actions WHERE complaintUuid = :clientUuid")
     void deletePendingActionsForComplaint(String clientUuid);
 
-    @Query("DELETE FROM comments WHERE complaintUuid = :clientUuid")
-    void deleteCommentsForComplaint(String clientUuid);
+    @Query("DELETE FROM comments WHERE complaintUuid = :identifier OR complaintUuid = (SELECT clientUuid FROM complaints WHERE serverId = :identifier LIMIT 1) OR complaintUuid = (SELECT serverId FROM complaints WHERE clientUuid = :identifier LIMIT 1)")
+    void deleteCommentsForComplaint(String identifier);
 
     @Query("DELETE FROM complaint_feed_membership WHERE serverId = :serverId")
     void deleteFeedMembershipsForServerId(String serverId);

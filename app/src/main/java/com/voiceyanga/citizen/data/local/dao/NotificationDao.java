@@ -32,4 +32,7 @@ public interface NotificationDao {
 
     @Query("SELECT COUNT(*) FROM notifications WHERE isRead = 0")
     int getUnreadCountSync();
+
+    @Query("SELECT * FROM notifications WHERE id = :id LIMIT 1")
+    Notification getNotificationByIdSync(String id);
 }

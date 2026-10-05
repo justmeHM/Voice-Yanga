@@ -76,9 +76,14 @@ public class ComplaintRepository {
         android.util.Log.d("ComplaintRepo", "API_BASE_URL host=" + com.voiceyanga.citizen.BuildConfig.API_BASE_URL);
         executorService.execute(() -> {
             try {
-                Response<com.voiceyanga.citizen.data.remote.dto.HealthResponse> response = apiService.ready().execute();
-                if (response.isSuccessful() && response.body() != null) {
-                    android.util.Log.d("ComplaintRepo", "HEALTH communityReadPolicy=" + response.body().getCommunityReadPolicy());
+                if (apiService != null) {
+                    retrofit2.Call<com.voiceyanga.citizen.data.remote.dto.HealthResponse> call = apiService.ready();
+                    if (call != null) {
+                        Response<com.voiceyanga.citizen.data.remote.dto.HealthResponse> response = call.execute();
+                        if (response != null && response.isSuccessful() && response.body() != null) {
+                            android.util.Log.d("ComplaintRepo", "HEALTH communityReadPolicy=" + response.body().getCommunityReadPolicy());
+                        }
+                    }
                 }
             } catch (Exception e) {
                 android.util.Log.e("ComplaintRepo", "Health check failed", e);
@@ -474,19 +479,30 @@ public class ComplaintRepository {
                     serverComplaint.setVoiceNoteDuration(existing.getVoiceNoteDuration());
                 }
 
-                // Milestone Notification Logic
+                // Engagement & Support / Comment Notification Logic
                 String userEmail = sessionManager.getUserEmail();
-                if (userEmail != null && Objects.equals(userEmail, dto.getAuthorEmail())) {
-                    int oldCount = existing.getSupportCount();
-                    int newCount = dto.getSupportCount();
-                    if (newCount > oldCount && newCount >= 10 && (newCount / 10) > (oldCount / 10)) {
+                boolean userEngaged = existing.isSupportedByMe() 
+                        || (userEmail != null && userEmail.equalsIgnoreCase(dto.getAuthorEmail()))
+                        || complaintDao.getUserCommentCountOnComplaint(targetUuid, sessionManager.getUserName(), sessionManager.getUserEmail()) > 0;
+
+                int oldCount = existing.getSupportCount();
+                int newCount = dto.getSupportCount();
+                if (newCount > oldCount && userEngaged) {
+                    if (userEmail != null && Objects.equals(userEmail, dto.getAuthorEmail()) && newCount >= 10 && (newCount / 10) > (oldCount / 10)) {
                         int milestone = (newCount / 10) * 10;
-                    notificationHelper.showMilestoneNotification(
-                            "New Milestone Reached!",
-                            dto.getTitle() != null ? dto.getTitle() : "Your Report",
-                            milestone,
-                            targetUuid
-                    );
+                        notificationHelper.showMilestoneNotification(
+                                "New Milestone Reached!",
+                                dto.getTitle() != null ? dto.getTitle() : "Your Report",
+                                milestone,
+                                targetUuid
+                        );
+                    } else if (newCount > oldCount) {
+                        notificationHelper.showNotification(
+                                "New Support Received!",
+                                "A report you engaged with (" + (dto.getTitle() != null ? dto.getTitle() : "Report") + ") received new community support (" + newCount + " votes).",
+                                targetUuid,
+                                "SUPPORT"
+                        );
                     }
                 }
             } else {
@@ -548,23 +564,32 @@ public class ComplaintRepository {
                     android.util.Log.d("ComplaintRepo", String.format("COMMENTS_HTTP serverIdPresent=true authAttached=true parsedCount=%d result=%d",
                             comments.size(), statusCode));
                             
+                    Complaint local = complaintDao.getComplaintById(serverId);
+                    String targetKey = (local != null && local.getClientUuid() != null) ? local.getClientUuid() : complaintUuid;
+                    
+                    complaintDao.clearSyncedCommentsForComplaint(targetKey);
+                    if (serverId != null && !serverId.equals(targetKey)) {
+                        complaintDao.clearSyncedCommentsForComplaint(serverId);
+                    }
+
                     for (CommentResponse dto : comments) {
-                        complaintDao.deleteLocalComment(complaintUuid, dto.getAuthorName(), dto.getContent());
+                        String author = dto.getAuthorName();
+                        if (author == null || author.trim().isEmpty()) author = "Citizen";
                         
                         String content = dto.getContent();
-                        if (content == null || content.isEmpty()) content = "(No content)";
+                        if (content == null || content.trim().isEmpty()) content = "(No content)";
 
                         Comment comment = new Comment(
-                                dto.getId(),
-                                complaintUuid,
-                                dto.getAuthorName(),
+                                dto.getId() != null ? dto.getId() : java.util.UUID.randomUUID().toString(),
+                                targetKey,
+                                author,
                                 content,
                                 dto.isOfficial(),
-                                dto.getCreatedAt() != null ? dto.getCreatedAt() : System.currentTimeMillis()
+                                dto.getCreatedAtMs()
                         );
                         complaintDao.insertComment(comment);
                     }
-                    complaintDao.updateCommentCount(complaintUuid);
+                    complaintDao.updateCommentCount(targetKey);
                     if (callback != null) callback.onResult(com.voiceyanga.citizen.feature.complaints.ComplaintDetailViewModel.CommentsState.SUCCESS);
                 } else if (statusCode == 403) {
                     android.util.Log.e("ComplaintRepo", "COMMENTS_HTTP ownership=community serverIdPresent=true authAttached=true result=403");
@@ -671,19 +696,22 @@ public class ComplaintRepository {
             String author = sessionManager.getUserName();
             if (author == null || author.isEmpty()) author = "Anonymous User";
             
+            Complaint local = complaintDao.getComplaintById(complaintUuid);
+            String targetKey = (local != null && local.getClientUuid() != null) ? local.getClientUuid() : complaintUuid;
+
             Comment localComment = new Comment(
-                    UUID.randomUUID().toString(),
-                    complaintUuid,
+                    "local_" + UUID.randomUUID().toString(),
+                    targetKey,
                     author,
                     message,
                     false,
                     System.currentTimeMillis()
             );
             complaintDao.insertComment(localComment);
-            complaintDao.updateCommentCount(complaintUuid);
+            complaintDao.updateCommentCount(targetKey);
 
-            complaintDao.insertPendingAction(new PendingAction("COMMENT", complaintUuid, message));
-            scheduleSync(complaintUuid);
+            complaintDao.insertPendingAction(new PendingAction("COMMENT", targetKey, message));
+            scheduleSync(targetKey);
         });
     }
 

@@ -75,6 +75,30 @@ public class HomeActivity extends AppCompatActivity {
         viewModel.refreshData();
     }
 
+    private final android.os.Handler pollHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable pollRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (viewModel != null) {
+                viewModel.refreshData();
+            }
+            pollHandler.postDelayed(this, 30000);
+        }
+    };
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        pollHandler.removeCallbacks(pollRunnable);
+        pollHandler.postDelayed(pollRunnable, 30000);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        pollHandler.removeCallbacks(pollRunnable);
+    }
+
     @com.google.android.material.badge.ExperimentalBadgeUtils
     @Override
     protected void onCreate(Bundle savedInstanceState) {

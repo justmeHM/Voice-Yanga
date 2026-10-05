@@ -95,19 +95,24 @@ public class RealAuthRepository implements AuthRepository {
                         callback.onError("Login failed: missing required auth fields");
                     }
                 } else {
-                    String errorMsg = "Login failed (" + response.code() + ")";
-                    try (okhttp3.ResponseBody errorBody = response.errorBody()) {
-                        if (errorBody != null) {
-                            android.util.Log.e("AuthRepo", "Login error body: " + errorBody.string());
-                        }
-                    } catch (IOException ignored) {}
-                    callback.onError(errorMsg);
+                    if (response.code() == 401) {
+                        callback.onError("Invalid credentials. Please check your email/phone and password.");
+                    } else {
+                        String errorMsg = com.voiceyanga.citizen.core.network.ErrorParser.parseError(response);
+                        callback.onError(errorMsg);
+                    }
                 }
             }
 
             @Override
             public void onFailure(Call<AuthResponse> call, Throwable t) {
-                callback.onError("Network error: " + t.getMessage());
+                android.util.Log.e("AuthRepo", "Login request failed", t);
+                String details = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
+                if (t instanceof com.google.gson.JsonSyntaxException || (t.getLocalizedMessage() != null && t.getLocalizedMessage().toLowerCase().contains("deserialize"))) {
+                    callback.onError("Server response format error. Please try again.");
+                } else {
+                    callback.onError("Network error: Unable to connect to Voice Yanga servers (" + details + ")");
+                }
             }
         });
     }
@@ -176,12 +181,12 @@ public class RealAuthRepository implements AuthRepository {
 
             @Override
             public void onFailure(Call<AuthResponse> call, Throwable t) {
+                android.util.Log.e("AuthDiagnostic", "HTTP_REQUEST_FAILED", t);
+                String details = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
                 if (t instanceof com.google.gson.JsonSyntaxException || (t.getLocalizedMessage() != null && t.getLocalizedMessage().toLowerCase().contains("deserialize"))) {
-                    android.util.Log.e("AuthDiagnostic", "DESERIALIZATION_FAILED", t);
                     callback.onError("Account created, but the app could not start your session. Please sign in.");
                 } else {
-                    android.util.Log.e("AuthDiagnostic", "HTTP_REQUEST_FAILED", t);
-                    callback.onError("Network error: " + t.getMessage());
+                    callback.onError("Network error: Unable to connect to Voice Yanga servers (" + details + ")");
                 }
             }
         });

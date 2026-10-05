@@ -1,6 +1,7 @@
 package com.voiceyanga.citizen.data.repository;
 
 import androidx.lifecycle.LiveData;
+import com.voiceyanga.citizen.core.notifications.NotificationHelper;
 import com.voiceyanga.citizen.data.local.dao.NotificationDao;
 import com.voiceyanga.citizen.data.local.entity.Notification;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
@@ -18,12 +19,14 @@ public class NotificationRepository {
 
     private final NotificationDao notificationDao;
     private final ApiService apiService;
+    private final NotificationHelper notificationHelper;
     private final ExecutorService executorService;
 
     @Inject
-    public NotificationRepository(NotificationDao notificationDao, ApiService apiService) {
+    public NotificationRepository(NotificationDao notificationDao, ApiService apiService, NotificationHelper notificationHelper) {
         this.notificationDao = notificationDao;
         this.apiService = apiService;
+        this.notificationHelper = notificationHelper;
         this.executorService = Executors.newSingleThreadExecutor();
     }
 
@@ -63,6 +66,12 @@ public class NotificationRepository {
                     if (serverNotifications != null) {
                         accumulatedParsed += serverNotifications.size();
                         for (NotificationDto dto : serverNotifications) {
+                            if (!dto.isRead() && notificationDao.getNotificationByIdSync(dto.getId()) == null) {
+                                String title = dto.getTitle() != null ? dto.getTitle() : "Voice Yanga Alert";
+                                String msg = dto.getMessage() != null ? dto.getMessage() : "New update on a report you engaged with.";
+                                notificationHelper.showNotification(title, msg, dto.getComplaintId(), dto.getType());
+                            }
+
                             Notification notification = new Notification(
                                     dto.getId(),
                                     dto.getComplaintId(), // Store server complaint ID as requested

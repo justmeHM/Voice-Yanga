@@ -194,11 +194,7 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
                         complaint, photoUri, mediaId, repository, binding.ivComplaintPreview, R.color.neutral_200);
                 binding.ivComplaintPreview.setTransitionName("image_" + complaint.getClientUuid());
             } else {
-                // If no photo, show a placeholder icon instead of hiding to maintain Facebook standard
-                binding.flPhotoContainer.setVisibility(android.view.View.VISIBLE);
-                binding.ivComplaintPreview.setImageResource(R.drawable.vote_icon);
-                binding.ivComplaintPreview.setAlpha(0.1f);
-                com.voiceyanga.citizen.core.utils.PhotoLogger.logPlaceholder();
+                binding.flPhotoContainer.setVisibility(android.view.View.GONE);
             }
 
             // Engagement Counts (Facebook Style)

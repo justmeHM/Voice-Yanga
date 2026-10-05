@@ -45,6 +45,10 @@ public class UserRepository {
         });
     }
 
+    public void getNotificationPreferences(Callback<ApiEnvelope<NotificationPreferences>> callback) {
+        apiService.getNotificationPreferences().enqueue(callback);
+    }
+
     public void updateNotificationPreferences(NotificationPreferences preferences) {
         apiService.updateNotificationPreferences(preferences).enqueue(new Callback<ApiEnvelope<Object>>() {
             @Override

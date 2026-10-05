@@ -9,6 +9,7 @@ public class VoiceNotePlayer {
     private static final String TAG = "VoiceNotePlayer";
     private MediaPlayer mediaPlayer;
     private boolean isPlaying = false;
+    private String currentFilePath;
 
     public interface PlayerListener {
         void onCompletion();
@@ -24,6 +25,7 @@ public class VoiceNotePlayer {
     public void play(String filePath) {
         try {
             stop();
+            currentFilePath = filePath;
             mediaPlayer = new MediaPlayer();
             mediaPlayer.setDataSource(filePath);
             mediaPlayer.setOnCompletionListener(mp -> {
@@ -89,6 +91,7 @@ public class VoiceNotePlayer {
             release();
         } finally {
             isPlaying = false;
+            currentFilePath = null;
         }
     }
 
@@ -103,11 +106,20 @@ public class VoiceNotePlayer {
         } finally {
             mediaPlayer = null;
             isPlaying = false;
+            currentFilePath = null;
         }
     }
 
     public boolean isPlaying() {
         return isPlaying;
+    }
+
+    public boolean isPaused() {
+        return mediaPlayer != null && !isPlaying;
+    }
+
+    public String getCurrentFilePath() {
+        return currentFilePath;
     }
     
     public int getDuration() {

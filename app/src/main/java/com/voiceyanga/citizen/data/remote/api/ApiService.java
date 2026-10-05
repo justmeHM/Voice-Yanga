@@ -142,6 +142,9 @@ public interface ApiService {
         @Query("unreadOnly") boolean unreadOnly
     );
 
+    @GET("notifications/preferences")
+    Call<ApiEnvelope<NotificationPreferences>> getNotificationPreferences();
+
     @PATCH("notifications/preferences")
     Call<ApiEnvelope<Object>> updateNotificationPreferences(@Body NotificationPreferences body);
 
