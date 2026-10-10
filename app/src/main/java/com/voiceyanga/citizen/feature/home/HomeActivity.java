@@ -117,6 +117,8 @@ public class HomeActivity extends AppCompatActivity {
             return insets;
         });
 
+        com.voiceyanga.citizen.core.utils.PlayServicesHelper.checkForAppUpdates(this);
+
         viewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         
         // Ensure icons show original colors
@@ -217,8 +219,13 @@ public class HomeActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         if (networkCallback != null) {
-            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-            cm.unregisterNetworkCallback(networkCallback);
+            try {
+                ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+                if (cm != null) {
+                    cm.unregisterNetworkCallback(networkCallback);
+                }
+            } catch (Exception ignored) {}
+            networkCallback = null;
         }
     }
 

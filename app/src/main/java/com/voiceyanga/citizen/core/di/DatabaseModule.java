@@ -38,6 +38,8 @@ public class DatabaseModule {
                         AppDatabase.MIGRATION_20_21,
                         AppDatabase.MIGRATION_21_22,
                         AppDatabase.MIGRATION_22_23)
+                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigrationOnDowngrade()
                 .build();
     }
 

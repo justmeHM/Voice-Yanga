@@ -90,6 +90,9 @@ public class SyncWorker extends Worker {
                 syncComplaint(complaint);
             } catch (Exception e) {
                 Log.e(TAG, "Sync failed for complaint: " + complaint.getClientUuid(), e);
+                try {
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e);
+                } catch (Throwable ignored) {}
                 complaint.setSyncStatus("FAILED");
                 complaint.setFailureReason(e.getMessage());
                 complaintDao.update(complaint);

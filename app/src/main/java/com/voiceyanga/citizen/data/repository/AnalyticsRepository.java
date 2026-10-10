@@ -263,6 +263,7 @@ public class AnalyticsRepository {
     }
 
     private void scheduleSyncWorker() {
+        if (workManager == null) return;
         try {
             Constraints constraints = new Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)

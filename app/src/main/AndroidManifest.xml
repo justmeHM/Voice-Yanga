@@ -17,7 +17,8 @@
     <application
         android:name=".VoiceYangaApplication"
         android:allowBackup="true"
-        android:usesCleartextTraffic="true"
+        android:usesCleartextTraffic="false"
+        android:enableOnBackInvokedCallback="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_voice_yanga"
@@ -54,6 +55,11 @@
 
         <activity
             android:name=".feature.auth.ForgotPasswordActivity"
+            android:exported="false"
+            android:theme="@style/Theme.VoiceYanga" />
+
+        <activity
+            android:name=".feature.auth.TermsOfServiceActivity"
             android:exported="false"
             android:theme="@style/Theme.VoiceYanga" />
 

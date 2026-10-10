@@ -245,7 +245,7 @@ public class ComplaintRepositoryTest {
         when(complaintDao.getComplaintById("target-id")).thenReturn(mockLocal);
 
         Call<com.google.gson.JsonElement> call = mock(Call.class);
-        when(call.execute()).thenReturn(Response.error(404, okhttp3.ResponseBody.create(null, "")));
+        when(call.execute()).thenReturn(Response.error(404, okhttp3.ResponseBody.create(okhttp3.MediaType.parse("application/json"), "")));
         when(apiService.getComplaint("target-id")).thenReturn(call);
 
         repository.refreshComplaintDetail("target-id");

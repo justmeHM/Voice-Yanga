@@ -28,10 +28,10 @@ public class AnalyticsEventEntity {
     @ColumnInfo(name = "createdAt")
     private long createdAt;
 
-    @ColumnInfo(name = "attemptCount")
+    @ColumnInfo(name = "attemptCount", defaultValue = "0")
     private int attemptCount;
 
-    @ColumnInfo(name = "nextAttemptAt")
+    @ColumnInfo(name = "nextAttemptAt", defaultValue = "0")
     private long nextAttemptAt;
 
     @ColumnInfo(name = "lastErrorClass")

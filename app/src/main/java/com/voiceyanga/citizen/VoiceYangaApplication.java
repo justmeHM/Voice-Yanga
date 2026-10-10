@@ -16,30 +16,12 @@ public class VoiceYangaApplication extends Application implements Configuration.
     @Inject
     HiltWorkerFactory workerFactory;
 
-    @Inject
-    okhttp3.OkHttpClient okHttpClient;
-
     @Override
     public void onCreate() {
         super.onCreate();
         // Prevent Glide from throwing "You must not call setTag() on a view Glide is targeting"
         com.bumptech.glide.request.target.ViewTarget.setTagId(R.id.glide_internal_request_tag);
-        registerGlideComponents();
         createNotificationChannel();
-    }
-
-    private void registerGlideComponents() {
-        try {
-            // Force register the authenticated OkHttpClient into Glide
-            com.bumptech.glide.Glide.get(this).getRegistry().replace(
-                    com.bumptech.glide.load.model.GlideUrl.class,
-                    java.io.InputStream.class,
-                    new com.bumptech.glide.integration.okhttp3.OkHttpUrlLoader.Factory(okHttpClient)
-            );
-            android.util.Log.d("VoiceYangaApp", "Glide OkHttp integration manually registered");
-        } catch (Throwable t) {
-            android.util.Log.e("VoiceYangaApp", "Failed to manually register Glide OkHttp integration", t);
-        }
     }
 
     private void createNotificationChannel() {
@@ -68,8 +50,12 @@ public class VoiceYangaApplication extends Application implements Configuration.
     @NonNull
     @Override
     public Configuration getWorkManagerConfiguration() {
-        return new Configuration.Builder()
-                .setWorkerFactory(workerFactory)
-                .build();
+        if (workerFactory != null) {
+            return new Configuration.Builder()
+                    .setWorkerFactory(workerFactory)
+                    .build();
+        } else {
+            return new Configuration.Builder().build();
+        }
     }
 }

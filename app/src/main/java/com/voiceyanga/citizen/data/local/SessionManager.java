@@ -49,46 +49,78 @@ public class SessionManager {
         } catch (Throwable e) {
             android.util.Log.e("SessionManager", "EncryptedSharedPreferences creation failed, falling back to standard prefs", e);
             try {
+                java.security.KeyStore keyStore = java.security.KeyStore.getInstance("AndroidKeyStore");
+                keyStore.load(null);
+                keyStore.deleteEntry("_androidx_security_master_key_");
+            } catch (Throwable ignored) {}
+
+            try {
                 context.deleteSharedPreferences(PREF_NAME);
             } catch (Throwable ignored) {}
-            prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+
+            try {
+                prefs = context.getSharedPreferences(PREF_NAME + "_fallback", Context.MODE_PRIVATE);
+            } catch (Throwable t) {
+                android.util.Log.e("SessionManager", "Fallback SharedPreferences creation failed", t);
+            }
+        }
+
+        if (prefs == null) {
+            try {
+                prefs = context.getSharedPreferences("voice_yanga_safe_session", Context.MODE_PRIVATE);
+            } catch (Throwable ignored) {}
         }
     }
 
     public void saveTokens(String access, String refresh) {
-        android.util.Log.d("SessionManager", "Saving tokens. Access token length: " + (access != null ? access.length() : "null"));
-        SharedPreferences.Editor editor = prefs.edit();
-        if (access != null) {
-            editor.putString(KEY_TOKEN, access);
-        } else {
-            editor.remove(KEY_TOKEN);
+        if (prefs == null) return;
+        try {
+            android.util.Log.d("SessionManager", "Saving tokens. Access token length: " + (access != null ? access.length() : "null"));
+            SharedPreferences.Editor editor = prefs.edit();
+            if (access != null) {
+                editor.putString(KEY_TOKEN, access);
+            } else {
+                editor.remove(KEY_TOKEN);
+            }
+            
+            if (refresh != null) {
+                editor.putString(KEY_REFRESH_TOKEN, refresh);
+            } else {
+                editor.remove(KEY_REFRESH_TOKEN);
+            }
+            editor.commit();
+        } catch (Throwable t) {
+            android.util.Log.e("SessionManager", "Error saving tokens", t);
         }
-        
-        if (refresh != null) {
-            editor.putString(KEY_REFRESH_TOKEN, refresh);
-        } else {
-            editor.remove(KEY_REFRESH_TOKEN);
-        }
-        // Use commit() for tokens to ensure they are available to the next request immediately
-        editor.commit();
     }
 
     public void saveUser(String id, String name, String email, String phone, String role) {
-        String safeName = (name == null || name.trim().isEmpty() || name.equalsIgnoreCase("null null") || name.equalsIgnoreCase("null")) ? "Citizen" : name;
-        prefs.edit()
-                .putString(KEY_USER_ID, id != null ? id : "")
-                .putString(KEY_USER_NAME, safeName)
-                .putString(KEY_USER_EMAIL, email != null ? email : "")
-                .putString(KEY_USER_PHONE, phone != null ? phone : "")
-                .putString(KEY_USER_ROLE, role != null ? role : "CITIZEN")
-                .apply();
+        if (prefs == null) return;
+        try {
+            String safeName = (name == null || name.trim().isEmpty() || name.equalsIgnoreCase("null null") || name.equalsIgnoreCase("null")) ? "Citizen" : name;
+            prefs.edit()
+                    .putString(KEY_USER_ID, id != null ? id : "")
+                    .putString(KEY_USER_NAME, safeName)
+                    .putString(KEY_USER_EMAIL, email != null ? email : "")
+                    .putString(KEY_USER_PHONE, phone != null ? phone : "")
+                    .putString(KEY_USER_ROLE, role != null ? role : "CITIZEN")
+                    .apply();
+        } catch (Throwable t) {
+            android.util.Log.e("SessionManager", "Error saving user info", t);
+        }
     }
 
     public String getUserId() {
-        return prefs.getString(KEY_USER_ID, "");
+        if (prefs == null) return "";
+        try {
+            return prefs.getString(KEY_USER_ID, "");
+        } catch (Throwable t) {
+            return "";
+        }
     }
 
     public String getAccessToken() {
+        if (prefs == null) return null;
         try {
             return prefs.getString(KEY_TOKEN, null);
         } catch (Throwable t) {
@@ -98,6 +130,7 @@ public class SessionManager {
     }
 
     public String getRefreshToken() {
+        if (prefs == null) return null;
         try {
             return prefs.getString(KEY_REFRESH_TOKEN, null);
         } catch (Throwable t) {
@@ -107,19 +140,39 @@ public class SessionManager {
     }
 
     public String getUserName() {
-        return prefs.getString(KEY_USER_NAME, "Citizen");
+        if (prefs == null) return "Citizen";
+        try {
+            return prefs.getString(KEY_USER_NAME, "Citizen");
+        } catch (Throwable t) {
+            return "Citizen";
+        }
     }
 
     public String getUserEmail() {
-        return prefs.getString(KEY_USER_EMAIL, "");
+        if (prefs == null) return "";
+        try {
+            return prefs.getString(KEY_USER_EMAIL, "");
+        } catch (Throwable t) {
+            return "";
+        }
     }
 
     public String getUserPhone() {
-        return prefs.getString(KEY_USER_PHONE, "");
+        if (prefs == null) return "";
+        try {
+            return prefs.getString(KEY_USER_PHONE, "");
+        } catch (Throwable t) {
+            return "";
+        }
     }
 
     public String getUserRole() {
-        return prefs.getString(KEY_USER_ROLE, "CITIZEN");
+        if (prefs == null) return "CITIZEN";
+        try {
+            return prefs.getString(KEY_USER_ROLE, "CITIZEN");
+        } catch (Throwable t) {
+            return "CITIZEN";
+        }
     }
 
     public boolean isLoggedIn() {
@@ -128,62 +181,96 @@ public class SessionManager {
 
     public void clearSession() {
         boolean biometricWasEnabled = isBiometricEnabled();
-        prefs.edit()
-                .remove(KEY_TOKEN)
-                .remove(KEY_REFRESH_TOKEN)
-                .remove(KEY_USER_ID)
-                .remove(KEY_USER_NAME)
-                .remove(KEY_USER_EMAIL)
-                .remove(KEY_USER_PHONE)
-                .remove(KEY_USER_ROLE)
-                .apply();
-        
-        // Ensure biometric preference is RESTORED if it was accidentally cleared
-        // (Though .remove shouldn't touch it, explicit set is safer for this bug)
+        if (prefs != null) {
+            try {
+                prefs.edit()
+                        .remove(KEY_TOKEN)
+                        .remove(KEY_REFRESH_TOKEN)
+                        .remove(KEY_USER_ID)
+                        .remove(KEY_USER_NAME)
+                        .remove(KEY_USER_EMAIL)
+                        .remove(KEY_USER_PHONE)
+                        .remove(KEY_USER_ROLE)
+                        .apply();
+            } catch (Throwable ignored) {}
+        }
         setBiometricEnabled(biometricWasEnabled);
     }
 
     public void setBiometricEnabled(boolean enabled) {
-        prefs.edit().putBoolean(KEY_BIOMETRIC_ENABLED, enabled).apply();
+        if (prefs == null) return;
+        try {
+            prefs.edit().putBoolean(KEY_BIOMETRIC_ENABLED, enabled).apply();
+        } catch (Throwable ignored) {}
     }
 
     public boolean isBiometricEnabled() {
-        return prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false);
+        if (prefs == null) return false;
+        try {
+            return prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false);
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     public boolean isFirstLaunch() {
-        return prefs.getBoolean(KEY_FIRST_LAUNCH, true);
+        if (prefs == null) return true;
+        try {
+            return prefs.getBoolean(KEY_FIRST_LAUNCH, true);
+        } catch (Throwable t) {
+            return true;
+        }
     }
 
     public void setFirstLaunch(boolean isFirst) {
-        prefs.edit().putBoolean(KEY_FIRST_LAUNCH, isFirst).apply();
+        if (prefs == null) return;
+        try {
+            prefs.edit().putBoolean(KEY_FIRST_LAUNCH, isFirst).apply();
+        } catch (Throwable ignored) {}
     }
 
     public synchronized String getAnonymousUserId() {
-        String id = prefs.getString(KEY_ANONYMOUS_USER_ID, null);
-        if (id == null || id.isEmpty()) {
-            id = java.util.UUID.randomUUID().toString();
-            prefs.edit().putString(KEY_ANONYMOUS_USER_ID, id).commit();
+        if (prefs == null) return java.util.UUID.randomUUID().toString();
+        try {
+            String id = prefs.getString(KEY_ANONYMOUS_USER_ID, null);
+            if (id == null || id.isEmpty()) {
+                id = java.util.UUID.randomUUID().toString();
+                prefs.edit().putString(KEY_ANONYMOUS_USER_ID, id).commit();
+            }
+            return id;
+        } catch (Throwable t) {
+            return java.util.UUID.randomUUID().toString();
         }
-        return id;
     }
 
     public synchronized String getSessionId() {
-        String id = prefs.getString(KEY_SESSION_ID, null);
-        if (id == null || id.isEmpty()) {
-            id = java.util.UUID.randomUUID().toString();
-            prefs.edit().putString(KEY_SESSION_ID, id).commit();
+        if (prefs == null) return java.util.UUID.randomUUID().toString();
+        try {
+            String id = prefs.getString(KEY_SESSION_ID, null);
+            if (id == null || id.isEmpty()) {
+                id = java.util.UUID.randomUUID().toString();
+                prefs.edit().putString(KEY_SESSION_ID, id).commit();
+            }
+            return id;
+        } catch (Throwable t) {
+            return java.util.UUID.randomUUID().toString();
         }
-        return id;
     }
 
     public synchronized String rotateSessionId() {
         String newSessionId = java.util.UUID.randomUUID().toString();
-        prefs.edit().putString(KEY_SESSION_ID, newSessionId).commit();
+        if (prefs != null) {
+            try {
+                prefs.edit().putString(KEY_SESSION_ID, newSessionId).commit();
+            } catch (Throwable ignored) {}
+        }
         return newSessionId;
     }
 
     public synchronized void clearAnonymousUserId() {
-        prefs.edit().remove(KEY_ANONYMOUS_USER_ID).remove(KEY_SESSION_ID).apply();
+        if (prefs == null) return;
+        try {
+            prefs.edit().remove(KEY_ANONYMOUS_USER_ID).remove(KEY_SESSION_ID).apply();
+        } catch (Throwable ignored) {}
     }
 }

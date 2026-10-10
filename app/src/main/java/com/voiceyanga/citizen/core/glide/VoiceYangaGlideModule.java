@@ -41,4 +41,9 @@ public final class VoiceYangaGlideModule extends AppGlideModule {
                 new OkHttpUrlLoader.Factory(client)
         );
     }
+
+    @Override
+    public boolean isManifestParsingEnabled() {
+        return false;
+    }
 }
