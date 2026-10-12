@@ -62,9 +62,9 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             binding.tvOfficialBadge.setVisibility(comment.isOfficial() ? View.VISIBLE : View.GONE);
             
             if (comment.isOfficial()) {
-                binding.llCommentRoot.setBackgroundColor(0xFFF0FDF4); // Subtle green for official updates
+                binding.llCommentRoot.setBackgroundColor(0x1A10B981); // Subtle 10% green tint for official updates
             } else {
-                binding.llCommentRoot.setBackgroundColor(0xFFFFFFFF);
+                binding.llCommentRoot.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             }
         }
     }

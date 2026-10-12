@@ -125,8 +125,13 @@ public class ComplaintRepository {
                     android.util.Log.d("ComplaintRepo", "Refreshing community feed... page=" + currentPage);
                     Response<ApiEnvelope<PaginatedComplaints>> response = apiService.getComplaints(currentPage, 50, null, null, null, null, null, null).execute();
                     
-                    if (!response.isSuccessful() || response.body() == null || !response.body().success || response.body().data == null) {
-                        throw new RuntimeException("COMMUNITY_HTTP failed or invalid response at page " + currentPage);
+                    if (!response.isSuccessful()) {
+                        String parsedError = com.voiceyanga.citizen.core.network.ErrorParser.parseError(response);
+                        throw new RuntimeException(parsedError);
+                    }
+                    if (response.body() == null || !response.body().success || response.body().data == null) {
+                        String msg = (response.body() != null && response.body().message != null) ? response.body().message : "Invalid response from server";
+                        throw new RuntimeException(msg);
                     }
 
                     PaginatedComplaints paginatedData = response.body().data;
@@ -180,10 +185,11 @@ public class ComplaintRepository {
             } catch (Exception e) {
                 android.util.Log.e("ComplaintRepo", "Community feed refresh failed", e);
                 com.voiceyanga.citizen.feature.home.CommunityFeedState s = communityFeedState.getValue();
+                String formattedError = com.voiceyanga.citizen.core.network.ErrorParser.parseThrowable(e);
                 communityFeedState.postValue(new com.voiceyanga.citizen.feature.home.CommunityFeedState(
                     s != null ? s.getItems() : java.util.Collections.emptyList(),
                     false, false, s != null && s.hasCompletedSuccessfulRefresh(),
-                    s != null && s.hasCompletedSuccessfulRefresh(), e.getMessage(), 
+                    s != null && s.hasCompletedSuccessfulRefresh(), formattedError, 
                     s != null ? s.getPage() : 0, s != null ? s.getTotalPages() : 0, s != null ? s.getTotalItems() : 0
                 ));
             }
@@ -220,8 +226,13 @@ public class ComplaintRepository {
                     android.util.Log.d("ComplaintRepo", "Refreshing my complaints... page=" + currentPage);
                     Response<ApiEnvelope<PaginatedComplaints>> response = apiService.getMyComplaints(currentPage, 50).execute();
                     
-                    if (!response.isSuccessful() || response.body() == null || !response.body().success || response.body().data == null) {
-                        throw new RuntimeException("MY_HTTP failed or invalid response at page " + currentPage);
+                    if (!response.isSuccessful()) {
+                        String parsedError = com.voiceyanga.citizen.core.network.ErrorParser.parseError(response);
+                        throw new RuntimeException(parsedError);
+                    }
+                    if (response.body() == null || !response.body().success || response.body().data == null) {
+                        String msg = (response.body() != null && response.body().message != null) ? response.body().message : "Invalid response from server";
+                        throw new RuntimeException(msg);
                     }
 
                     PaginatedComplaints paginatedData = response.body().data;
@@ -275,10 +286,11 @@ public class ComplaintRepository {
             } catch (Exception e) {
                 android.util.Log.e("ComplaintRepo", "My complaints refresh failed", e);
                 com.voiceyanga.citizen.feature.home.MyComplaintsState s = myComplaintsState.getValue();
+                String formattedError = com.voiceyanga.citizen.core.network.ErrorParser.parseThrowable(e);
                 myComplaintsState.postValue(new com.voiceyanga.citizen.feature.home.MyComplaintsState(
                     s != null ? s.getItems() : java.util.Collections.emptyList(),
                     false, false, s != null && s.hasCompletedSuccessfulRefresh(),
-                    s != null && s.hasCompletedSuccessfulRefresh(), e.getMessage(), 
+                    s != null && s.hasCompletedSuccessfulRefresh(), formattedError, 
                     s != null ? s.getPage() : 0, s != null ? s.getTotalPages() : 0, s != null ? s.getTotalItems() : 0
                 ));
             }
@@ -387,14 +399,22 @@ public class ComplaintRepository {
             if (targetUuid == null || targetUuid.isEmpty()) continue;
 
             String localPreview = complaintDao.getFirstPhotoUri(targetUuid);
+            Complaint existingLocal = complaintDao.getComplaintByUuid(targetUuid);
             
-            android.util.Log.d("ComplaintRepo", "Updating local complaint with UUID: " + targetUuid);
+            String finalLocationName = "Unknown";
+            if (existingLocal != null && existingLocal.getLocation() != null && !existingLocal.getLocation().trim().isEmpty() && !existingLocal.getLocation().equalsIgnoreCase("Unknown")) {
+                finalLocationName = existingLocal.getLocation();
+            } else if (dto.getLocation() != null && dto.getLocation().getDisplayName() != null && !dto.getLocation().getDisplayName().trim().isEmpty()) {
+                finalLocationName = dto.getLocation().getDisplayName();
+            }
+            
+            android.util.Log.d("ComplaintRepo", "Updating local complaint with UUID: " + targetUuid + ", location: " + finalLocationName);
             Complaint serverComplaint = new Complaint(
                     targetUuid,
                     dto.getTitle(),
                     dto.getDescription(),
                     dto.getCategory() != null ? dto.getCategory().getName() : "General",
-                    dto.getLocation() != null ? dto.getLocation().getDisplayName() : "Lusaka",
+                    finalLocationName,
                     "SYNCED",
                     dto.getCreatedAt()
             );
@@ -438,19 +458,40 @@ public class ComplaintRepository {
             } else {
                 serverComplaint.setFirstPhotoUri(localPreview);
             }
+
+            if (serverComplaint.isSupportedByMe() || (serverComplaint.getAuthorEmail() != null && serverComplaint.getAuthorEmail().equalsIgnoreCase(sessionManager.getUserEmail()))) {
+                try {
+                    com.google.firebase.messaging.FirebaseMessaging.getInstance()
+                            .subscribeToTopic("complaint_" + serverId);
+                } catch (Exception ignored) {}
+            }
             
+            double serverLat = 0.0;
+            double serverLon = 0.0;
+
             if (dto.getLocation() != null) {
                 serverComplaint.setWard(dto.getLocation().getWard());
                 serverComplaint.setDistrict(dto.getLocation().getDistrict());
                 serverComplaint.setProvince(dto.getLocation().getProvince());
                 serverComplaint.setLocationId(dto.getLocation().getId());
                 if (dto.getLocation().getLatitude() != null && dto.getLocation().getLongitude() != null) {
-                    serverComplaint.setLatitude(dto.getLocation().getLatitude());
-                    serverComplaint.setLongitude(dto.getLocation().getLongitude());
-                    serverComplaint.setHasValidCoordinates(true);
-                } else {
-                    serverComplaint.setHasValidCoordinates(false);
+                    serverLat = dto.getLocation().getLatitude();
+                    serverLon = dto.getLocation().getLongitude();
                 }
+            }
+            if (serverLat == 0.0 && dto.getLatitude() != 0.0) {
+                serverLat = dto.getLatitude();
+                serverLon = dto.getLongitude();
+            }
+
+            if (serverLat != 0.0 && serverLon != 0.0) {
+                serverComplaint.setLatitude(serverLat);
+                serverComplaint.setLongitude(serverLon);
+                serverComplaint.setHasValidCoordinates(true);
+            } else if (existingLocal != null && existingLocal.getLatitude() != 0.0) {
+                serverComplaint.setLatitude(existingLocal.getLatitude());
+                serverComplaint.setLongitude(existingLocal.getLongitude());
+                serverComplaint.setHasValidCoordinates(existingLocal.isHasValidCoordinates());
             } else {
                 serverComplaint.setHasValidCoordinates(false);
             }
@@ -783,6 +824,16 @@ public class ComplaintRepository {
         executorService.execute(() -> {
             complaintDao.incrementSupportCount(uuid);
             complaintDao.insertPendingAction(new PendingAction("SUPPORT", uuid, null));
+            Complaint complaint = complaintDao.getComplaintByUuid(uuid);
+            if (complaint != null && complaint.getServerId() != null) {
+                try {
+                    com.google.firebase.messaging.FirebaseMessaging.getInstance()
+                            .subscribeToTopic("complaint_" + complaint.getServerId());
+                    android.util.Log.d("ComplaintRepo", "Subscribed to FCM topic: complaint_" + complaint.getServerId());
+                } catch (Exception e) {
+                    android.util.Log.e("ComplaintRepo", "Failed to subscribe to FCM topic", e);
+                }
+            }
             scheduleSync(uuid);
         });
     }

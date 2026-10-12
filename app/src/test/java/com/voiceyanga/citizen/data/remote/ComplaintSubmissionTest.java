@@ -63,4 +63,18 @@ public class ComplaintSubmissionTest {
         );
         assertFalse("Invalid priority should fail validation", request.isValid());
     }
+
+    @Test
+    public void testCustomLocationRequestValidation() {
+        ComplaintRequest request = new ComplaintRequest(
+                "Chilenje Garbage Collection",
+                "Garbage hasn't been collected in Chilenje Ward 24 for two weeks.",
+                "Sanitation",
+                "Chilenje, Ward 24",
+                "MEDIUM",
+                "custom-loc-uuid"
+        );
+        assertTrue("Custom non-Matero location request should be valid", request.isValid());
+        assertTrue("Location string should be preserved", request.location.equals("Chilenje, Ward 24"));
+    }
 }

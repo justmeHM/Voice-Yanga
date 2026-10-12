@@ -79,23 +79,57 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
 
     public void mapToApiLocation(String district, String ward) {
         List<LocationDto> locations = _locations.getValue();
-        if (locations == null) return;
-        LocationDto fallback = null;
+        if (locations == null || locations.isEmpty()) return;
+
         for (LocationDto dto : locations) {
             boolean wardMatch = ward != null && dto.getWard() != null && dto.getWard().equalsIgnoreCase(ward);
             boolean districtMatch = district != null && dto.getDistrict() != null && dto.getDistrict().equalsIgnoreCase(district);
             if (wardMatch && districtMatch) {
                 _mappedLocation.setValue(dto);
                 return;
-            } else if (wardMatch && fallback == null) {
-                fallback = dto;
-            } else if (districtMatch && fallback == null) {
-                fallback = dto;
             }
         }
-        if (fallback != null) {
-            _mappedLocation.setValue(fallback);
+        
+        for (LocationDto dto : locations) {
+            boolean wardMatch = ward != null && dto.getWard() != null && dto.getWard().equalsIgnoreCase(ward);
+            if (wardMatch) {
+                _mappedLocation.setValue(dto);
+                return;
+            }
         }
+    }
+
+    public void matchAndSetLocation(String locationString) {
+        if (locationString == null || locationString.trim().isEmpty()) {
+            _mappedLocation.setValue(null);
+            return;
+        }
+        List<LocationDto> locations = _locations.getValue();
+        if (locations == null || locations.isEmpty()) {
+            _mappedLocation.setValue(null);
+            return;
+        }
+        
+        String query = locationString.toLowerCase().trim();
+        LocationDto bestMatch = null;
+        
+        for (LocationDto dto : locations) {
+            String ward = dto.getWard() != null ? dto.getWard().toLowerCase() : "";
+            String constituency = dto.getConstituency() != null ? dto.getConstituency().toLowerCase() : "";
+            String district = dto.getDistrict() != null ? dto.getDistrict().toLowerCase() : "";
+            String displayName = dto.getDisplayName() != null ? dto.getDisplayName().toLowerCase() : "";
+            
+            if ((!ward.isEmpty() && (query.contains(ward) || ward.contains(query))) ||
+                (!constituency.isEmpty() && (query.contains(constituency) || constituency.contains(query))) ||
+                (!displayName.isEmpty() && (query.contains(displayName) || displayName.contains(query)))) {
+                bestMatch = dto;
+                break;
+            } else if (!district.isEmpty() && (query.contains(district) || district.contains(query))) {
+                if (bestMatch == null) bestMatch = dto;
+            }
+        }
+        
+        _mappedLocation.setValue(bestMatch);
     }
 
     public void setManualLocation(LocationDto location) {
@@ -381,7 +415,12 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
 
     public void submitComplaint(String title, String description, CategoryDto category, String customCategory, LocationDto location, String addressString, double lat, double lon) {
         VoiceNoteState vnState = _voiceNoteState.getValue();
-        boolean hasVoiceNote = vnState != null && vnState.localFile != null;
+        boolean hasVoiceNote = vnState != null && vnState.localFile != null && vnState.localFile.exists();
+        
+        if (hasVoiceNote && vnState.durationSeconds > 120) {
+            _error.setValue("Voice note exceeds 2 minutes max limit");
+            return;
+        }
         
         String otherCategory = getApplication().getString(R.string.category_other);
         String categoryName = (category != null && !category.getName().equalsIgnoreCase(otherCategory)) 
@@ -436,6 +475,24 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         // Remove common numeric debris if found at the start of string
         finalLocation = finalLocation.replaceAll("^[A-Z0-9]{4}\\+[A-Z0-9]{2,3}\\s*,*\\s*", "");
 
+        // Ensure location object matches finalLocation string, or clear it if it's a mismatch
+        if (location != null && finalLocation != null && !finalLocation.trim().isEmpty()) {
+            String addrLower = finalLocation.toLowerCase().trim();
+            String wardLower = location.getWard() != null ? location.getWard().toLowerCase() : "";
+            String constLower = location.getConstituency() != null ? location.getConstituency().toLowerCase() : "";
+            String distLower = location.getDistrict() != null ? location.getDistrict().toLowerCase() : "";
+            String nameLower = location.getDisplayName() != null ? location.getDisplayName().toLowerCase() : "";
+            
+            boolean matches = (!wardLower.isEmpty() && (addrLower.contains(wardLower) || wardLower.contains(addrLower))) ||
+                              (!constLower.isEmpty() && (addrLower.contains(constLower) || constLower.contains(addrLower))) ||
+                              (!distLower.isEmpty() && (addrLower.contains(distLower) || distLower.contains(addrLower))) ||
+                              (!nameLower.isEmpty() && (addrLower.contains(nameLower) || nameLower.contains(addrLower)));
+                              
+            if (!matches) {
+                location = null;
+            }
+        }
+
         Complaint complaint = new Complaint(
                 currentClientUuid,
                 title,
@@ -447,7 +504,15 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         );
         complaint.setLatitude(lat);
         complaint.setLongitude(lon);
+        complaint.setHasValidCoordinates(lat != 0.0 && lon != 0.0);
         complaint.setUserId(repository.getUserId());
+
+        if (location != null) {
+            complaint.setLocationId(location.getId());
+            complaint.setWard(location.getWard());
+            complaint.setDistrict(location.getDistrict());
+            complaint.setProvince(location.getProvince());
+        }
         
         if (category != null && !category.getName().equalsIgnoreCase(otherCategory)) {
             complaint.setCategoryId(category.getId());

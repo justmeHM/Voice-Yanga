@@ -156,8 +156,8 @@ public class AuthRefreshTest {
         // Verify only one refresh request was made
         int refreshCalls = 0;
         for (int i = 0; i < 5; i++) {
-            RecordedRequest req = takeRequest();
-            if (req.getPath().contains("/auth/refresh")) {
+            RecordedRequest req = server.takeRequest(1, TimeUnit.SECONDS);
+            if (req != null && req.getPath().contains("/auth/refresh")) {
                 refreshCalls++;
             }
         }

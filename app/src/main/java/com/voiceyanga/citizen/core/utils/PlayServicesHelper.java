@@ -21,12 +21,26 @@ public class PlayServicesHelper {
     public static final int UPDATE_REQUEST_CODE = 9001;
 
     public static void checkForAppUpdates(Activity activity) {
+        checkForAppUpdates(activity, null);
+    }
+
+    public static void checkForAppUpdates(Activity activity, android.view.View rootView) {
         if (activity == null || activity.isFinishing()) return;
 
         try {
             AppUpdateManager appUpdateManager = AppUpdateManagerFactory.create(activity);
+
+            com.google.android.play.core.install.InstallStateUpdatedListener listener = state -> {
+                if (state.installStatus() == com.google.android.play.core.install.model.InstallStatus.DOWNLOADED) {
+                    popupSnackbarForCompleteUpdate(activity, appUpdateManager, rootView);
+                }
+            };
+            appUpdateManager.registerListener(listener);
+
             appUpdateManager.getAppUpdateInfo().addOnSuccessListener(appUpdateInfo -> {
-                if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+                if (appUpdateInfo.installStatus() == com.google.android.play.core.install.model.InstallStatus.DOWNLOADED) {
+                    popupSnackbarForCompleteUpdate(activity, appUpdateManager, rootView);
+                } else if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
                         && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)) {
                     try {
                         appUpdateManager.startUpdateFlow(
@@ -42,6 +56,21 @@ public class PlayServicesHelper {
         } catch (Throwable t) {
             Log.e(TAG, "Play AppUpdateManager initialization failed", t);
         }
+    }
+
+    private static void popupSnackbarForCompleteUpdate(Activity activity, AppUpdateManager appUpdateManager, android.view.View rootView) {
+        if (activity == null || activity.isFinishing()) return;
+        android.view.View targetView = rootView != null ? rootView : activity.findViewById(android.R.id.content);
+        if (targetView == null) return;
+
+        com.google.android.material.snackbar.Snackbar snackbar = com.google.android.material.snackbar.Snackbar.make(
+                targetView,
+                "An update for Voice Yanga has been downloaded.",
+                com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE
+        );
+        snackbar.setAction("RESTART", v -> appUpdateManager.completeUpdate());
+        snackbar.setActionTextColor(androidx.core.content.ContextCompat.getColor(activity, com.voiceyanga.citizen.R.color.primary_green));
+        snackbar.show();
     }
 
     public static void requestInAppReview(Activity activity) {

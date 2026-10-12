@@ -31,12 +31,16 @@ public class NotificationRepository {
     }
 
     public LiveData<List<Notification>> getAllNotifications() {
+        refreshNotificationsAsync();
+        return notificationDao.getAllNotifications();
+    }
+
+    public void refreshNotificationsAsync() {
         executorService.execute(() -> {
             try {
                 refreshNotifications();
             } catch (Exception ignored) {}
         });
-        return notificationDao.getAllNotifications();
     }
 
     public void refreshNotifications() throws Exception {

@@ -94,7 +94,7 @@ public class SyncWorker extends Worker {
                     com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e);
                 } catch (Throwable ignored) {}
                 complaint.setSyncStatus("FAILED");
-                complaint.setFailureReason(e.getMessage());
+                complaint.setFailureReason(com.voiceyanga.citizen.core.network.ErrorParser.parseThrowable(e));
                 complaintDao.update(complaint);
                 
                 notificationHelper.showNotification(
@@ -174,6 +174,12 @@ public class SyncWorker extends Worker {
             );
             request.voiceNoteUrl = voiceNoteUrl;
             request.voiceNoteDurationSeconds = complaint.getVoiceNoteDuration() > 0 ? complaint.getVoiceNoteDuration() : null;
+            request.locationId = complaint.getLocationId();
+            request.ward = complaint.getWard();
+            request.district = complaint.getDistrict();
+            request.province = complaint.getProvince();
+            if (complaint.getLatitude() != 0.0) request.latitude = complaint.getLatitude();
+            if (complaint.getLongitude() != 0.0) request.longitude = complaint.getLongitude();
 
             if (!request.isValid()) {
                 throw new Exception("Invalid complaint data");
@@ -206,6 +212,13 @@ public class SyncWorker extends Worker {
             parts.put("priority", toRequestBody(complaint.getPriority() != null ? complaint.getPriority() : "MEDIUM"));
             parts.put("clientUuid", toRequestBody(complaint.getClientUuid()));
             
+            if (complaint.getLocationId() != null) parts.put("locationId", toRequestBody(complaint.getLocationId()));
+            if (complaint.getWard() != null) parts.put("ward", toRequestBody(complaint.getWard()));
+            if (complaint.getDistrict() != null) parts.put("district", toRequestBody(complaint.getDistrict()));
+            if (complaint.getProvince() != null) parts.put("province", toRequestBody(complaint.getProvince()));
+            if (complaint.getLatitude() != 0.0) parts.put("latitude", toRequestBody(String.valueOf(complaint.getLatitude())));
+            if (complaint.getLongitude() != 0.0) parts.put("longitude", toRequestBody(String.valueOf(complaint.getLongitude())));
+
             if (voiceNoteUrl != null) {
                 parts.put("voiceNoteUrl", toRequestBody(voiceNoteUrl));
             }
@@ -222,6 +235,11 @@ public class SyncWorker extends Worker {
             complaint.setServerId(result.getServerId());
             complaint.setReferenceCode(result.referenceCode);
             complaintDao.update(complaint);
+
+            try {
+                com.google.firebase.messaging.FirebaseMessaging.getInstance()
+                        .subscribeToTopic("complaint_" + result.getServerId());
+            } catch (Exception ignored) {}
             
             notificationHelper.showNotification(
                     getApplicationContext().getString(R.string.sync_notification_title),
@@ -306,10 +324,12 @@ public class SyncWorker extends Worker {
 
         if ("SUPPORT".equals(action.getActionType())) {
             Response<com.voiceyanga.citizen.data.remote.dto.SupportResponse> response = apiService.support(complaint.getServerId()).execute();
-            if (response.isSuccessful()) {
+            if (response.isSuccessful() || response.code() == 409) {
                 complaintDao.deletePendingAction(action.getId());
-            } else if (response.code() == 409) {
-                complaintDao.deletePendingAction(action.getId());
+                try {
+                    com.google.firebase.messaging.FirebaseMessaging.getInstance()
+                            .subscribeToTopic("complaint_" + complaint.getServerId());
+                } catch (Exception ignored) {}
             } else {
                 throw new Exception("Support failed");
             }

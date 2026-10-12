@@ -17,6 +17,7 @@ public class ComplaintDetailViewModel extends ViewModel {
 
     private final ComplaintRepository repository;
     private final SessionManager sessionManager;
+    private final com.voiceyanga.citizen.data.repository.NotificationRepository notificationRepository;
     private final MutableLiveData<Boolean> _commentSuccess = new MutableLiveData<>();
     public LiveData<Boolean> getCommentSuccess() { return _commentSuccess; }
 
@@ -28,9 +29,10 @@ public class ComplaintDetailViewModel extends ViewModel {
     public LiveData<CommentsState> getCommentsState() { return _commentsState; }
 
     @Inject
-    public ComplaintDetailViewModel(ComplaintRepository repository, SessionManager sessionManager) {
+    public ComplaintDetailViewModel(ComplaintRepository repository, SessionManager sessionManager, com.voiceyanga.citizen.data.repository.NotificationRepository notificationRepository) {
         this.repository = repository;
         this.sessionManager = sessionManager;
+        this.notificationRepository = notificationRepository;
     }
 
     public LiveData<Complaint> getComplaint(String uuid) {
@@ -95,6 +97,9 @@ public class ComplaintDetailViewModel extends ViewModel {
     public void postComment(String uuid, String message) {
         new Thread(() -> {
             repository.postComment(uuid, message);
+            if (notificationRepository != null) {
+                notificationRepository.refreshNotificationsAsync();
+            }
             _commentSuccess.postValue(true);
         }).start();
     }

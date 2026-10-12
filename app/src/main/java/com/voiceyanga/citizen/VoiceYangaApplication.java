@@ -16,9 +16,15 @@ public class VoiceYangaApplication extends Application implements Configuration.
     @Inject
     HiltWorkerFactory workerFactory;
 
+    @Inject
+    com.voiceyanga.citizen.data.local.SessionManager sessionManager;
+
     @Override
     public void onCreate() {
         super.onCreate();
+        if (sessionManager != null) {
+            sessionManager.applyTheme();
+        }
         // Prevent Glide from throwing "You must not call setTag() on a view Glide is targeting"
         com.bumptech.glide.request.target.ViewTarget.setTagId(R.id.glide_internal_request_tag);
         createNotificationChannel();

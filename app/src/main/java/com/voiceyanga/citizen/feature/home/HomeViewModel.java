@@ -138,38 +138,11 @@ public class HomeViewModel extends ViewModel {
         userRepository.getProfile(new Callback<UserDto>() {
             @Override
             public void onResponse(Call<UserDto> call, Response<UserDto> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    String locationId = response.body().getLocationId();
-                    if (locationId != null) {
-                        applyDefaultLocationFilter(locationId);
-                    }
-                }
+                // Profile loaded successfully
             }
 
             @Override
             public void onFailure(Call<UserDto> call, Throwable t) {}
-        });
-    }
-
-    private void applyDefaultLocationFilter(String locationId) {
-        referenceRepository.getLocations(new ReferenceRepository.ReferenceCallback<List<LocationDto>>() {
-            @Override
-            public void onSuccess(List<LocationDto> data) {
-                for (LocationDto loc : data) {
-                    if (Objects.equals(loc.getId(), locationId)) {
-                        if (loc.getWard() != null && !loc.getWard().isEmpty()) {
-                            setFilter("ward", loc.getWard());
-                        }
-                        if (loc.getDistrict() != null && !loc.getDistrict().isEmpty()) {
-                            setFilter("district", loc.getDistrict());
-                        }
-                        break;
-                    }
-                }
-            }
-
-            @Override
-            public void onError(String message) {}
         });
     }
 
@@ -225,10 +198,7 @@ public class HomeViewModel extends ViewModel {
     public void refreshData() {
         _loading.setValue(true);
         repository.refreshCommunityFeed();
-        
-        try {
-            notificationRepository.refreshNotifications();
-        } catch (Exception ignored) {}
+        notificationRepository.refreshNotificationsAsync();
         
         // Trigger filters update to refresh the LiveData stream
         Map<String, String> current = filters.getValue();

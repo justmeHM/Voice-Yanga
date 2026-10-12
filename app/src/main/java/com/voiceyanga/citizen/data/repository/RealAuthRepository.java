@@ -107,11 +107,11 @@ public class RealAuthRepository implements AuthRepository {
             @Override
             public void onFailure(Call<AuthResponse> call, Throwable t) {
                 android.util.Log.e("AuthRepo", "Login request failed", t);
-                String details = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
                 if (t instanceof com.google.gson.JsonSyntaxException || (t.getLocalizedMessage() != null && t.getLocalizedMessage().toLowerCase().contains("deserialize"))) {
                     callback.onError("Server response format error. Please try again.");
                 } else {
-                    callback.onError("Network error: Unable to connect to Voice Yanga servers (" + details + ")");
+                    String userFriendlyError = com.voiceyanga.citizen.core.network.ErrorParser.parseThrowable(t);
+                    callback.onError(userFriendlyError);
                 }
             }
         });
@@ -182,11 +182,11 @@ public class RealAuthRepository implements AuthRepository {
             @Override
             public void onFailure(Call<AuthResponse> call, Throwable t) {
                 android.util.Log.e("AuthDiagnostic", "HTTP_REQUEST_FAILED", t);
-                String details = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
                 if (t instanceof com.google.gson.JsonSyntaxException || (t.getLocalizedMessage() != null && t.getLocalizedMessage().toLowerCase().contains("deserialize"))) {
                     callback.onError("Account created, but the app could not start your session. Please sign in.");
                 } else {
-                    callback.onError("Network error: Unable to connect to Voice Yanga servers (" + details + ")");
+                    String userFriendlyError = com.voiceyanga.citizen.core.network.ErrorParser.parseThrowable(t);
+                    callback.onError(userFriendlyError);
                 }
             }
         });

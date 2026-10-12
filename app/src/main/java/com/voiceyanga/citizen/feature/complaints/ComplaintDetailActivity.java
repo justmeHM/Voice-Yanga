@@ -255,8 +255,38 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         startActivity(Intent.createChooser(intent, "Share via"));
     }
 
+    private void showFullScreenPhotoDialog(String photoUri, String mediaId) {
+        if (photoUri == null || photoUri.isEmpty()) return;
+
+        android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        dialog.setContentView(R.layout.dialog_full_screen_photo);
+        
+        android.widget.ImageView ivFull = dialog.findViewById(R.id.ivFullScreenPhoto);
+        View btnClose = dialog.findViewById(R.id.btnCloseFullPhoto);
+
+        if (ivFull != null) {
+            com.voiceyanga.citizen.core.utils.PhotoLoader.loadPhoto(
+                    currentComplaint, photoUri, mediaId, complaintRepository, ivFull, R.color.neutral_900);
+            ivFull.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        if (btnClose != null) {
+            btnClose.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        dialog.show();
+    }
+
     private void setupPhotoList() {
-        photoAdapter = new PhotoAdapter(null, complaintRepository);
+        photoAdapter = new PhotoAdapter(new PhotoAdapter.OnRemoveListener() {
+            @Override
+            public void onRemove(String uri) {}
+
+            @Override
+            public void onPhotoClick(String uri) {
+                showFullScreenPhotoDialog(uri, null);
+            }
+        }, complaintRepository);
         binding.rvPhotos.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         binding.rvPhotos.setAdapter(photoAdapter);
     }
@@ -344,9 +374,21 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         binding.tvRefCode.setText(complaint.getReferenceCode() != null ? complaint.getReferenceCode() : "PENDING SYNC");
         binding.tvTitle.setText(complaint.getTitle());
 
-        // Sync Retry & Edit Logic
+        // Owner Check: Only the creator of the report can edit
+        boolean isOwner = false;
+        String currentUserEmail = sessionManager.getUserEmail();
+        String currentUserId = sessionManager.getUserId();
+        if (currentUserEmail != null && !currentUserEmail.trim().isEmpty() && complaint.getAuthorEmail() != null) {
+            isOwner = currentUserEmail.equalsIgnoreCase(complaint.getAuthorEmail());
+        }
+        if (!isOwner && currentUserId != null && !currentUserId.trim().isEmpty() && complaint.getUserId() != null) {
+            isOwner = currentUserId.equals(complaint.getUserId());
+        }
+
+        binding.btnEditReport.setVisibility(isOwner ? View.VISIBLE : View.GONE);
+
+        // Sync Retry Logic
         if ("FAILED".equals(complaint.getSyncStatus())) {
-            binding.btnEditReport.setVisibility(View.VISIBLE);
             binding.btnRetrySync.setVisibility(View.VISIBLE);
             binding.btnRetrySync.setText(R.string.btn_retry_upload);
             binding.btnRetrySync.setEnabled(true);
@@ -358,13 +400,11 @@ public class ComplaintDetailActivity extends AppCompatActivity {
                 binding.tvFailureReason.setVisibility(View.GONE);
             }
         } else if ("SYNCING".equals(complaint.getSyncStatus()) || "PENDING".equals(complaint.getSyncStatus())) {
-            binding.btnEditReport.setVisibility(View.GONE);
             binding.btnRetrySync.setVisibility(View.VISIBLE);
             binding.btnRetrySync.setText("Retrying...");
             binding.btnRetrySync.setEnabled(false);
             binding.tvFailureReason.setVisibility(View.GONE);
         } else {
-            binding.btnEditReport.setVisibility(View.GONE);
             binding.btnRetrySync.setVisibility(View.GONE);
             binding.tvFailureReason.setVisibility(View.GONE);
         }

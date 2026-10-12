@@ -113,6 +113,14 @@
                 android:text="@string/label_enable_biometric"
                 android:textColor="?android:attr/textColorPrimary" />
 
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchDarkMode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/label_dark_mode"
+                android:textColor="?android:attr/textColorPrimary" />
+
             <ProgressBar
                 android:id="@+id/progressBar"
                 android:layout_width="wrap_content"

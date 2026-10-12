@@ -39,4 +39,20 @@ public class ErrorParser {
             default: return "An unexpected error occurred (" + response.code() + ")";
         }
     }
+
+    public static String parseThrowable(Throwable t) {
+        if (t == null) return "An unexpected error occurred.";
+        if (t instanceof java.net.UnknownHostException || 
+            (t.getMessage() != null && t.getMessage().toLowerCase().contains("no address associated"))) {
+            return "No internet connection. Please check your network connection.";
+        }
+        if (t instanceof java.net.SocketTimeoutException || 
+            (t.getMessage() != null && t.getMessage().toLowerCase().contains("timeout"))) {
+            return "Network request timed out. Please try again.";
+        }
+        if (t instanceof java.io.IOException) {
+            return "Unable to connect to Voice Yanga servers. Please check your connection.";
+        }
+        return t.getLocalizedMessage() != null ? t.getLocalizedMessage() : "An unexpected error occurred.";
+    }
 }

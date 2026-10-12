@@ -29,6 +29,8 @@ public class SessionManager {
     private static final String KEY_FIRST_LAUNCH = "first_launch";
     private static final String KEY_ANONYMOUS_USER_ID = "anonymous_user_id";
     private static final String KEY_SESSION_ID = "session_id";
+    private static final String KEY_DARK_MODE = "dark_mode";
+    private static final String KEY_RECENT_CUSTOM_LOCATION = "recent_custom_location";
 
     private SharedPreferences prefs;
 
@@ -271,6 +273,46 @@ public class SessionManager {
         if (prefs == null) return;
         try {
             prefs.edit().remove(KEY_ANONYMOUS_USER_ID).remove(KEY_SESSION_ID).apply();
+        } catch (Throwable ignored) {}
+    }
+
+    public boolean isDarkModeEnabled() {
+        if (prefs == null) return false;
+        try {
+            return prefs.getBoolean(KEY_DARK_MODE, false);
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    public void setDarkModeEnabled(boolean enabled) {
+        if (prefs == null) return;
+        try {
+            prefs.edit().putBoolean(KEY_DARK_MODE, enabled).apply();
+        } catch (Throwable ignored) {}
+    }
+
+    public void applyTheme() {
+        boolean darkMode = isDarkModeEnabled();
+        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                darkMode ? androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+                         : androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+        );
+    }
+
+    public String getRecentCustomLocation() {
+        if (prefs == null) return null;
+        try {
+            return prefs.getString(KEY_RECENT_CUSTOM_LOCATION, null);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    public void saveRecentCustomLocation(String location) {
+        if (prefs == null || location == null || location.trim().isEmpty()) return;
+        try {
+            prefs.edit().putString(KEY_RECENT_CUSTOM_LOCATION, location.trim()).apply();
         } catch (Throwable ignored) {}
     }
 }

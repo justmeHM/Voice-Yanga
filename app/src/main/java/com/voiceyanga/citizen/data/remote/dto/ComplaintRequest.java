@@ -27,6 +27,24 @@ public class ComplaintRequest {
     @SerializedName("voiceNoteDurationSeconds")
     public Integer voiceNoteDurationSeconds;
 
+    @SerializedName("locationId")
+    public String locationId;
+
+    @SerializedName("ward")
+    public String ward;
+
+    @SerializedName("district")
+    public String district;
+
+    @SerializedName("province")
+    public String province;
+
+    @SerializedName("latitude")
+    public Double latitude;
+
+    @SerializedName("longitude")
+    public Double longitude;
+
     public ComplaintRequest() {}
 
     public ComplaintRequest(String title, String description, String category, String location, String priority, String clientUuid) {

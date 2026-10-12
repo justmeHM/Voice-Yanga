@@ -76,7 +76,7 @@ public interface ComplaintDao {
     LiveData<List<Complaint>> getCommunityComplaints(String email);
 
     @Query("SELECT * FROM complaints WHERE " +
-           "serverId IN (SELECT serverId FROM complaint_feed_membership WHERE feedType = 'COMMUNITY') " +
+           "(serverId IN (SELECT serverId FROM complaint_feed_membership WHERE feedType = 'COMMUNITY') OR syncStatus IN ('SYNCED', 'PENDING', 'SYNCING', 'FAILED')) " +
            "AND (:status IS NULL OR :status = '' OR status = :status) " +
            "AND (:category IS NULL OR :category = '' OR category = :category) " +
            "AND (:query IS NULL OR :query = '' OR title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' OR location LIKE '%' || :query || '%') " +
@@ -95,7 +95,7 @@ public interface ComplaintDao {
     @Query("SELECT * FROM complaints WHERE syncStatus IN ('DRAFT', 'PENDING', 'FAILED') ORDER BY createdAt DESC")
     LiveData<List<Complaint>> getOutboxComplaints();
 
-    @Query("SELECT * FROM complaints WHERE syncStatus = 'PENDING'")
+    @Query("SELECT * FROM complaints WHERE syncStatus IN ('PENDING', 'FAILED')")
     List<Complaint> getPendingComplaints();
 
     @Query("SELECT * FROM complaints WHERE clientUuid = :id OR serverId = :id")

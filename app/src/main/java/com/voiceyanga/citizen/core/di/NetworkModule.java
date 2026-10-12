@@ -122,18 +122,6 @@ public class NetworkModule {
                 String path = response.request().url().encodedPath();
                 boolean isPhoto = path.startsWith("/uploads") || (path.contains("/media/") && path.endsWith("/access"));
 
-                boolean isTokenExpired;
-                try (ResponseBody peekBody = response.peekBody(1024)) {
-                    String errorBody = peekBody.string();
-                    isTokenExpired = errorBody.contains("TOKEN_EXPIRED") || errorBody.isEmpty();
-                } catch (Exception ignored) {
-                    isTokenExpired = true;
-                }
-
-                if (!isTokenExpired) {
-                    return null;
-                }
-
                 synchronized (this) {
                     String currentToken = sessionManager.getAccessToken();
                     String requestToken = response.request().header("Authorization");

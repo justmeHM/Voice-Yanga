@@ -55,6 +55,9 @@ public class CreateComplaintActivity extends AppCompatActivity {
     @javax.inject.Inject
     com.voiceyanga.citizen.data.repository.AnalyticsRepository analyticsRepository;
 
+    @javax.inject.Inject
+    com.voiceyanga.citizen.data.local.SessionManager sessionManager;
+
     private ActivityCreateComplaintBinding binding;
     private ComplaintViewModel viewModel;
     private PhotoAdapter photoAdapter;
@@ -328,6 +331,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
         viewModel.getSubmissionSuccess().observe(this, success -> {
             if (Boolean.TRUE.equals(success)) {
+                this.isSubmitted = true;
                 com.voiceyanga.citizen.ui.common.SuccessDialogFragment dialog = new com.voiceyanga.citizen.ui.common.SuccessDialogFragment();
                 dialog.setOnDismissListener(this::finish);
                 dialog.show(getSupportFragmentManager(), "success");
@@ -336,8 +340,19 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
         viewModel.getError().observe(this, error -> {
             if (error != null) {
-                Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, error, Toast.LENGTH_LONG).show();
                 binding.btnSubmit.setEnabled(true);
+                
+                String errLower = error.toLowerCase();
+                if (errLower.contains("title")) {
+                    binding.tilTitle.setError(error);
+                    binding.etTitle.requestFocus();
+                } else if (errLower.contains("description")) {
+                    binding.tilDescription.setError(error);
+                    binding.etDescription.requestFocus();
+                } else if (errLower.contains("problem") || errLower.contains("category")) {
+                    Toast.makeText(this, R.string.error_select_problem_type, Toast.LENGTH_LONG).show();
+                }
             }
         });
 
@@ -356,10 +371,13 @@ public class CreateComplaintActivity extends AppCompatActivity {
         });
 
         viewModel.getMappedLocation().observe(this, location -> {
-            if (location != null && binding != null) {
-                this.currentLocation = location;
-                this.detectedAddress = currentLocation.getDisplayName();
-                binding.tvDetectedLocation.setText(detectedAddress);
+            if (binding == null) return;
+            this.currentLocation = location;
+            if (location != null) {
+                if (!isManualLocation && (detectedAddress == null || detectedAddress.trim().isEmpty() || detectedAddress.contains("Unknown"))) {
+                    this.detectedAddress = currentLocation.getDisplayName();
+                    binding.tvDetectedLocation.setText(detectedAddress);
+                }
                 binding.tvDetectedLocation.setVisibility(View.VISIBLE);
                 binding.pbLocationLoading.setVisibility(View.GONE);
                 populateSummary();
@@ -371,6 +389,17 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 binding.etTitle.setText(draft.getTitle());
                 binding.etDescription.setText(draft.getDescription());
                 
+                if (draft.getLocation() != null && !draft.getLocation().trim().isEmpty()) {
+                    this.detectedAddress = draft.getLocation();
+                    this.isManualLocation = true;
+                    binding.tvDetectedLocation.setText(detectedAddress);
+                    binding.tvDetectedLocation.setVisibility(View.VISIBLE);
+                    binding.pbLocationLoading.setVisibility(View.GONE);
+                    viewModel.matchAndSetLocation(draft.getLocation());
+                }
+                if (draft.getLatitude() != 0.0) this.currentLatitude = draft.getLatitude();
+                if (draft.getLongitude() != 0.0) this.currentLongitude = draft.getLongitude();
+
                 String draftCategory = draft.getCategory();
                 if (draftCategory != null) {
                     selectCategory(draftCategory);
@@ -419,8 +448,11 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (s != null && s.length() > 0 && selectedCategory == null) {
-                    suggestCategory(s.toString());
+                if (s != null && s.length() > 0) {
+                    binding.tilTitle.setError(null);
+                    if (selectedCategory == null) {
+                        suggestCategory(s.toString());
+                    }
                 }
                 populateSummary();
             }
@@ -433,7 +465,12 @@ public class CreateComplaintActivity extends AppCompatActivity {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) { populateSummary(); }
+            public void onTextChanged(CharSequence s, int start, int before, int count) { 
+                if (s != null && s.length() > 0) {
+                    binding.tilDescription.setError(null);
+                }
+                populateSummary(); 
+            }
             @Override
             public void afterTextChanged(android.text.Editable s) {}
         });
@@ -441,6 +478,15 @@ public class CreateComplaintActivity extends AppCompatActivity {
         binding.btnSubmit.setOnClickListener(v -> {
             if (isSubmitted) return;
             
+            binding.tilTitle.setError(null);
+            binding.tilDescription.setError(null);
+
+            // Auto-stop active recording if user is currently recording
+            ComplaintViewModel.VoiceNoteState vnState = viewModel.getVoiceNoteState().getValue();
+            if (vnState != null && vnState.isRecording) {
+                viewModel.stopRecording();
+            }
+
             String title = binding.etTitle.getText().toString().trim();
             String description = binding.etDescription.getText().toString().trim();
             String customCategory = binding.etCustomCategory.getText().toString().trim();
@@ -448,6 +494,9 @@ public class CreateComplaintActivity extends AppCompatActivity {
             binding.btnSubmit.setEnabled(false);
             if (analyticsRepository != null) {
                 analyticsRepository.trackComplaintSubmissionAttempted(null);
+            }
+            if (sessionManager != null && detectedAddress != null && !detectedAddress.trim().isEmpty() && !detectedAddress.contains("timed out")) {
+                sessionManager.saveRecentCustomLocation(detectedAddress);
             }
             viewModel.submitComplaint(title, description, selectedCategory, customCategory, currentLocation, 
                     detectedAddress, currentLatitude, currentLongitude);
@@ -517,35 +566,84 @@ public class CreateComplaintActivity extends AppCompatActivity {
     }
 
     private void showManualLocationDialog() {
-        List<LocationDto> locations = viewModel.getLocations().getValue();
-        if (locations == null || locations.isEmpty()) {
-            android.widget.EditText etLocation = new android.widget.EditText(this);
-            etLocation.setHint("e.g. Matero, Ward 24");
-            etLocation.setPadding(48, 48, 48, 48);
-            
-            new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                    .setTitle(R.string.title_select_location)
-                    .setView(etLocation)
-                    .setPositiveButton(R.string.btn_save, (dialog, which) -> {
-                        String manualName = etLocation.getText().toString().trim();
-                        if (!manualName.isEmpty()) {
-                            this.detectedAddress = manualName;
-                            this.isManualLocation = true;
-                            binding.tvDetectedLocation.setText(detectedAddress);
-                            binding.tvDetectedLocation.setVisibility(View.VISIBLE);
-                            populateSummary();
-                        }
-                    })
-                    .setNegativeButton(R.string.btn_cancel, null)
-                    .show();
-            return;
+        String recentLocation = sessionManager != null ? sessionManager.getRecentCustomLocation() : null;
+
+        android.widget.LinearLayout layout = new android.widget.LinearLayout(this);
+        layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+        layout.setPadding(48, 32, 48, 32);
+
+        List<LocationDto> apiLocations = viewModel.getLocations().getValue();
+        if (apiLocations != null && !apiLocations.isEmpty()) {
+            com.google.android.material.button.MaterialButton btnBrowse = new com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.borderlessButtonStyle);
+            btnBrowse.setText("Select Official Ward / Area");
+            btnBrowse.setAllCaps(false);
+            btnBrowse.setTextColor(ContextCompat.getColor(this, R.color.primary_green));
+            btnBrowse.setOnClickListener(v -> {
+                SearchableLocationDialog searchDialog = new SearchableLocationDialog(apiLocations, selectedLoc -> {
+                    this.currentLocation = selectedLoc;
+                    this.detectedAddress = selectedLoc.getDisplayName();
+                    this.isManualLocation = true;
+                    viewModel.setManualLocation(selectedLoc);
+                    if (sessionManager != null) {
+                        sessionManager.saveRecentCustomLocation(selectedLoc.getDisplayName());
+                    }
+                    binding.tvDetectedLocation.setText(detectedAddress);
+                    binding.tvDetectedLocation.setVisibility(View.VISIBLE);
+                    populateSummary();
+                });
+                searchDialog.show(getSupportFragmentManager(), "searchable_location");
+            });
+            layout.addView(btnBrowse);
         }
 
-        SearchableLocationDialog dialog = new SearchableLocationDialog(locations, location -> {
-            isManualLocation = true;
-            viewModel.setManualLocation(location);
-        });
-        dialog.show(getSupportFragmentManager(), "search_location");
+        if (recentLocation != null && !recentLocation.trim().isEmpty()) {
+            com.google.android.material.button.MaterialButton btnRecent = new com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.borderlessButtonStyle);
+            btnRecent.setText("Use Recent: " + recentLocation);
+            btnRecent.setAllCaps(false);
+            btnRecent.setTextColor(ContextCompat.getColor(this, R.color.primary_green));
+            layout.addView(btnRecent);
+        }
+
+        android.widget.EditText etLocation = new android.widget.EditText(this);
+        etLocation.setHint("e.g. Chilenje, Ward 24");
+        if (this.detectedAddress != null && !this.detectedAddress.contains("timed out")) {
+            etLocation.setText(this.detectedAddress);
+        } else if (recentLocation != null) {
+            etLocation.setText(recentLocation);
+        }
+        layout.addView(etLocation);
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder builder = new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.title_select_location)
+                .setView(layout)
+                .setPositiveButton(R.string.btn_save, (dialog, which) -> {
+                    String manualName = etLocation.getText().toString().trim();
+                    if (!manualName.isEmpty()) {
+                        this.detectedAddress = manualName;
+                        this.isManualLocation = true;
+                        if (sessionManager != null) {
+                            sessionManager.saveRecentCustomLocation(manualName);
+                        }
+                        viewModel.matchAndSetLocation(manualName);
+                        binding.tvDetectedLocation.setText(detectedAddress);
+                        binding.tvDetectedLocation.setVisibility(View.VISIBLE);
+                        populateSummary();
+                    }
+                })
+                .setNegativeButton(R.string.btn_cancel, null);
+
+        androidx.appcompat.app.AlertDialog dialog = builder.create();
+
+        if (layout.getChildCount() > 1 && layout.getChildAt(0) instanceof com.google.android.material.button.MaterialButton) {
+            layout.getChildAt(0).setOnClickListener(v -> {
+                if (recentLocation != null) {
+                    etLocation.setText(recentLocation);
+                    etLocation.setSelection(recentLocation.length());
+                }
+            });
+        }
+
+        dialog.show();
     }
 
     private void requestLocationPermissions() {
@@ -627,10 +725,11 @@ public class CreateComplaintActivity extends AppCompatActivity {
             if (binding.pbLocationLoading.getVisibility() == View.VISIBLE) {
                 fusedLocationClient.removeLocationUpdates(locationCallback);
                 binding.pbLocationLoading.setVisibility(View.GONE);
-                Toast.makeText(CreateComplaintActivity.this, "GPS tracking timeout. Please select location manually.", Toast.LENGTH_LONG).show();
-                binding.tvDetectedLocation.setText("Location tracking timed out");
+                Toast.makeText(CreateComplaintActivity.this, "GPS taking long? Tap location to select or enter manually.", Toast.LENGTH_LONG).show();
+                binding.tvDetectedLocation.setText("GPS slow. Tap to select location manually");
+                binding.tvDetectedLocation.setOnClickListener(v -> showManualLocationDialog());
             }
-        }, 15000);
+        }, 10000);
     }
 
     private void updateLocationUI(Location location) {

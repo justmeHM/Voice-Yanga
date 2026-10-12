@@ -47,12 +47,23 @@ public class ProfileActivity extends AppCompatActivity {
         setupObservers();
         setupListeners();
         setupBiometricSwitch();
+        setupDarkModeSwitch();
     }
 
     private void setupBiometricSwitch() {
         binding.switchBiometric.setChecked(sessionManager.isBiometricEnabled());
         binding.switchBiometric.setOnCheckedChangeListener((buttonView, isChecked) -> {
             sessionManager.setBiometricEnabled(isChecked);
+        });
+    }
+
+    private void setupDarkModeSwitch() {
+        binding.switchDarkMode.setChecked(sessionManager.isDarkModeEnabled());
+        binding.switchDarkMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked != sessionManager.isDarkModeEnabled()) {
+                sessionManager.setDarkModeEnabled(isChecked);
+                sessionManager.applyTheme();
+            }
         });
     }
 

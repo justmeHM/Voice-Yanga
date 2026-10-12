@@ -117,7 +117,7 @@ public class HomeActivity extends AppCompatActivity {
             return insets;
         });
 
-        com.voiceyanga.citizen.core.utils.PlayServicesHelper.checkForAppUpdates(this);
+        com.voiceyanga.citizen.core.utils.PlayServicesHelper.checkForAppUpdates(this, binding.getRoot());
 
         viewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         
@@ -455,11 +455,15 @@ public class HomeActivity extends AppCompatActivity {
                     binding.layoutError.llErrorRoot.setVisibility(View.VISIBLE);
                     binding.layoutError.tvErrorMessage.setText(error);
                     binding.rvComplaints.setVisibility(View.GONE);
+                    binding.llEmptyState.setVisibility(View.GONE);
                 }
                 binding.shimmerFeed.setVisibility(View.GONE);
                 binding.swipeRefresh.setRefreshing(false);
             } else {
                 binding.layoutError.llErrorRoot.setVisibility(View.GONE);
+                java.util.List<Complaint> currentList = viewModel.getComplaints().getValue();
+                binding.llEmptyState.setVisibility(
+                        (currentList == null || currentList.isEmpty()) ? View.VISIBLE : View.GONE);
             }
         });
 
@@ -469,6 +473,7 @@ public class HomeActivity extends AppCompatActivity {
                     binding.shimmerFeed.startShimmer();
                     binding.shimmerFeed.setVisibility(View.VISIBLE);
                     binding.rvComplaints.setVisibility(View.GONE);
+                    binding.llEmptyState.setVisibility(View.GONE);
                 } else {
                     binding.shimmerFeed.stopShimmer();
                     binding.shimmerFeed.setVisibility(View.GONE);
@@ -490,8 +495,9 @@ public class HomeActivity extends AppCompatActivity {
             String summary = currentFilters != null ? currentFilters.toString() : "{}";
             android.util.Log.d("HomeActivity", "HOME_UI renderedCount=" + renderedCount + " activeFilters=" + summary);
 
+            boolean hasError = binding.layoutError.llErrorRoot.getVisibility() == View.VISIBLE;
             binding.llEmptyState.setVisibility(
-                    (complaints == null || complaints.isEmpty()) ? View.VISIBLE : View.GONE);
+                    (!hasError && (complaints == null || complaints.isEmpty())) ? View.VISIBLE : View.GONE);
             binding.swipeRefresh.setRefreshing(false);
         });
 

@@ -43,10 +43,10 @@ import retrofit2.http.Query;
 
 public interface ApiService {
 
-    @GET("/health")
+    @GET("health")
     Call<Void> health();
 
-    @GET("/ready")
+    @GET("ready")
     Call<HealthResponse> ready();
 
     @POST("auth/register")

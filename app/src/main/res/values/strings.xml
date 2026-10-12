@@ -163,8 +163,9 @@
     <string name="filter_district_hint">Council / District</string>
     <string name="filter_province_hint">Province</string>
     <string name="filter_clear_all">Clear All</string>
-    <string name="filter_apply">Apply Filter</string>
+    <string name="filter_apply">Search</string>
     <string name="desc_filter_feed">Filter complaints by location</string>
+    <string name="label_dark_mode">Dark Theme</string>
 
     <string name="action_support">Support</string>
     <string name="action_comment">Comment</string>
