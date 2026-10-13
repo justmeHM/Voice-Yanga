@@ -1,0 +1,6 @@
+# Enforce LF line endings for executable scripts
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Default text handling
+* text=auto

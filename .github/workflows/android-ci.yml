@@ -20,14 +20,19 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Run lint
-        run: ./gradlew lint
+      - name: Sanitize wrapper & grant execution permission
+        run: |
+          sed -i 's/\r$//' gradlew
+          chmod +x gradlew
 
       - name: Run unit tests
-        run: ./gradlew test
+        run: ./gradlew testDebugUnitTest
+
+      - name: Run lint
+        run: ./gradlew lintDebug
 
       - name: Build debug APK
         run: ./gradlew assembleDebug
