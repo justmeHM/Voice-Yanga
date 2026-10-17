@@ -19,7 +19,21 @@
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@drawable/ic_back_small"
             app:title="@string/create_complaint_title"
-            app:titleTextColor="?attr/colorOnSurface" />
+            app:titleTextColor="?attr/colorOnSurface">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnQuickExit"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginEnd="12dp"
+                android:text="Quick Exit"
+                android:textColor="@color/primary_red"
+                android:textStyle="bold"
+                app:icon="@drawable/ic_close_white"
+                app:iconTint="@color/primary_red" />
+        </com.google.android.material.appbar.MaterialToolbar>
 
         <View
             android:layout_width="match_parent"
@@ -102,6 +116,66 @@
                         android:inputType="textCapSentences" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- Sensitive Sub-Category Input (Hidden by default) -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilSubCategory"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="Select Specific Sensitive Issue"
+                    android:visibility="gone">
+                    <AutoCompleteTextView
+                        android:id="@+id/actvSubCategory"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Confidentiality Reassurance Banner (Hidden by default) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardConfidentialBanner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone"
+                    app:cardCornerRadius="12dp"
+                    app:cardBackgroundColor="#1A00C853"
+                    app:strokeColor="?attr/colorPrimary"
+                    app:strokeWidth="1dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🔒 Confidential &amp; Urgent Report"
+                            android:textStyle="bold"
+                            android:textSize="14sp"
+                            android:textColor="?attr/colorPrimary" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="This report is strictly private, assigned CRITICAL priority, and will NEVER appear on the public feed."
+                            android:textSize="12sp"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Anonymous Submission Switch -->
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchAnonymous"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone"
+                    android:text="Submit Anonymously (Hide my identity)"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
                 <!-- Media Section (Horizontal) -->
                 <TextView
                     android:layout_width="wrap_content"
@@ -113,30 +187,16 @@
                     android:textStyle="bold"
                     android:letterSpacing="0.1" />
 
-                <LinearLayout
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddEvidence"
+                    style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="56dp"
                     android:layout_marginTop="12dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnAddPhotos"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/add_photos_button"
-                        app:icon="@drawable/ic_photos"
-                        android:textSize="12sp" />
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnRecord"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:text="Voice Note"
-                        app:icon="@drawable/ic_mic"
-                        android:textSize="12sp" />
-                </LinearLayout>
+                    android:text="Add Evidence (Photos, Voice, Video)"
+                    app:icon="@drawable/ic_photos"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
                 <!-- Voice Recording UI -->
                 <com.google.android.material.card.MaterialCardView
@@ -216,6 +276,66 @@
                                 app:icon="@drawable/ic_delete" />
                         </LinearLayout>
                     </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Video Attachment UI -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardVideoNote"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp">
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="180dp">
+                        <ImageView
+                            android:id="@+id/ivVideoThumbnail"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop" />
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="#40000000" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnPlayVideoPreview"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:layout_centerInParent="true"
+                            app:icon="@drawable/ic_play"
+                            app:iconSize="28dp"
+                            app:backgroundTint="#80000000"
+                            app:iconTint="@color/white" />
+                        <TextView
+                            android:id="@+id/tvVideoDuration"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentBottom="true"
+                            android:layout_alignParentStart="true"
+                            android:layout_margin="12dp"
+                            android:background="@drawable/bg_status_chip"
+                            android:backgroundTint="#CC000000"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="4dp"
+                            android:textColor="@color/white"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            tools:text="Video • 1:30 max" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnDeleteVideo"
+                            style="@style/Widget.Material3.Button.IconButton.Filled"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_alignParentTop="true"
+                            android:layout_alignParentEnd="true"
+                            android:layout_margin="8dp"
+                            app:icon="@drawable/ic_delete"
+                            app:backgroundTint="#CC000000"
+                            app:iconTint="@color/white" />
+                    </RelativeLayout>
                 </com.google.android.material.card.MaterialCardView>
 
                 <!-- Description (Hidden if voice note is present) -->

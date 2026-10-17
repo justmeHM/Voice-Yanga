@@ -21,7 +21,7 @@ public class MyComplaintsViewModel extends ViewModel {
     private final ComplaintRepository repository;
     private final SessionManager sessionManager;
     private final MutableLiveData<Tab> selectedTab = new MutableLiveData<>(Tab.ACTIVE);
-    private final androidx.lifecycle.MediatorLiveData<List<Complaint>> complaints = new androidx.lifecycle.MediatorLiveData<>();
+    private final LiveData<List<Complaint>> complaints;
     private final MutableLiveData<Boolean> _loading = new MutableLiveData<>(false);
     private final MutableLiveData<String> _error = new MutableLiveData<>(null);
     
@@ -38,7 +38,7 @@ public class MyComplaintsViewModel extends ViewModel {
         this.repository = repository;
         this.sessionManager = sessionManager;
         
-        LiveData<List<Complaint>> tabSource = Transformations.switchMap(selectedTab, tab -> {
+        this.complaints = Transformations.switchMap(selectedTab, tab -> {
             String userId = sessionManager.getUserId();
             String email = sessionManager.getUserEmail();
             switch (tab) {
@@ -49,13 +49,6 @@ public class MyComplaintsViewModel extends ViewModel {
                 case ACTIVE:
                 default:
                     return repository.observeMyComplaints(userId, email);
-            }
-        });
-        complaints.addSource(tabSource, complaints::setValue);
-        complaints.addSource(repository.getMyComplaintsState(), state -> {
-            if (state != null) {
-                _loading.setValue(state.isInitialLoading() || state.isRefreshing());
-                _error.setValue(state.getError());
             }
         });
     }

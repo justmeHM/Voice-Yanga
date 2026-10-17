@@ -42,13 +42,13 @@ public interface ComplaintDao {
     @Query("SELECT * FROM complaints ORDER BY createdAt DESC")
     LiveData<List<Complaint>> getAllComplaints();
 
-    @Query("SELECT * FROM complaints WHERE (serverId IN (SELECT serverId FROM complaint_feed_membership WHERE feedType = 'MY_COMPLAINTS') OR (syncStatus != 'DRAFT' AND (userId = :userId OR authorEmail = :email))) AND status != 'RESOLVED' ORDER BY createdAt DESC")
+    @Query("SELECT * FROM complaints WHERE (serverId IN (SELECT serverId FROM complaint_feed_membership WHERE feedType = 'MY_COMPLAINTS') OR (syncStatus != 'DRAFT' AND ((:userId IS NOT NULL AND userId = :userId) OR (:email IS NOT NULL AND authorEmail = :email)))) AND status != 'RESOLVED' ORDER BY createdAt DESC")
     LiveData<List<Complaint>> getMyActiveComplaints(String userId, String email);
 
-    @Query("SELECT * FROM complaints WHERE (serverId IN (SELECT serverId FROM complaint_feed_membership WHERE feedType = 'MY_COMPLAINTS') OR (syncStatus != 'DRAFT' AND (userId = :userId OR authorEmail = :email))) AND status = 'RESOLVED' ORDER BY createdAt DESC")
+    @Query("SELECT * FROM complaints WHERE (serverId IN (SELECT serverId FROM complaint_feed_membership WHERE feedType = 'MY_COMPLAINTS') OR (syncStatus != 'DRAFT' AND ((:userId IS NOT NULL AND userId = :userId) OR (:email IS NOT NULL AND authorEmail = :email)))) AND status = 'RESOLVED' ORDER BY createdAt DESC")
     LiveData<List<Complaint>> getMyResolvedComplaints(String userId, String email);
 
-    @Query("SELECT * FROM complaints WHERE userId != :userId AND authorEmail != :email AND supportedByMe = 1 ORDER BY createdAt DESC")
+    @Query("SELECT * FROM complaints WHERE supportedByMe = 1 AND (:userId IS NOT NULL OR :email IS NOT NULL OR 1=1) ORDER BY createdAt DESC")
     LiveData<List<Complaint>> getMySupportedComplaints(String userId, String email);
 
     @Query("SELECT * FROM complaints WHERE (userId = :userId OR authorEmail = :email) AND status != 'RESOLVED' AND syncStatus != 'DRAFT' ORDER BY createdAt DESC LIMIT 1")
@@ -77,7 +77,9 @@ public interface ComplaintDao {
 
     @Query("SELECT * FROM complaints WHERE " +
            "(serverId IN (SELECT serverId FROM complaint_feed_membership WHERE feedType = 'COMMUNITY') OR syncStatus IN ('SYNCED', 'PENDING', 'SYNCING', 'FAILED')) " +
-           "AND (:status IS NULL OR :status = '' OR status = :status) " +
+           "AND (CASE WHEN :status IS NULL OR :status = '' THEN status != 'RESOLVED' ELSE status = :status END) " +
+           "AND (confidential = 0 OR confidential IS NULL) " +
+           "AND (category NOT IN ('Sensitive Issues', 'Gender-Based Violence (GBV)', 'Sexual harassment', 'Human rights abuses', 'Child labour', 'Child abuse and neglect', 'Violence against children')) " +
            "AND (:category IS NULL OR :category = '' OR category = :category) " +
            "AND (:query IS NULL OR :query = '' OR title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' OR location LIKE '%' || :query || '%') " +
            "AND (:ward IS NULL OR :ward = '' OR ward = :ward OR location LIKE '%' || :ward || '%') " +
@@ -134,6 +136,30 @@ public interface ComplaintDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertComment(Comment comment);
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insertComments(List<Comment> comments);
+
+    @androidx.room.Transaction
+    default void syncCommentsForComplaint(String targetKey, String serverId, List<Comment> comments) {
+        clearSyncedCommentsForComplaint(targetKey);
+        if (serverId != null && !serverId.equals(targetKey)) {
+            clearSyncedCommentsForComplaint(serverId);
+        }
+        if (comments != null && !comments.isEmpty()) {
+            insertComments(comments);
+        }
+        updateCommentCount(targetKey);
+    }
+
+    @Query("SELECT * FROM comments WHERE id = :commentId LIMIT 1")
+    Comment getCommentById(String commentId);
+
+    @Query("UPDATE comments SET content = :newContent WHERE id = :commentId")
+    void updateCommentContent(String commentId, String newContent);
+
+    @Query("DELETE FROM comments WHERE id = :commentId")
+    void deleteCommentById(String commentId);
+
     @Query("DELETE FROM comments WHERE complaintUuid = :complaintUuid AND authorName = :author AND content = :content")
     void deleteLocalComment(String complaintUuid, String author, String content);
 
@@ -164,6 +190,9 @@ public interface ComplaintDao {
     @Query("SELECT * FROM pending_actions ORDER BY createdAt ASC")
     List<PendingAction> getAllPendingActions();
 
+    @Query("SELECT * FROM pending_actions WHERE complaintUuid = :identifier OR complaintUuid = (SELECT clientUuid FROM complaints WHERE serverId = :identifier LIMIT 1) OR complaintUuid = (SELECT serverId FROM complaints WHERE clientUuid = :identifier LIMIT 1)")
+    List<PendingAction> getPendingActionsForComplaintSync(String identifier);
+
     @Query("DELETE FROM pending_actions WHERE id = :id")
     void deletePendingAction(int id);
 
@@ -186,6 +215,11 @@ public interface ComplaintDao {
     default void purgeComplaintByServerId(String serverId) {
         Complaint complaint = getComplaintByServerId(serverId);
         if (complaint == null) {
+            deleteFeedMembershipsForServerId(serverId);
+            return;
+        }
+
+        if (complaint.isSupportedByMe() || (complaint.getSyncStatus() != null && !"SYNCED".equals(complaint.getSyncStatus()))) {
             deleteFeedMembershipsForServerId(serverId);
             return;
         }

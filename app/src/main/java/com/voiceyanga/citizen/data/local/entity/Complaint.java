@@ -45,7 +45,13 @@ public class Complaint {
     private String voiceNoteLocalPath;
     private String voiceNoteUrl;
     private int voiceNoteDuration;
+    private String videoLocalPath;
+    private String videoUrl;
+    private String videoThumbnailUrl;
+    private int videoDuration;
     private String failureReason;
+    private boolean confidential;
+    private boolean anonymous;
 
     public Complaint(@NonNull String clientUuid, String title, String description, String category, String location, String syncStatus, long createdAt) {
         this.clientUuid = clientUuid;
@@ -167,8 +173,26 @@ public class Complaint {
     public int getVoiceNoteDuration() { return voiceNoteDuration; }
     public void setVoiceNoteDuration(int voiceNoteDuration) { this.voiceNoteDuration = voiceNoteDuration; }
 
+    public String getVideoLocalPath() { return videoLocalPath; }
+    public void setVideoLocalPath(String videoLocalPath) { this.videoLocalPath = videoLocalPath; }
+
+    public String getVideoUrl() { return videoUrl; }
+    public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
+
+    public String getVideoThumbnailUrl() { return videoThumbnailUrl; }
+    public void setVideoThumbnailUrl(String videoThumbnailUrl) { this.videoThumbnailUrl = videoThumbnailUrl; }
+
+    public int getVideoDuration() { return videoDuration; }
+    public void setVideoDuration(int videoDuration) { this.videoDuration = videoDuration; }
+
     public String getFailureReason() { return failureReason; }
     public void setFailureReason(String failureReason) { this.failureReason = failureReason; }
+
+    public boolean isConfidential() { return confidential; }
+    public void setConfidential(boolean confidential) { this.confidential = confidential; }
+
+    public boolean isAnonymous() { return anonymous; }
+    public void setAnonymous(boolean anonymous) { this.anonymous = anonymous; }
 
     public String getCalculatedPriority() {
         int engagementScore = supportCount + (commentCount * 2); // Comments carry more weight

@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Transformations;
 import androidx.lifecycle.ViewModel;
+import com.voiceyanga.citizen.core.network.ErrorParser;
 import com.voiceyanga.citizen.data.local.entity.Notification;
 import com.voiceyanga.citizen.data.repository.NotificationRepository;
 import java.util.List;
@@ -33,10 +34,27 @@ public class NotificationViewModel extends ViewModel {
             return Transformations.map(all, list -> {
                 if (list == null) return null;
                 return list.stream()
-                        .filter(n -> type.equals(n.getType()))
+                        .filter(n -> isTypeMatch(type, n.getType()))
                         .collect(java.util.stream.Collectors.toList());
             });
         });
+    }
+
+    private static boolean isTypeMatch(String filter, String actualType) {
+        if (actualType == null) return false;
+        if ("ALL".equals(filter)) return true;
+        
+        String upperActual = actualType.toUpperCase(java.util.Locale.US);
+        
+        if ("STATUS_UPDATES".equals(filter) || "COMPLAINT_STATUS_CHANGED".equals(filter)) {
+            return upperActual.contains("STATUS") || upperActual.contains("OFFICIAL") || "STATUS_CHANGE".equals(upperActual);
+        }
+        
+        if ("COMMENTS_AND_SUPPORT".equals(filter) || "COMPLAINT_COMMENT_ADDED".equals(filter)) {
+            return upperActual.contains("COMMENT") || upperActual.contains("SUPPORT") || upperActual.contains("MILESTONE");
+        }
+        
+        return filter.equalsIgnoreCase(actualType);
     }
 
     public LiveData<List<Notification>> getNotifications() {
@@ -54,7 +72,7 @@ public class NotificationViewModel extends ViewModel {
                 repository.refreshNotifications();
                 _error.postValue(null);
             } catch (Exception e) {
-                _error.postValue("Failed to refresh notifications: " + e.getMessage());
+                _error.postValue(ErrorParser.parseThrowable(e));
             } finally {
                 _loading.postValue(false);
             }

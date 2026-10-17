@@ -58,10 +58,19 @@ public class NotificationHelper {
     }
 
     public void showNotification(String title, String message, String complaintUuid, String type) {
-        String notificationId = UUID.randomUUID().toString();
+        String keySource = (complaintUuid != null ? complaintUuid : "") + "_" + (type != null ? type : "") + "_" + (title != null ? title : "");
+        int rawId = Math.abs(keySource.hashCode());
+        final int sysNotifId = rawId == 0 ? 1 : rawId;
+        String notificationId = "notif_" + sysNotifId;
         
-        // Save to local database
+        // Save to local database with deduplication check
         executorService.execute(() -> {
+            Notification existing = notificationDao.getNotificationByIdSync(notificationId);
+            if (existing != null) {
+                // Already notified recently, skip duplicate banner & DB insert
+                return;
+            }
+
             Notification notification = new Notification(
                     notificationId,
                     complaintUuid,
@@ -71,35 +80,35 @@ public class NotificationHelper {
                     System.currentTimeMillis()
             );
             notificationDao.insert(notification);
+
+            // Show system notification
+            Intent intent = new Intent(context, SplashActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            if (complaintUuid != null) {
+                intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaintUuid);
+            }
+
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                    context, 
+                    sysNotifId, 
+                    intent, 
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_stat_notification)
+                    .setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_voice_yanga))
+                    .setColor(ContextCompat.getColor(context, R.color.primary_green))
+                    .setContentTitle(title != null ? title : "Voice Yanga")
+                    .setContentText(message != null ? message : "")
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(true);
+
+            NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (manager != null) {
+                manager.notify(sysNotifId, builder.build());
+            }
         });
-
-        // Show system notification
-        Intent intent = new Intent(context, SplashActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        if (complaintUuid != null) {
-            intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaintUuid);
-        }
-
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-                context, 
-                0, 
-                intent, 
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_stat_notification)
-                .setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_voice_yanga))
-                .setColor(ContextCompat.getColor(context, R.color.primary_green))
-                .setContentTitle(title != null ? title : "Voice Yanga")
-                .setContentText(message != null ? message : "")
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setContentIntent(pendingIntent)
-                .setAutoCancel(true);
-
-        NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (manager != null) {
-            manager.notify((int) System.currentTimeMillis(), builder.build());
-        }
     }
 
     public void showMilestoneNotification(String title, String complaintTitle, int milestone, String complaintUuid) {

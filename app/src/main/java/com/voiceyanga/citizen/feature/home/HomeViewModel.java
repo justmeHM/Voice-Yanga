@@ -213,6 +213,10 @@ public class HomeViewModel extends ViewModel {
         repository.retryComplaint(uuid);
     }
 
+    public void deleteComplaint(String uuid) {
+        repository.deleteComplaint(uuid);
+    }
+
     public void supportComplaint(String uuid) {
         repository.supportComplaint(uuid);
     }

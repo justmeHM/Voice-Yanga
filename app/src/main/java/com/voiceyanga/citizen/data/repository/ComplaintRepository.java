@@ -16,6 +16,7 @@ import com.voiceyanga.citizen.data.local.entity.PendingAction;
 import com.voiceyanga.citizen.data.remote.SyncWorker;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
 import com.voiceyanga.citizen.core.notifications.NotificationHelper;
+import com.voiceyanga.citizen.core.network.ErrorParser;
 import com.voiceyanga.citizen.data.remote.dto.ApiEnvelope;
 import com.voiceyanga.citizen.data.remote.dto.CommentRequest;
 import com.voiceyanga.citizen.data.remote.dto.CommentResponse;
@@ -401,8 +402,10 @@ public class ComplaintRepository {
             String localPreview = complaintDao.getFirstPhotoUri(targetUuid);
             Complaint existingLocal = complaintDao.getComplaintByUuid(targetUuid);
             
-            String finalLocationName = "Unknown";
-            if (existingLocal != null && existingLocal.getLocation() != null && !existingLocal.getLocation().trim().isEmpty() && !existingLocal.getLocation().equalsIgnoreCase("Unknown")) {
+            String finalLocationName = "Location Not Specified";
+            if (dto.getLocationName() != null && !dto.getLocationName().trim().isEmpty() && !dto.getLocationName().equalsIgnoreCase("Unknown")) {
+                finalLocationName = dto.getLocationName();
+            } else if (existingLocal != null && existingLocal.getLocation() != null && !existingLocal.getLocation().trim().isEmpty() && !existingLocal.getLocation().equalsIgnoreCase("Unknown") && !existingLocal.getLocation().equalsIgnoreCase("Location Not Specified")) {
                 finalLocationName = existingLocal.getLocation();
             } else if (dto.getLocation() != null && dto.getLocation().getDisplayName() != null && !dto.getLocation().getDisplayName().trim().isEmpty()) {
                 finalLocationName = dto.getLocation().getDisplayName();
@@ -431,6 +434,12 @@ public class ComplaintRepository {
                 serverComplaint.setVoiceNoteUrl(dto.getVoiceNoteUrl());
                 serverComplaint.setVoiceNoteDuration(dto.getVoiceNoteDuration());
             }
+
+            if (dto.getVideoUrl() != null && !dto.getVideoUrl().isEmpty()) {
+                serverComplaint.setVideoUrl(dto.getVideoUrl());
+                serverComplaint.setVideoThumbnailUrl(dto.getVideoThumbnailUrl());
+                serverComplaint.setVideoDuration(dto.getVideoDuration());
+            }
             
             if (dto.getMedia() != null && !dto.getMedia().isEmpty()) {
                 boolean firstPhotoSet = false;
@@ -439,6 +448,10 @@ public class ComplaintRepository {
                     if ("AUDIO".equalsIgnoreCase(m.type) || "VOICE_NOTE".equalsIgnoreCase(m.type)) {
                         if (mediaUrl != null && !mediaUrl.isEmpty()) {
                             serverComplaint.setVoiceNoteUrl(mediaUrl);
+                        }
+                    } else if ("VIDEO".equalsIgnoreCase(m.type)) {
+                        if (mediaUrl != null && !mediaUrl.isEmpty()) {
+                            serverComplaint.setVideoUrl(mediaUrl);
                         }
                     } else if (m.type == null || "PHOTO".equalsIgnoreCase(m.type)) {
                         if (!firstPhotoSet && mediaUrl != null && !mediaUrl.isEmpty()) {
@@ -459,7 +472,12 @@ public class ComplaintRepository {
                 serverComplaint.setFirstPhotoUri(localPreview);
             }
 
-            if (serverComplaint.isSupportedByMe() || (serverComplaint.getAuthorEmail() != null && serverComplaint.getAuthorEmail().equalsIgnoreCase(sessionManager.getUserEmail()))) {
+            boolean dtoSupported = dto.getSupportedByMe() != null && dto.getSupportedByMe();
+            String userEmail = sessionManager.getUserEmail();
+            boolean isAuthor = serverComplaint.getAuthorEmail() != null && userEmail != null && userEmail.equalsIgnoreCase(serverComplaint.getAuthorEmail());
+            boolean userHasCommented = complaintDao.getUserCommentCountOnComplaint(targetUuid, sessionManager.getUserName(), sessionManager.getUserEmail()) > 0;
+
+            if (serverComplaint.isSupportedByMe() || dtoSupported || isAuthor || userHasCommented) {
                 try {
                     com.google.firebase.messaging.FirebaseMessaging.getInstance()
                             .subscribeToTopic("complaint_" + serverId);
@@ -496,12 +514,12 @@ public class ComplaintRepository {
                 serverComplaint.setHasValidCoordinates(false);
             }
 
+            boolean persistentSupported = sessionManager.isComplaintSupported(targetUuid) || (serverId != null && sessionManager.isComplaintSupported(serverId));
             Complaint existing = complaintDao.getComplaintByUuid(targetUuid);
+            boolean localSupported = (existing != null && existing.isSupportedByMe());
+            serverComplaint.setSupportedByMe(dtoSupported || localSupported || persistentSupported);
+
             if (existing != null) {
-                // CRITICAL: Preserve local 'supportedByMe' state if a sync is pending
-                // or if we just toggled it locally, to prevent server refresh overwriting UI state
-                serverComplaint.setSupportedByMe(existing.isSupportedByMe());
-                
                 serverComplaint.setCommentCount(existing.getCommentCount());
                 serverComplaint.setSupportCount(dto.getSupportCount());
                 
@@ -520,16 +538,28 @@ public class ComplaintRepository {
                     serverComplaint.setVoiceNoteDuration(existing.getVoiceNoteDuration());
                 }
 
+                if (serverComplaint.getVideoUrl() == null || serverComplaint.getVideoUrl().isEmpty()) {
+                    serverComplaint.setVideoUrl(existing.getVideoUrl());
+                }
+                if (existing.getVideoLocalPath() != null && !existing.getVideoLocalPath().isEmpty()) {
+                    serverComplaint.setVideoLocalPath(existing.getVideoLocalPath());
+                }
+                if (serverComplaint.getVideoThumbnailUrl() == null || serverComplaint.getVideoThumbnailUrl().isEmpty()) {
+                    serverComplaint.setVideoThumbnailUrl(existing.getVideoThumbnailUrl());
+                }
+                if (serverComplaint.getVideoDuration() == 0 && existing.getVideoDuration() > 0) {
+                    serverComplaint.setVideoDuration(existing.getVideoDuration());
+                }
+
                 // Engagement & Support / Comment Notification Logic
-                String userEmail = sessionManager.getUserEmail();
                 boolean userEngaged = existing.isSupportedByMe() 
-                        || (userEmail != null && userEmail.equalsIgnoreCase(dto.getAuthorEmail()))
-                        || complaintDao.getUserCommentCountOnComplaint(targetUuid, sessionManager.getUserName(), sessionManager.getUserEmail()) > 0;
+                        || isAuthor
+                        || userHasCommented;
 
                 int oldCount = existing.getSupportCount();
                 int newCount = dto.getSupportCount();
                 if (newCount > oldCount && userEngaged) {
-                    if (userEmail != null && Objects.equals(userEmail, dto.getAuthorEmail()) && newCount >= 10 && (newCount / 10) > (oldCount / 10)) {
+                    if (isAuthor && newCount >= 10 && (newCount / 10) > (oldCount / 10)) {
                         int milestone = (newCount / 10) * 10;
                         notificationHelper.showMilestoneNotification(
                                 "New Milestone Reached!",
@@ -538,15 +568,20 @@ public class ComplaintRepository {
                                 targetUuid
                         );
                     } else if (newCount > oldCount) {
+                        String notifTitle = isAuthor ? "New Support on Your Report!" : "New Support Received!";
+                        String notifMsg = isAuthor ?
+                                "Your report (" + (dto.getTitle() != null ? dto.getTitle() : "Report") + ") received new community support (" + newCount + " votes)." :
+                                "A report you engaged with (" + (dto.getTitle() != null ? dto.getTitle() : "Report") + ") received new community support (" + newCount + " votes).";
                         notificationHelper.showNotification(
-                                "New Support Received!",
-                                "A report you engaged with (" + (dto.getTitle() != null ? dto.getTitle() : "Report") + ") received new community support (" + newCount + " votes).",
+                                notifTitle,
+                                notifMsg,
                                 targetUuid,
                                 "SUPPORT"
                         );
                     }
                 }
             } else {
+                serverComplaint.setSupportedByMe(dtoSupported);
                 serverComplaint.setSupportCount(dto.getSupportCount());
             }
             
@@ -607,30 +642,90 @@ public class ComplaintRepository {
                             
                     Complaint local = complaintDao.getComplaintById(serverId);
                     String targetKey = (local != null && local.getClientUuid() != null) ? local.getClientUuid() : complaintUuid;
+                    int oldCommentCount = (local != null) ? local.getCommentCount() : 0;
+                    String currentUserName = sessionManager.getUserName();
+                    String currentUserEmail = sessionManager.getUserEmail();
+                    boolean isAuthor = (local != null && currentUserEmail != null && currentUserEmail.equalsIgnoreCase(local.getAuthorEmail()));
+                    boolean isEngaged = (local != null && local.isSupportedByMe()) ||
+                            complaintDao.getUserCommentCountOnComplaint(targetKey, currentUserName, currentUserEmail) > 0;
                     
-                    complaintDao.clearSyncedCommentsForComplaint(targetKey);
-                    if (serverId != null && !serverId.equals(targetKey)) {
-                        complaintDao.clearSyncedCommentsForComplaint(serverId);
+                    List<PendingAction> pendingActions = complaintDao.getPendingActionsForComplaintSync(targetKey);
+                    java.util.Set<String> pendingDeletedCommentIds = new java.util.HashSet<>();
+                    java.util.Map<String, String> pendingEditedCommentContents = new java.util.HashMap<>();
+
+                    if (pendingActions != null) {
+                        for (PendingAction pa : pendingActions) {
+                            if ("DELETE_COMMENT".equals(pa.getActionType()) && pa.getData() != null) {
+                                pendingDeletedCommentIds.add(pa.getData());
+                            } else if ("EDIT_COMMENT".equals(pa.getActionType()) && pa.getData() != null && pa.getData().contains("|||")) {
+                                String[] parts = pa.getData().split("\\|\\|\\|", 2);
+                                pendingEditedCommentContents.put(parts[0], parts[1]);
+                            }
+                        }
                     }
 
+                    int newCount = comments.size();
+                    boolean hasNewExternalComment = false;
+                    String latestCommentAuthor = "Someone";
+                    String latestCommentContent = "";
+
+                    List<Comment> entitiesToInsert = new java.util.ArrayList<>();
                     for (CommentResponse dto : comments) {
+                        String dtoId = dto.getId();
+                        if (dtoId != null && pendingDeletedCommentIds.contains(dtoId)) {
+                            // CRITICAL: Do not re-insert comments pending deletion!
+                            continue;
+                        }
+
                         String author = dto.getAuthorName();
                         if (author == null || author.trim().isEmpty()) author = "Citizen";
                         
                         String content = dto.getContent();
+                        if (dtoId != null && pendingEditedCommentContents.containsKey(dtoId)) {
+                            content = pendingEditedCommentContents.get(dtoId);
+                        }
                         if (content == null || content.trim().isEmpty()) content = "(No content)";
 
+                        boolean isSelf = (currentUserName != null && author.equalsIgnoreCase(currentUserName)) ||
+                                (currentUserEmail != null && author.equalsIgnoreCase(currentUserEmail));
+
+                        if (!isSelf) {
+                            hasNewExternalComment = true;
+                            latestCommentAuthor = author;
+                            latestCommentContent = content;
+                        }
+
                         Comment comment = new Comment(
-                                dto.getId() != null ? dto.getId() : java.util.UUID.randomUUID().toString(),
+                                dtoId != null ? dtoId : java.util.UUID.randomUUID().toString(),
                                 targetKey,
                                 author,
                                 content,
                                 dto.isOfficial(),
                                 dto.getCreatedAtMs()
                         );
-                        complaintDao.insertComment(comment);
+                        entitiesToInsert.add(comment);
                     }
-                    complaintDao.updateCommentCount(targetKey);
+
+                    complaintDao.syncCommentsForComplaint(targetKey, serverId, entitiesToInsert);
+
+                    if (newCount > oldCommentCount && hasNewExternalComment) {
+                        String reportTitle = (local != null && local.getTitle() != null) ? local.getTitle() : "Report";
+                        if (isAuthor) {
+                            notificationHelper.showNotification(
+                                    "New Comment on Your Report",
+                                    latestCommentAuthor + " commented on your report (" + reportTitle + "): " + latestCommentContent,
+                                    targetKey,
+                                    "NEW_COMMENT"
+                            );
+                        } else if (isEngaged) {
+                            notificationHelper.showNotification(
+                                    "New Comment on Engaged Report",
+                                    latestCommentAuthor + " commented on a report you engaged with (" + reportTitle + "): " + latestCommentContent,
+                                    targetKey,
+                                    "NEW_COMMENT"
+                            );
+                        }
+                    }
                     if (callback != null) callback.onResult(com.voiceyanga.citizen.feature.complaints.ComplaintDetailViewModel.CommentsState.SUCCESS);
                 } else if (statusCode == 403) {
                     android.util.Log.e("ComplaintRepo", "COMMENTS_HTTP ownership=community serverIdPresent=true authAttached=true result=403");
@@ -673,7 +768,7 @@ public class ComplaintRepository {
 
             @Override
             public void onFailure(retrofit2.Call<com.google.gson.JsonElement> call, Throwable t) {
-                callback.onError(t.getMessage());
+                callback.onError(ErrorParser.parseThrowable(t));
             }
         });
     }
@@ -695,7 +790,7 @@ public class ComplaintRepository {
 
             @Override
             public void onFailure(retrofit2.Call<ApiEnvelope<com.voiceyanga.citizen.data.remote.dto.MediaAccessData>> call, Throwable t) {
-                callback.onError(t.getMessage());
+                callback.onError(ErrorParser.parseThrowable(t));
             }
         });
     }
@@ -751,8 +846,84 @@ public class ComplaintRepository {
             complaintDao.insertComment(localComment);
             complaintDao.updateCommentCount(targetKey);
 
+            if (local != null && local.getServerId() != null) {
+                try {
+                    com.google.firebase.messaging.FirebaseMessaging.getInstance()
+                            .subscribeToTopic("complaint_" + local.getServerId());
+                } catch (Exception ignored) {}
+            }
+
             complaintDao.insertPendingAction(new PendingAction("COMMENT", targetKey, message));
             scheduleSync(targetKey);
+        });
+    }
+
+    public void updateComment(String commentId, String complaintUuid, String newContent) {
+        executorService.execute(() -> {
+            Complaint local = complaintDao.getComplaintById(complaintUuid);
+            String targetKey = (local != null && local.getClientUuid() != null) ? local.getClientUuid() : complaintUuid;
+            
+            complaintDao.updateCommentContent(commentId, newContent);
+            
+            if (!commentId.startsWith("local_")) {
+                complaintDao.insertPendingAction(new PendingAction("EDIT_COMMENT", targetKey, commentId + "|||" + newContent));
+            }
+            scheduleSync(targetKey);
+        });
+    }
+
+    public void deleteComment(String commentId, String complaintUuid) {
+        executorService.execute(() -> {
+            Complaint local = complaintDao.getComplaintById(complaintUuid);
+            String targetKey = (local != null && local.getClientUuid() != null) ? local.getClientUuid() : complaintUuid;
+            
+            complaintDao.deleteCommentById(commentId);
+            complaintDao.updateCommentCount(targetKey);
+            
+            if (!commentId.startsWith("local_")) {
+                complaintDao.insertPendingAction(new PendingAction("DELETE_COMMENT", targetKey, commentId));
+            }
+            scheduleSync(targetKey);
+        });
+    }
+
+    public void editComplaint(Complaint complaint) {
+        executorService.execute(() -> {
+            complaintDao.update(complaint);
+            String serverId = complaint.getServerId();
+            if (serverId != null && !serverId.isEmpty()) {
+                com.google.gson.JsonObject payload = new com.google.gson.JsonObject();
+                payload.addProperty("title", complaint.getTitle());
+                payload.addProperty("description", complaint.getDescription());
+                payload.addProperty("category", complaint.getCategory());
+                payload.addProperty("location", complaint.getLocation());
+                
+                complaintDao.insertPendingAction(new PendingAction("EDIT_COMPLAINT", complaint.getClientUuid(), payload.toString()));
+                scheduleSync(complaint.getClientUuid());
+            }
+        });
+    }
+
+    public void deleteComplaint(String uuid) {
+        executorService.execute(() -> {
+            Complaint complaint = complaintDao.getComplaintById(uuid);
+            if (complaint == null) return;
+            
+            String serverId = complaint.getServerId();
+            String clientUuid = complaint.getClientUuid();
+            
+            complaintDao.deletePendingActionsForComplaint(clientUuid);
+            complaintDao.deleteCommentsForComplaint(clientUuid);
+            complaintDao.deletePhotosForComplaint(clientUuid);
+            if (serverId != null) {
+                complaintDao.deleteFeedMembershipsForServerId(serverId);
+            }
+            complaintDao.deleteComplaintByClientUuid(clientUuid);
+            
+            if (serverId != null && !serverId.isEmpty()) {
+                complaintDao.insertPendingAction(new PendingAction("DELETE_COMPLAINT", clientUuid, serverId));
+                scheduleSync(clientUuid);
+            }
         });
     }
 
@@ -822,10 +993,12 @@ public class ComplaintRepository {
 
     public void supportComplaint(String uuid) {
         executorService.execute(() -> {
+            sessionManager.addSupportedComplaintUuid(uuid);
             complaintDao.incrementSupportCount(uuid);
             complaintDao.insertPendingAction(new PendingAction("SUPPORT", uuid, null));
             Complaint complaint = complaintDao.getComplaintByUuid(uuid);
             if (complaint != null && complaint.getServerId() != null) {
+                sessionManager.addSupportedComplaintUuid(complaint.getServerId());
                 try {
                     com.google.firebase.messaging.FirebaseMessaging.getInstance()
                             .subscribeToTopic("complaint_" + complaint.getServerId());

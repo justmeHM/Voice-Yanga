@@ -203,6 +203,33 @@
                 </com.google.android.material.card.MaterialCardView>
 
                 <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardVideoPlayer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:visibility="gone"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/neutral_200"
+                    app:strokeWidth="1dp"
+                    tools:visibility="visible">
+
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="240dp">
+
+                        <androidx.media3.ui.PlayerView
+                            android:id="@+id/playerViewDetail"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            app:use_controller="true"
+                            app:show_buffering="when_playing"
+                            app:resize_mode="fit" />
+
+                    </RelativeLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardVoiceNote"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

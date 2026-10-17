@@ -1,5 +1,6 @@
 package com.voiceyanga.citizen.data.repository;
 
+import com.voiceyanga.citizen.core.network.ErrorParser;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
 import com.voiceyanga.citizen.data.remote.dto.ApiEnvelope;
 import com.voiceyanga.citizen.data.remote.dto.CategoryDto;
@@ -41,7 +42,7 @@ public class RealReferenceRepository implements ReferenceRepository {
 
             @Override
             public void onFailure(Call<ApiEnvelope<List<CategoryDto>>> call, Throwable t) {
-                callback.onError(t.getMessage());
+                callback.onError(ErrorParser.parseThrowable(t));
             }
         });
     }
@@ -64,7 +65,7 @@ public class RealReferenceRepository implements ReferenceRepository {
 
             @Override
             public void onFailure(Call<ApiEnvelope<List<LocationDto>>> call, Throwable t) {
-                callback.onError(t.getMessage());
+                callback.onError(ErrorParser.parseThrowable(t));
             }
         });
     }

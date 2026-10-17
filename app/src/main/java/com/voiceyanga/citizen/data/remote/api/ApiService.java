@@ -17,6 +17,8 @@ import com.voiceyanga.citizen.data.remote.dto.NotificationDto;
 import com.voiceyanga.citizen.data.remote.dto.NotificationPreferences;
 import com.voiceyanga.citizen.data.remote.dto.PaginatedComplaints;
 import com.voiceyanga.citizen.data.remote.dto.PaginatedNotifications;
+import com.voiceyanga.citizen.data.remote.dto.PresignedUploadRequest;
+import com.voiceyanga.citizen.data.remote.dto.PresignedUploadResponse;
 import com.voiceyanga.citizen.data.remote.dto.RefreshData;
 import com.voiceyanga.citizen.data.remote.dto.RefreshRequest;
 import com.voiceyanga.citizen.data.remote.dto.RegisterRequest;
@@ -93,6 +95,24 @@ public interface ApiService {
         @Part("durationSeconds") RequestBody durationSeconds
     );
 
+    @Multipart
+    @POST("videos")
+    Call<ApiEnvelope<VoiceNoteData>> uploadVideo(
+        @Part MultipartBody.Part file,
+        @Part("durationSeconds") RequestBody durationSeconds
+    );
+
+    @POST("videos/upload-url")
+    Call<ApiEnvelope<PresignedUploadResponse>> getPresignedVideoUploadUrl(
+        @retrofit2.http.Body PresignedUploadRequest request
+    );
+
+    @retrofit2.http.PUT
+    Call<Void> uploadBinaryToUrl(
+        @retrofit2.http.Url String url,
+        @retrofit2.http.Body RequestBody fileBody
+    );
+
     @GET("complaints/my")
     Call<ApiEnvelope<PaginatedComplaints>> getMyComplaints(
         @Query("page") int page,
@@ -130,6 +150,30 @@ public interface ApiService {
     Call<ApiEnvelope<CommentResponse>> addComment(
         @Path("id") String id,
         @Body CommentRequest body
+    );
+
+    @PATCH("complaints/{id}/comments/{commentId}")
+    Call<ApiEnvelope<CommentResponse>> updateComment(
+        @Path("id") String complaintId,
+        @Path("commentId") String commentId,
+        @Body CommentRequest body
+    );
+
+    @DELETE("complaints/{id}/comments/{commentId}")
+    Call<ApiEnvelope<Object>> deleteComment(
+        @Path("id") String complaintId,
+        @Path("commentId") String commentId
+    );
+
+    @PATCH("complaints/{id}")
+    Call<ApiEnvelope<ComplaintDto>> updateComplaint(
+        @Path("id") String id,
+        @Body ComplaintRequest body
+    );
+
+    @DELETE("complaints/{id}")
+    Call<ApiEnvelope<Object>> deleteComplaint(
+        @Path("id") String id
     );
 
     @POST("complaints/{id}/support")

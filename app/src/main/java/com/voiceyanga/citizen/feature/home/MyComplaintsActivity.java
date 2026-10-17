@@ -127,16 +127,19 @@ public class MyComplaintsActivity extends AppCompatActivity {
         adapter = new ComplaintAdapter(new ComplaintAdapter.OnComplaintClickListener() {
             @Override
             public void onComplaintClick(Complaint complaint, View sharedElement) {
+                if (complaint == null || complaint.getClientUuid() == null) return;
                 Intent intent = new Intent(MyComplaintsActivity.this, ComplaintDetailActivity.class);
                 intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaint.getClientUuid());
                 
-                if (sharedElement != null && sharedElement.getVisibility() == View.VISIBLE) {
-                    androidx.core.app.ActivityOptionsCompat options = androidx.core.app.ActivityOptionsCompat.makeSceneTransitionAnimation(
-                            MyComplaintsActivity.this, sharedElement, sharedElement.getTransitionName());
-                    startActivity(intent, options.toBundle());
-                } else {
-                    startActivity(intent);
+                if (sharedElement != null && sharedElement.getVisibility() == View.VISIBLE && sharedElement.getTransitionName() != null) {
+                    try {
+                        androidx.core.app.ActivityOptionsCompat options = androidx.core.app.ActivityOptionsCompat.makeSceneTransitionAnimation(
+                                MyComplaintsActivity.this, sharedElement, sharedElement.getTransitionName());
+                        startActivity(intent, options.toBundle());
+                        return;
+                    } catch (Exception ignored) {}
                 }
+                startActivity(intent);
             }
 
             @Override
@@ -181,8 +184,9 @@ public class MyComplaintsActivity extends AppCompatActivity {
         });
 
         viewModel.getMyComplaints().observe(this, complaints -> {
-            // When data arrives, stop loading
-            viewModel.setLoading(false);
+            binding.shimmerMyComplaints.stopShimmer();
+            binding.shimmerMyComplaints.setVisibility(View.GONE);
+            binding.rvMyComplaints.setVisibility(View.VISIBLE);
             binding.swipeRefresh.setRefreshing(false);
             
             adapter.submitList(complaints);

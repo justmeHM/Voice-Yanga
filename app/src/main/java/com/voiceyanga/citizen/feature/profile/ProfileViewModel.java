@@ -3,6 +3,7 @@ package com.voiceyanga.citizen.feature.profile;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
+import com.voiceyanga.citizen.core.network.ErrorParser;
 import com.voiceyanga.citizen.data.local.SessionManager;
 import com.voiceyanga.citizen.data.remote.api.ApiService;
 import com.voiceyanga.citizen.data.remote.dto.ApiEnvelope;
@@ -80,7 +81,7 @@ public class ProfileViewModel extends ViewModel {
 
             @Override
             public void onFailure(Call<UserDto> call, Throwable t) {
-                _error.setValue(t.getMessage());
+                _error.setValue(ErrorParser.parseThrowable(t));
             }
         });
     }
@@ -104,7 +105,7 @@ public class ProfileViewModel extends ViewModel {
 
             @Override
             public void onFailure(Call<ApiEnvelope<UserDto>> call, Throwable t) {
-                _error.setValue(t.getMessage());
+                _error.setValue(ErrorParser.parseThrowable(t));
             }
         });
     }

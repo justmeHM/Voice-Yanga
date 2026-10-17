@@ -231,6 +231,22 @@ public class SessionManager {
         } catch (Throwable ignored) {}
     }
 
+    public void saveDismissedLatestReportUuid(String uuid) {
+        if (prefs == null || uuid == null) return;
+        try {
+            prefs.edit().putString("dismissed_latest_report_uuid", uuid).apply();
+        } catch (Throwable ignored) {}
+    }
+
+    public boolean isLatestReportDismissed(String uuid) {
+        if (prefs == null || uuid == null) return false;
+        try {
+            return uuid.equals(prefs.getString("dismissed_latest_report_uuid", null));
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     public synchronized String getAnonymousUserId() {
         if (prefs == null) return java.util.UUID.randomUUID().toString();
         try {
@@ -289,6 +305,46 @@ public class SessionManager {
         if (prefs == null) return;
         try {
             prefs.edit().putBoolean(KEY_DARK_MODE, enabled).apply();
+        } catch (Throwable ignored) {}
+    }
+
+    public boolean isAutoplayVideosEnabled() {
+        if (prefs == null) return true;
+        try {
+            return prefs.getBoolean("autoplay_videos", true);
+        } catch (Throwable t) {
+            return true;
+        }
+    }
+
+    public void setAutoplayVideosEnabled(boolean enabled) {
+        if (prefs == null) return;
+        try {
+            prefs.edit().putBoolean("autoplay_videos", enabled).apply();
+        } catch (Throwable ignored) {}
+    }
+
+    public java.util.Set<String> getSupportedComplaintUuids() {
+        if (prefs == null) return new java.util.HashSet<>();
+        try {
+            java.util.Set<String> set = prefs.getStringSet("supported_complaint_uuids", null);
+            return set != null ? new java.util.HashSet<>(set) : new java.util.HashSet<>();
+        } catch (Throwable t) {
+            return new java.util.HashSet<>();
+        }
+    }
+
+    public boolean isComplaintSupported(String uuid) {
+        if (uuid == null) return false;
+        return getSupportedComplaintUuids().contains(uuid);
+    }
+
+    public synchronized void addSupportedComplaintUuid(String uuid) {
+        if (prefs == null || uuid == null || uuid.isEmpty()) return;
+        try {
+            java.util.Set<String> set = getSupportedComplaintUuids();
+            set.add(uuid);
+            prefs.edit().putStringSet("supported_complaint_uuids", set).apply();
         } catch (Throwable ignored) {}
     }
 

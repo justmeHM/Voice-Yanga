@@ -15,7 +15,29 @@ import java.util.Locale;
 
 public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentViewHolder> {
 
+    public interface OnCommentActionListener {
+        void onEditComment(Comment comment);
+        void onDeleteComment(Comment comment);
+    }
+
     private List<Comment> comments = new ArrayList<>();
+    private OnCommentActionListener listener;
+    private String currentUserName;
+    private String currentUserEmail;
+
+    public CommentAdapter() {}
+
+    public CommentAdapter(OnCommentActionListener listener, String currentUserName, String currentUserEmail) {
+        this.listener = listener;
+        this.currentUserName = currentUserName;
+        this.currentUserEmail = currentUserEmail;
+    }
+
+    public void setCommentActionListener(OnCommentActionListener listener, String currentUserName, String currentUserEmail) {
+        this.listener = listener;
+        this.currentUserName = currentUserName;
+        this.currentUserEmail = currentUserEmail;
+    }
 
     public void setComments(List<Comment> comments) {
         this.comments = comments;
@@ -39,7 +61,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         return comments.size();
     }
 
-    static class CommentViewHolder extends RecyclerView.ViewHolder {
+    class CommentViewHolder extends RecyclerView.ViewHolder {
         private final ItemCommentBinding binding;
         private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault());
 
@@ -62,9 +84,24 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             binding.tvOfficialBadge.setVisibility(comment.isOfficial() ? View.VISIBLE : View.GONE);
             
             if (comment.isOfficial()) {
-                binding.llCommentRoot.setBackgroundColor(0x1A10B981); // Subtle 10% green tint for official updates
+                binding.llCommentRoot.setBackgroundColor(0x1A10B981);
             } else {
                 binding.llCommentRoot.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+            }
+
+            boolean isOwned = false;
+            String author = comment.getAuthorName();
+            if (author != null) {
+                if (currentUserName != null && author.equalsIgnoreCase(currentUserName)) isOwned = true;
+                if (currentUserEmail != null && author.equalsIgnoreCase(currentUserEmail)) isOwned = true;
+            }
+
+            if (isOwned && listener != null) {
+                binding.llCommentActions.setVisibility(View.VISIBLE);
+                binding.btnEditComment.setOnClickListener(v -> listener.onEditComment(comment));
+                binding.btnDeleteComment.setOnClickListener(v -> listener.onDeleteComment(comment));
+            } else {
+                binding.llCommentActions.setVisibility(View.GONE);
             }
         }
     }

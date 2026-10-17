@@ -42,8 +42,11 @@ public class ComplaintDto {
     @SerializedName("category")
     private CategoryDto category;
 
-    @SerializedName("location")
-    private LocationDto location;
+    @SerializedName(value = "location", alternate = {"locationData"})
+    private com.google.gson.JsonElement rawLocation;
+
+    @SerializedName(value = "locationName", alternate = {"address", "locationString", "rawLocationName"})
+    private String rawLocationName;
 
     @SerializedName("media")
     private java.util.List<ComplaintMedia> media;
@@ -87,11 +90,23 @@ public class ComplaintDto {
     @SerializedName(value = "voiceNoteDurationSeconds", alternate = {"voiceNoteDuration", "duration", "voiceDuration"})
     private Integer voiceNoteDurationSeconds;
 
+    @SerializedName(value = "videoUrl", alternate = {"video", "mediaVideoUrl"})
+    private String videoUrl;
+
+    @SerializedName(value = "videoThumbnailUrl", alternate = {"videoThumbnail", "thumbnailUrl"})
+    private String videoThumbnailUrl;
+
+    @SerializedName(value = "videoDurationSeconds", alternate = {"videoDuration"})
+    private Integer videoDurationSeconds;
+
     @SerializedName("assignedOrganization")
     private String assignedOrganization;
 
     @SerializedName("supportCount")
     private int supportCount;
+
+    @SerializedName(value = "supportedByMe", alternate = {"hasSupported", "isSupportedByMe", "hasVoted", "supported", "isSupported", "voted"})
+    private Boolean supportedByMe;
 
     public String getUserId() { return userId; }
     public String getClientUuid() { return clientUuid; }
@@ -102,12 +117,39 @@ public class ComplaintDto {
     public String getTitle() { return title; }
     public String getDescription() { return description; }
     public CategoryDto getCategory() { return category; }
-    public LocationDto getLocation() { return location; }
+    
+    public LocationDto getLocation() {
+        if (rawLocation != null && rawLocation.isJsonObject()) {
+            try {
+                return new com.google.gson.Gson().fromJson(rawLocation, LocationDto.class);
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
+
+    public String getLocationName() {
+        if (rawLocationName != null && !rawLocationName.trim().isEmpty()) {
+            return rawLocationName.trim();
+        }
+        if (rawLocation != null && rawLocation.isJsonPrimitive()) {
+            String s = rawLocation.getAsString();
+            if (s != null && !s.trim().isEmpty()) return s.trim();
+        }
+        if (getLocation() != null) {
+            String name = getLocation().getDisplayName();
+            if (name != null && !name.trim().isEmpty()) return name.trim();
+        }
+        return null;
+    }
     public String getPriority() { return priority; }
     public String getStatus() { return status; }
     
     public int getSupportCount() { 
         return supportCount; 
+    }
+
+    public Boolean getSupportedByMe() {
+        return supportedByMe;
     }
 
     public long getCreatedAt() {
@@ -177,6 +219,29 @@ public class ComplaintDto {
 
     public int getVoiceNoteDuration() {
         return voiceNoteDurationSeconds != null ? voiceNoteDurationSeconds : 0;
+    }
+
+    public String getVideoUrl() {
+        if (videoUrl != null && !videoUrl.isEmpty()) {
+            return videoUrl;
+        }
+        if (media != null) {
+            for (ComplaintMedia item : media) {
+                if ("VIDEO".equalsIgnoreCase(item.type)) {
+                    String url = item.getFileUrl();
+                    if (url != null && !url.isEmpty()) return url;
+                }
+            }
+        }
+        return null;
+    }
+
+    public String getVideoThumbnailUrl() {
+        return videoThumbnailUrl;
+    }
+
+    public int getVideoDuration() {
+        return videoDurationSeconds != null ? videoDurationSeconds : 0;
     }
 
     public String getAssignedToName() {

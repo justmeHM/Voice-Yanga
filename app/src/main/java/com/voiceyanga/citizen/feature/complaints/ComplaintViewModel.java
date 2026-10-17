@@ -69,6 +69,7 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
     public LiveData<Complaint> getDraft() { return _draft; }
     
     private String currentClientUuid = null;
+    private Complaint editingComplaint = null;
     private String lastSavedTitle = "";
     private String lastSavedDesc = "";
     private String lastSavedCategory = "";
@@ -308,6 +309,7 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         new Thread(() -> {
             Complaint complaint = repository.getComplaintSync(uuid);
             if (complaint != null) {
+                this.editingComplaint = complaint;
                 _draft.postValue(complaint);
                 loadMediaForComplaint(complaint);
             }
@@ -381,6 +383,7 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         defaults.add(new CategoryDto("cat_roads", getApplication().getString(R.string.category_roads)));
         defaults.add(new CategoryDto("cat_electricity", getApplication().getString(R.string.category_electricity)));
         defaults.add(new CategoryDto("cat_security", getApplication().getString(R.string.category_security)));
+        defaults.add(new CategoryDto("cat_sensitive", "Sensitive Issues"));
         defaults.add(new CategoryDto("cat_other", getApplication().getString(R.string.category_other)));
         return defaults;
     }
@@ -389,9 +392,52 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         referenceRepository.getCategories(new ReferenceRepository.ReferenceCallback<List<CategoryDto>>() {
             @Override
             public void onSuccess(List<CategoryDto> data) {
+                List<CategoryDto> merged = new ArrayList<>();
                 if (data != null && !data.isEmpty()) {
-                    _categories.setValue(data);
+                    merged.addAll(data);
+                } else {
+                    merged.addAll(getDefaultCategories());
                 }
+
+                boolean hasSensitive = false;
+                for (CategoryDto dto : merged) {
+                    if (dto.getName() != null && (dto.getName().equalsIgnoreCase("Sensitive Issues") || dto.getName().toLowerCase().contains("sensitive"))) {
+                        hasSensitive = true;
+                        break;
+                    }
+                }
+                if (!hasSensitive) {
+                    // Insert before "Other" if possible
+                    int otherIdx = -1;
+                    for (int i = 0; i < merged.size(); i++) {
+                        if (merged.get(i).getName() != null && merged.get(i).getName().equalsIgnoreCase("Other")) {
+                            otherIdx = i;
+                            break;
+                        }
+                    }
+                    if (otherIdx >= 0) {
+                        merged.add(otherIdx, new CategoryDto("cat_sensitive", "Sensitive Issues"));
+                    } else {
+                        merged.add(new CategoryDto("cat_sensitive", "Sensitive Issues"));
+                    }
+                }
+                // Filter out sensitive sub-categories from main grid so only "Sensitive Issues" card appears
+                List<CategoryDto> filtered = new ArrayList<>();
+                for (CategoryDto dto : merged) {
+                    if (dto.getName() == null) continue;
+                    String nameLower = dto.getName().toLowerCase().trim();
+                    boolean isSubCat = nameLower.contains("gender-based") || 
+                                       nameLower.contains("gbv") || 
+                                       nameLower.contains("sexual harassment") || 
+                                       nameLower.contains("human rights") || 
+                                       nameLower.contains("child labour") || 
+                                       nameLower.contains("child abuse") || 
+                                       nameLower.contains("violence against children");
+                    if (!isSubCat) {
+                        filtered.add(dto);
+                    }
+                }
+                _categories.setValue(filtered);
             }
 
             @Override
@@ -413,12 +459,37 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
         });
     }
 
+    public static boolean isSensitiveCategory(String categoryName) {
+        if (categoryName == null) return false;
+        String lower = categoryName.toLowerCase().trim();
+        return lower.contains("sensitive") || 
+               lower.contains("gender") || 
+               lower.contains("gbv") || 
+               lower.contains("harassment") || 
+               lower.contains("human rights") || 
+               lower.contains("child");
+    }
+
     public void submitComplaint(String title, String description, CategoryDto category, String customCategory, LocationDto location, String addressString, double lat, double lon) {
+        submitComplaint(title, description, category, customCategory, location, addressString, lat, lon, null, 0, false);
+    }
+
+    public void submitComplaint(String title, String description, CategoryDto category, String customCategory, LocationDto location, String addressString, double lat, double lon, String videoPath, int videoDuration) {
+        submitComplaint(title, description, category, customCategory, location, addressString, lat, lon, videoPath, videoDuration, false);
+    }
+
+    public void submitComplaint(String title, String description, CategoryDto category, String customCategory, LocationDto location, String addressString, double lat, double lon, String videoPath, int videoDuration, boolean isAnonymous) {
         VoiceNoteState vnState = _voiceNoteState.getValue();
         boolean hasVoiceNote = vnState != null && vnState.localFile != null && vnState.localFile.exists();
+        boolean hasVideo = videoPath != null && !videoPath.trim().isEmpty();
         
         if (hasVoiceNote && vnState.durationSeconds > 120) {
             _error.setValue("Voice note exceeds 2 minutes max limit");
+            return;
+        }
+
+        if (hasVideo && videoDuration > 90) {
+            _error.setValue("Video exceeds 1 minute 30 seconds max limit");
             return;
         }
         
@@ -427,12 +498,14 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
             ? category.getName() 
             : (customCategory != null && !customCategory.isEmpty() ? customCategory : null);
 
-        String finalLocation = (addressString != null && !addressString.trim().isEmpty()) ? addressString : 
-                              (location != null ? location.getDisplayName() : getApplication().getString(R.string.default_location));
+        String finalLocation = (addressString != null && !addressString.trim().isEmpty()) ? addressString.trim() : 
+                              (location != null && location.getDisplayName() != null ? location.getDisplayName().trim() : getApplication().getString(R.string.default_location));
 
         if (currentClientUuid == null) {
             currentClientUuid = UUID.randomUUID().toString();
         }
+
+        boolean isSensitive = isSensitiveCategory(categoryName);
 
         // Use the same validation logic as the request model
         com.voiceyanga.citizen.data.remote.dto.ComplaintRequest validationRequest = 
@@ -441,12 +514,18 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
                 description,
                 categoryName,
                 finalLocation,
-                "MEDIUM",
+                isSensitive ? "CRITICAL" : "MEDIUM",
                 currentClientUuid
             );
+        validationRequest.isConfidential = isSensitive;
+        validationRequest.isAnonymous = isAnonymous;
         
         if (hasVoiceNote) {
-            validationRequest.voiceNoteUrl = "temp"; // Placeholder for validation
+            validationRequest.voiceNoteUrl = "temp";
+        }
+
+        if (hasVideo) {
+            validationRequest.videoUrl = "temp";
         }
 
         if (!validationRequest.isValid()) {
@@ -493,15 +572,27 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
             }
         }
 
-        Complaint complaint = new Complaint(
-                currentClientUuid,
-                title,
-                description != null ? description : "",
-                categoryName != null ? categoryName : getApplication().getString(R.string.default_category),
-                finalLocation,
-                "PENDING",
-                System.currentTimeMillis()
-        );
+        boolean isEditMode = (editingComplaint != null && editingComplaint.getClientUuid().equals(currentClientUuid));
+
+        Complaint complaint;
+        if (isEditMode) {
+            complaint = editingComplaint;
+            complaint.setTitle(title);
+            complaint.setDescription(description != null ? description : "");
+            complaint.setCategory(categoryName != null ? categoryName : getApplication().getString(R.string.default_category));
+            complaint.setLocation(finalLocation);
+        } else {
+            complaint = new Complaint(
+                    currentClientUuid,
+                    title,
+                    description != null ? description : "",
+                    categoryName != null ? categoryName : getApplication().getString(R.string.default_category),
+                    finalLocation,
+                    "PENDING",
+                    System.currentTimeMillis()
+            );
+        }
+
         complaint.setLatitude(lat);
         complaint.setLongitude(lon);
         complaint.setHasValidCoordinates(lat != 0.0 && lon != 0.0);
@@ -522,11 +613,29 @@ public class ComplaintViewModel extends androidx.lifecycle.AndroidViewModel {
             complaint.setVoiceNoteLocalPath(vnState.localFile.getAbsolutePath());
             complaint.setVoiceNoteDuration(vnState.durationSeconds);
         }
+
+        if (hasVideo) {
+            complaint.setVideoLocalPath(videoPath);
+            complaint.setVideoDuration(videoDuration);
+        }
+
+        if (isSensitive) {
+            complaint.setConfidential(true);
+            complaint.setAnonymous(isAnonymous);
+            if (isAnonymous) {
+                complaint.setAuthorEmail(null);
+            }
+        }
         
         complaint.setFailureReason(null); // Clear previous errors if any
         
-        repository.deleteDraft(); // Clear any existing draft before promoting
-        repository.saveComplaint(complaint, _selectedPhotos.getValue(), photoLabels);
+        if (isEditMode) {
+            repository.editComplaint(complaint);
+            editingComplaint = null;
+        } else {
+            repository.deleteDraft(); // Clear any existing draft before promoting
+            repository.saveComplaint(complaint, _selectedPhotos.getValue(), photoLabels);
+        }
         
         // Immediate feedback [UX-FIX]
         _loading.setValue(false);

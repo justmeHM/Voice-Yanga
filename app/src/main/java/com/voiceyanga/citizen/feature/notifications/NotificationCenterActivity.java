@@ -56,8 +56,8 @@ public class NotificationCenterActivity extends AppCompatActivity {
                 String type = "ALL";
                 switch (tab.getPosition()) {
                     case 0: type = "ALL"; break;
-                    case 1: type = "COMPLAINT_STATUS_CHANGED"; break;
-                    case 2: type = "COMPLAINT_COMMENT_ADDED"; break;
+                    case 1: type = "STATUS_UPDATES"; break;
+                    case 2: type = "COMMENTS_AND_SUPPORT"; break;
                 }
                 viewModel.setFilterType(type);
                 

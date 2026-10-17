@@ -35,7 +35,7 @@
     <string name="register_loading">Creating account…</string>
     <string name="welcome_message">Welcome to Voice Yanga</string>
     <string name="greeting_format">Good morning, %1$s</string>
-    <string name="location_placeholder">Matero, Lusaka</string>
+    <string name="location_placeholder">Enter location or select on map</string>
     <string name="report_card_title">Report a community problem</string>
     <string name="report_card_subtitle">Help your community get issues noticed and resolved fast.</string>
     <string name="nearby_issues_title">Nearby Issues</string>
@@ -221,7 +221,7 @@
     <string name="error_specify_other">Please specify the problem type for \'Other\'</string>
 
     <string name="default_category">General</string>
-    <string name="default_location">Lusaka</string>
+    <string name="default_location">Location Not Specified</string>
 
     <string name="success_title">Success!</string>
     <string name="success_message">Thank you for making Yanga better.</string>

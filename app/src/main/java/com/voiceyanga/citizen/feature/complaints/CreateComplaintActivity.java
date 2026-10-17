@@ -77,8 +77,22 @@ public class CreateComplaintActivity extends AppCompatActivity {
     private ActivityResultLauncher<String> galleryLauncher;
     private ActivityResultLauncher<String> cameraPermissionLauncher;
     private ActivityResultLauncher<android.net.Uri> cameraLauncher;
+    private ActivityResultLauncher<Intent> videoCaptureLauncher;
+    private ActivityResultLauncher<String> videoGalleryLauncher;
+    private ActivityResultLauncher<String> videoPermissionLauncher;
     private android.net.Uri cameraImageUri;
+    private String selectedVideoPath = null;
+    private int selectedVideoDuration = 0;
     private boolean isSubmitted = false;
+
+    public static final String[] SENSITIVE_SUB_CATEGORIES = {
+            "Gender-Based Violence (GBV)",
+            "Sexual harassment",
+            "Human rights abuses",
+            "Child labour",
+            "Child abuse and neglect",
+            "Violence against children"
+    };
 
     private final android.os.Handler autoSaveHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable autoSaveRunnable = new Runnable() {
@@ -157,7 +171,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
                 new ActivityResultContracts.RequestPermission(),
                 isGranted -> {
                     if (isGranted) {
-                        HapticHelper.selection(binding.btnRecord);
+                        HapticHelper.selection(binding.btnAddEvidence);
                         if (analyticsRepository != null) {
                             analyticsRepository.trackMediaAttachmentStarted("VOICE_NOTE");
                         }
@@ -184,6 +198,41 @@ public class CreateComplaintActivity extends AppCompatActivity {
                         if (analyticsRepository != null) {
                             analyticsRepository.trackMediaAttachmentFailed("PHOTO", "CANCELLED");
                         }
+                    }
+                }
+        );
+
+        videoCaptureLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        Intent data = result.getData();
+                        android.net.Uri videoUri = data != null ? data.getData() : null;
+                        if (videoUri != null) {
+                            handleSelectedVideo(videoUri);
+                        } else {
+                            Toast.makeText(this, "Failed to capture video", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }
+        );
+
+        videoGalleryLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                uri -> {
+                    if (uri != null) {
+                        handleSelectedVideo(uri);
+                    }
+                }
+        );
+
+        videoPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                isGranted -> {
+                    if (isGranted) {
+                        launchVideoCapture();
+                    } else {
+                        Toast.makeText(this, R.string.error_camera_permission, Toast.LENGTH_SHORT).show();
                     }
                 }
         );
@@ -218,6 +267,249 @@ public class CreateComplaintActivity extends AppCompatActivity {
                     }
                 }
         );
+    }
+
+    private void handleSelectedVideo(android.net.Uri videoUri) {
+        android.media.MediaMetadataRetriever retriever = new android.media.MediaMetadataRetriever();
+        try {
+            retriever.setDataSource(this, videoUri);
+            
+            String durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION);
+            long durationMs = durationStr != null ? Long.parseLong(durationStr) : 0;
+            int durationSec = (int) (durationMs / 1000);
+            
+            if (durationSec > 90) {
+                showVideoTrimmerDialog(videoUri, durationMs);
+            } else {
+                processAndAttachVideo(videoUri, 0, durationMs, durationSec);
+            }
+        } catch (Exception e) {
+            android.util.Log.e("CreateComplaint", "Failed to process video", e);
+            Toast.makeText(this, "Failed to process video: " + com.voiceyanga.citizen.core.network.ErrorParser.parseThrowable(e), Toast.LENGTH_SHORT).show();
+        } finally {
+            try {
+                retriever.release();
+            } catch (Exception ignored) {}
+        }
+    }
+
+    private void showVideoTrimmerDialog(android.net.Uri videoUri, long durationMs) {
+        android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        dialog.setContentView(R.layout.dialog_video_trimmer);
+
+        androidx.media3.ui.PlayerView playerView = dialog.findViewById(R.id.playerViewTrimmer);
+        android.widget.TextView tvTrimDuration = dialog.findViewById(R.id.tvTrimDuration);
+        com.google.android.material.slider.RangeSlider rangeSlider = dialog.findViewById(R.id.rangeSliderTrim);
+        com.google.android.material.button.MaterialButton btnConfirm = dialog.findViewById(R.id.btnConfirmTrim);
+        com.google.android.material.button.MaterialButton btnCancel = dialog.findViewById(R.id.btnCancelTrim);
+
+        androidx.media3.exoplayer.ExoPlayer player = new androidx.media3.exoplayer.ExoPlayer.Builder(this).build();
+        playerView.setPlayer(player);
+        player.setRepeatMode(androidx.media3.common.Player.REPEAT_MODE_ONE);
+
+        androidx.media3.common.MediaItem mediaItem = androidx.media3.common.MediaItem.fromUri(videoUri);
+        player.setMediaItem(mediaItem);
+        player.prepare();
+        player.play();
+
+        float durationSec = durationMs / 1000f;
+        rangeSlider.setValueFrom(0f);
+        rangeSlider.setValueTo(durationSec);
+        
+        float defaultEnd = Math.min(90f, durationSec);
+        rangeSlider.setValues(0f, defaultEnd);
+
+        final long[] selectedStartMs = {0};
+        final long[] selectedEndMs = {(long) (defaultEnd * 1000)};
+
+        rangeSlider.addOnChangeListener((slider, value, fromUser) -> {
+            java.util.List<Float> values = slider.getValues();
+            float startSec = values.get(0);
+            float endSec = values.get(1);
+
+            if (endSec - startSec > 90f) {
+                if (fromUser) {
+                    endSec = startSec + 90f;
+                    if (endSec > durationSec) {
+                        endSec = durationSec;
+                        startSec = Math.max(0f, endSec - 90f);
+                    }
+                    slider.setValues(startSec, endSec);
+                }
+            }
+
+            selectedStartMs[0] = (long) (startSec * 1000);
+            selectedEndMs[0] = (long) (endSec * 1000);
+
+            long clipLengthSec = (long) (endSec - startSec);
+            tvTrimDuration.setText(String.format(Locale.getDefault(), "Selected Clip: %d:%02d - %d:%02d (%d:%02d)",
+                    (long) startSec / 60, (long) startSec % 60,
+                    (long) endSec / 60, (long) endSec % 60,
+                    clipLengthSec / 60, clipLengthSec % 60));
+
+            player.seekTo(selectedStartMs[0]);
+        });
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        btnConfirm.setOnClickListener(v -> {
+            dialog.dismiss();
+            processAndAttachVideo(videoUri, selectedStartMs[0], selectedEndMs[0], (int) ((selectedEndMs[0] - selectedStartMs[0]) / 1000));
+        });
+
+        dialog.setOnDismissListener(d -> {
+            player.stop();
+            player.release();
+        });
+
+        dialog.show();
+    }
+
+    private void processAndAttachVideo(android.net.Uri videoUri, long startMs, long endMs, int clipDurationSec) {
+        android.app.ProgressDialog progressDialog = new android.app.ProgressDialog(this);
+        progressDialog.setMessage("Optimizing video clip for upload...");
+        progressDialog.setCancelable(false);
+        progressDialog.show();
+
+        android.media.MediaMetadataRetriever retriever = new android.media.MediaMetadataRetriever();
+        android.graphics.Bitmap frame = null;
+        try {
+            retriever.setDataSource(this, videoUri);
+            frame = retriever.getFrameAtTime(startMs > 0 ? startMs * 1000 : 1000000);
+        } catch (Exception ignored) {
+        } finally {
+            try { retriever.release(); } catch (Exception ignored) {}
+        }
+
+        final android.graphics.Bitmap thumbnailFrame = frame;
+
+        com.voiceyanga.citizen.core.utils.VideoCompressor.compressVideo(this, videoUri, startMs, endMs, new com.voiceyanga.citizen.core.utils.VideoCompressor.CompressCallback() {
+            @Override
+            public void onSuccess(java.io.File compressedFile) {
+                if (isFinishing() || isDestroyed()) return;
+                progressDialog.dismiss();
+
+                selectedVideoPath = compressedFile.getAbsolutePath();
+                selectedVideoDuration = clipDurationSec;
+
+                binding.cardVideoNote.setVisibility(View.VISIBLE);
+                if (thumbnailFrame != null) {
+                    binding.ivVideoThumbnail.setImageBitmap(thumbnailFrame);
+                }
+                binding.tvVideoDuration.setText(String.format(Locale.getDefault(), "Video • %d:%02d", clipDurationSec / 60, clipDurationSec % 60));
+
+                binding.btnDeleteVideo.setOnClickListener(v -> {
+                    selectedVideoPath = null;
+                    selectedVideoDuration = 0;
+                    binding.cardVideoNote.setVisibility(View.GONE);
+                });
+
+                Toast.makeText(CreateComplaintActivity.this, "Video attached & optimized", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                if (isFinishing() || isDestroyed()) return;
+                progressDialog.dismiss();
+                Toast.makeText(CreateComplaintActivity.this, "Failed to attach video: " + errorMessage, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showMediaSelectorBottomSheet() {
+        com.google.android.material.bottomsheet.BottomSheetDialog bottomSheetDialog = new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        android.view.View sheetView = getLayoutInflater().inflate(R.layout.dialog_media_selector, null);
+        bottomSheetDialog.setContentView(sheetView);
+
+        sheetView.findViewById(R.id.cardOptionPhotos).setOnClickListener(v -> {
+            HapticHelper.selection(v);
+            bottomSheetDialog.dismiss();
+            showPhotoSourceDialog();
+        });
+
+        sheetView.findViewById(R.id.cardOptionVoice).setOnClickListener(v -> {
+            HapticHelper.selection(v);
+            bottomSheetDialog.dismiss();
+            checkVoicePermission();
+        });
+
+        sheetView.findViewById(R.id.cardOptionVideo).setOnClickListener(v -> {
+            HapticHelper.selection(v);
+            bottomSheetDialog.dismiss();
+            showVideoSourceDialog();
+        });
+
+        bottomSheetDialog.show();
+    }
+
+    private void checkCameraPermissionForVideo() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            launchVideoCapture();
+        } else {
+            videoPermissionLauncher.launch(Manifest.permission.CAMERA);
+        }
+    }
+
+    private void launchVideoCapture() {
+        try {
+            Intent videoIntent = new Intent(android.provider.MediaStore.ACTION_VIDEO_CAPTURE);
+            videoIntent.putExtra(android.provider.MediaStore.EXTRA_DURATION_LIMIT, 90);
+            videoCaptureLauncher.launch(videoIntent);
+        } catch (android.content.ActivityNotFoundException e) {
+            Toast.makeText(this, "No camera application found to record video", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Unable to launch video recorder: " + com.voiceyanga.citizen.core.network.ErrorParser.parseThrowable(e), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showVideoSourceDialog() {
+        String[] options = {"Record Video", "Choose Video from Gallery"};
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Video Attachment (Max 90s)")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        checkCameraPermissionForVideo();
+                    } else {
+                        videoGalleryLauncher.launch("video/*");
+                    }
+                })
+                .show();
+    }
+
+    private void showVideoPreviewDialog(String videoPath) {
+        if (videoPath == null || videoPath.trim().isEmpty()) {
+            Toast.makeText(this, "No video available to preview", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        dialog.setContentView(R.layout.dialog_video_preview);
+
+        androidx.media3.ui.PlayerView playerView = dialog.findViewById(R.id.playerViewPreview);
+        com.google.android.material.button.MaterialButton btnClose = dialog.findViewById(R.id.btnClosePreview);
+
+        androidx.media3.exoplayer.ExoPlayer player = new androidx.media3.exoplayer.ExoPlayer.Builder(this).build();
+        playerView.setPlayer(player);
+
+        androidx.media3.common.MediaItem mediaItem;
+        if (videoPath.startsWith("content://") || videoPath.startsWith("http://") || videoPath.startsWith("https://")) {
+            mediaItem = androidx.media3.common.MediaItem.fromUri(android.net.Uri.parse(videoPath));
+        } else {
+            mediaItem = androidx.media3.common.MediaItem.fromUri(android.net.Uri.fromFile(new java.io.File(videoPath)));
+        }
+
+        player.setMediaItem(mediaItem);
+        player.prepare();
+        player.play();
+
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.setOnDismissListener(d -> {
+            player.stop();
+            player.release();
+        });
+
+        dialog.show();
     }
 
     private void setupToolbar() {
@@ -498,16 +790,42 @@ public class CreateComplaintActivity extends AppCompatActivity {
             if (sessionManager != null && detectedAddress != null && !detectedAddress.trim().isEmpty() && !detectedAddress.contains("timed out")) {
                 sessionManager.saveRecentCustomLocation(detectedAddress);
             }
+            boolean isAnonymous = binding.switchAnonymous.isChecked();
+            if (binding.tilSubCategory.getVisibility() == View.VISIBLE && binding.actvSubCategory.getText() != null && !binding.actvSubCategory.getText().toString().trim().isEmpty()) {
+                customCategory = binding.actvSubCategory.getText().toString().trim();
+            }
+
             viewModel.submitComplaint(title, description, selectedCategory, customCategory, currentLocation, 
-                    detectedAddress, currentLatitude, currentLongitude);
+                    detectedAddress, currentLatitude, currentLongitude, selectedVideoPath, selectedVideoDuration, isAnonymous);
             isSubmitted = true;
         });
 
         binding.btnManualLocation.setOnClickListener(v -> showManualLocationDialog());
-        binding.btnAddPhotos.setOnClickListener(v -> showPhotoSourceDialog());
+        binding.btnAddEvidence.setOnClickListener(v -> {
+            HapticHelper.selection(v);
+            showMediaSelectorBottomSheet();
+        });
+        binding.btnPlayVideoPreview.setOnClickListener(v -> {
+            HapticHelper.selection(v);
+            showVideoPreviewDialog(selectedVideoPath);
+        });
         binding.cardReviewSummary.setOnClickListener(v -> showFullReviewDialog());
 
-        binding.btnRecord.setOnClickListener(v -> checkVoicePermission());
+        binding.btnQuickExit.setOnClickListener(v -> {
+            HapticHelper.selection(v);
+            finish();
+        });
+
+        android.widget.ArrayAdapter<String> subCatAdapter = new android.widget.ArrayAdapter<>(
+                this, android.R.layout.simple_dropdown_item_1line, SENSITIVE_SUB_CATEGORIES);
+        binding.actvSubCategory.setAdapter(subCatAdapter);
+        binding.actvSubCategory.setOnItemClickListener((parent, view, position, id) -> {
+            String subCat = SENSITIVE_SUB_CATEGORIES[position];
+            selectedCategory = new CategoryDto(null, subCat);
+            binding.etTitle.setText(subCat);
+            populateSummary();
+        });
+
         binding.btnStop.setOnClickListener(v -> {
             HapticHelper.selection(v);
             viewModel.stopRecording();
@@ -523,7 +841,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
     private void checkVoicePermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            HapticHelper.selection(binding.btnRecord);
+            HapticHelper.selection(binding.btnAddEvidence);
             viewModel.startRecording();
         } else {
             voicePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
@@ -789,7 +1107,22 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
     private void selectCategory(String categoryName) {
         boolean isOther = categoryName.equalsIgnoreCase(getString(R.string.category_other));
+        boolean isSensitive = categoryName.toLowerCase().contains("sensitive") || ComplaintViewModel.isSensitiveCategory(categoryName);
+
         binding.tilCustomCategory.setVisibility(isOther ? View.VISIBLE : View.GONE);
+        binding.tilSubCategory.setVisibility(isSensitive ? View.VISIBLE : View.GONE);
+        binding.cardConfidentialBanner.setVisibility(isSensitive ? View.VISIBLE : View.GONE);
+        binding.switchAnonymous.setVisibility(isSensitive ? View.VISIBLE : View.GONE);
+
+        binding.etTitle.setText(categoryName);
+
+        if (!isSensitive) {
+            binding.actvSubCategory.setText("", false);
+            binding.switchAnonymous.setChecked(false);
+        }
+        if (!isOther) {
+            binding.etCustomCategory.setText("");
+        }
         
         if (binding.llStepDetails.getVisibility() != View.VISIBLE) {
             binding.llStepDetails.setVisibility(View.VISIBLE);

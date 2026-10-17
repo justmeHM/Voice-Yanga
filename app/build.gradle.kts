@@ -13,8 +13,8 @@ android {
         applicationId = "com.voiceyanga.citizen"
         minSdk = 24
         targetSdk = 36
-        versionCode = 12
-        versionName = "1.2.1"
+        versionCode = 13
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -104,4 +104,7 @@ dependencies {
     implementation(libs.shimmer)
     implementation(libs.biometric)
     implementation(libs.lottie)
+    implementation("androidx.media3:media3-exoplayer:1.3.1")
+    implementation("androidx.media3:media3-ui:1.3.1")
+    implementation("androidx.media3:media3-transformer:1.3.1")
 }

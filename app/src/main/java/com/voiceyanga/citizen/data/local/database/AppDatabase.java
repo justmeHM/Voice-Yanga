@@ -16,11 +16,45 @@ import com.voiceyanga.citizen.data.local.entity.PendingAction;
 import com.voiceyanga.citizen.data.local.dao.AnalyticsEventDao;
 import com.voiceyanga.citizen.data.local.entity.AnalyticsEventEntity;
 
-@Database(entities = {Complaint.class, Comment.class, ComplaintPhoto.class, Notification.class, PendingAction.class, com.voiceyanga.citizen.data.local.entity.ComplaintFeedMembership.class, AnalyticsEventEntity.class}, version = 23, exportSchema = false)
+@Database(entities = {Complaint.class, Comment.class, ComplaintPhoto.class, Notification.class, PendingAction.class, com.voiceyanga.citizen.data.local.entity.ComplaintFeedMembership.class, AnalyticsEventEntity.class}, version = 26, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract ComplaintDao complaintDao();
     public abstract NotificationDao notificationDao();
     public abstract AnalyticsEventDao analyticsEventDao();
+
+    public static final Migration MIGRATION_25_26 = new Migration(25, 26) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            try {
+                database.execSQL("ALTER TABLE `complaints` ADD COLUMN `confidential` INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception ignored) {}
+            try {
+                database.execSQL("ALTER TABLE `complaints` ADD COLUMN `anonymous` INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception ignored) {}
+        }
+    };
+
+    public static final Migration MIGRATION_24_25 = new Migration(24, 25) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            try {
+                database.execSQL("ALTER TABLE `complaints` ADD COLUMN `confidential` INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception ignored) {}
+            try {
+                database.execSQL("ALTER TABLE `complaints` ADD COLUMN `anonymous` INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception ignored) {}
+        }
+    };
+
+    public static final Migration MIGRATION_23_24 = new Migration(23, 24) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `complaints` ADD COLUMN `videoLocalPath` TEXT");
+            database.execSQL("ALTER TABLE `complaints` ADD COLUMN `videoUrl` TEXT");
+            database.execSQL("ALTER TABLE `complaints` ADD COLUMN `videoThumbnailUrl` TEXT");
+            database.execSQL("ALTER TABLE `complaints` ADD COLUMN `videoDuration` INTEGER NOT NULL DEFAULT 0");
+        }
+    };
 
     public static final Migration MIGRATION_22_23 = new Migration(22, 23) {
         @Override

@@ -16,6 +16,7 @@ import com.voiceyanga.citizen.data.remote.api.ApiService;
 import com.voiceyanga.citizen.data.remote.dto.ApiEnvelope;
 import com.voiceyanga.citizen.data.remote.dto.CommentRequest;
 import com.voiceyanga.citizen.data.remote.dto.CommentResponse;
+import com.voiceyanga.citizen.data.remote.dto.ComplaintDto;
 import com.voiceyanga.citizen.data.remote.dto.ComplaintRequest;
 import com.voiceyanga.citizen.data.remote.dto.CreateComplaintResponse;
 import com.voiceyanga.citizen.data.remote.dto.VoiceNoteData;
@@ -160,6 +161,19 @@ public class SyncWorker extends Worker {
             }
         }
 
+        String videoUrl = complaint.getVideoUrl();
+        if (videoUrl == null && complaint.getVideoLocalPath() != null) {
+            File videoFile = new File(complaint.getVideoLocalPath());
+            int duration = complaint.getVideoDuration();
+
+            if (videoFile.exists() && videoFile.length() > 0 && duration <= 90) {
+                videoUrl = uploadVideoFile(videoFile, duration, complaint);
+                complaint.setVideoUrl(videoUrl);
+                complaintDao.update(complaint);
+                Log.i(TAG, "Video upload complete. fileUrl: " + videoUrl);
+            }
+        }
+
         List<ComplaintPhoto> localPhotos = complaintDao.getPhotosForComplaintSync(complaint.getClientUuid());
         
         Response<CreateComplaintResponse> response;
@@ -174,6 +188,8 @@ public class SyncWorker extends Worker {
             );
             request.voiceNoteUrl = voiceNoteUrl;
             request.voiceNoteDurationSeconds = complaint.getVoiceNoteDuration() > 0 ? complaint.getVoiceNoteDuration() : null;
+            request.videoUrl = videoUrl;
+            request.videoDurationSeconds = complaint.getVideoDuration() > 0 ? complaint.getVideoDuration() : null;
             request.locationId = complaint.getLocationId();
             request.ward = complaint.getWard();
             request.district = complaint.getDistrict();
@@ -224,6 +240,12 @@ public class SyncWorker extends Worker {
             }
             if (complaint.getVoiceNoteDuration() != 0) {
                 parts.put("voiceNoteDurationSeconds", toRequestBody(String.valueOf(complaint.getVoiceNoteDuration())));
+            }
+            if (videoUrl != null) {
+                parts.put("videoUrl", toRequestBody(videoUrl));
+            }
+            if (complaint.getVideoDuration() != 0) {
+                parts.put("videoDurationSeconds", toRequestBody(String.valueOf(complaint.getVideoDuration())));
             }
 
             response = apiService.createComplaintWithPhotos(parts, photoParts).execute();
@@ -312,10 +334,6 @@ public class SyncWorker extends Worker {
         return RequestBody.create(value, MediaType.parse("text/plain"));
     }
 
-    private void logFailure(String action, Response<?> response) {
-        Log.e(TAG, action + " failed (HTTP " + response.code() + ")");
-    }
-
     private void syncAction(PendingAction action) throws Exception {
         Complaint complaint = complaintDao.getComplaintByUuid(action.getComplaintUuid());
         if (complaint == null || complaint.getServerId() == null) {
@@ -338,9 +356,101 @@ public class SyncWorker extends Worker {
             Response<ApiEnvelope<CommentResponse>> response = apiService.addComment(complaint.getServerId(), request).execute();
             if (response.isSuccessful() && response.body() != null) {
                 complaintDao.deletePendingAction(action.getId());
+                try {
+                    com.google.firebase.messaging.FirebaseMessaging.getInstance()
+                            .subscribeToTopic("complaint_" + complaint.getServerId());
+                } catch (Exception ignored) {}
             } else {
                 throw new Exception("Comment failed");
             }
+        } else if ("EDIT_COMMENT".equals(action.getActionType())) {
+            String rawData = action.getData();
+            if (rawData != null && rawData.contains("|||")) {
+                String[] parts = rawData.split("\\|\\|\\|", 2);
+                String commentId = parts[0];
+                String newContent = parts[1];
+                CommentRequest request = new CommentRequest(newContent, true);
+                Response<ApiEnvelope<CommentResponse>> response = apiService.updateComment(complaint.getServerId(), commentId, request).execute();
+                if (response.isSuccessful() || response.code() == 404) {
+                    complaintDao.deletePendingAction(action.getId());
+                } else {
+                    throw new Exception("Edit comment failed");
+                }
+            } else {
+                complaintDao.deletePendingAction(action.getId());
+            }
+        } else if ("DELETE_COMMENT".equals(action.getActionType())) {
+            String commentId = action.getData();
+            Response<ApiEnvelope<Object>> response = apiService.deleteComment(complaint.getServerId(), commentId).execute();
+            if (response.isSuccessful() || response.code() == 404) {
+                complaintDao.deletePendingAction(action.getId());
+            } else {
+                throw new Exception("Delete comment failed");
+            }
+        } else if ("EDIT_COMPLAINT".equals(action.getActionType())) {
+            String jsonStr = action.getData();
+            ComplaintRequest request = new com.google.gson.Gson().fromJson(jsonStr, ComplaintRequest.class);
+            if (request == null) {
+                request = new ComplaintRequest(complaint.getTitle(), complaint.getDescription(), complaint.getCategory(), complaint.getLocation(), complaint.getPriority(), complaint.getClientUuid());
+            }
+            Response<ApiEnvelope<ComplaintDto>> response = apiService.updateComplaint(complaint.getServerId(), request).execute();
+            if (response.isSuccessful() || response.code() == 404) {
+                complaintDao.deletePendingAction(action.getId());
+            } else {
+                throw new Exception("Edit complaint failed");
+            }
+        }
+    }
+
+    private String uploadVideoFile(File videoFile, int duration, Complaint complaint) throws Exception {
+        int safeDuration = Math.max(1, Math.min(90, duration));
+        String filename = videoFile.getName();
+        String mimeType = "video/mp4";
+
+        try {
+            com.voiceyanga.citizen.data.remote.dto.PresignedUploadRequest presignedReq =
+                    new com.voiceyanga.citizen.data.remote.dto.PresignedUploadRequest(filename, mimeType, videoFile.length());
+            
+            Response<ApiEnvelope<com.voiceyanga.citizen.data.remote.dto.PresignedUploadResponse>> presignedResponse =
+                    apiService.getPresignedVideoUploadUrl(presignedReq).execute();
+
+            if (presignedResponse.isSuccessful() && presignedResponse.body() != null && presignedResponse.body().success) {
+                com.voiceyanga.citizen.data.remote.dto.PresignedUploadResponse data = presignedResponse.body().data;
+                if (data != null && data.uploadUrl != null && data.fileUrl != null) {
+                    RequestBody fileBody = RequestBody.create(videoFile, MediaType.parse(mimeType));
+                    Response<Void> putResponse = apiService.uploadBinaryToUrl(data.uploadUrl, fileBody).execute();
+                    if (putResponse.isSuccessful()) {
+                        Log.i(TAG, "Presigned video upload successful. fileUrl: " + data.fileUrl);
+                        return data.fileUrl;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Presigned video upload attempt failed or not supported, trying legacy endpoint", e);
+        }
+
+        if (videoFile.length() > 4.2 * 1024 * 1024) {
+            long sizeMb = videoFile.length() / (1024 * 1024);
+            throw new Exception("Video upload failed: File size (" + sizeMb + "MB) exceeds Vercel 4.5MB serverless limit. Direct upload endpoint (POST /videos/upload-url) required.");
+        }
+
+        RequestBody videoBody = RequestBody.create(videoFile, MediaType.parse(mimeType));
+        MultipartBody.Part filePart = MultipartBody.Part.createFormData("file", filename, videoBody);
+
+        RequestBody durationPart = RequestBody.create(
+                String.valueOf(safeDuration),
+                MediaType.parse("text/plain")
+        );
+
+        Response<ApiEnvelope<VoiceNoteData>> videoResponse = apiService.uploadVideo(filePart, durationPart).execute();
+
+        if (videoResponse.isSuccessful() && videoResponse.body() != null && videoResponse.body().success) {
+            Log.i(TAG, "Legacy video upload successful. fileUrl: " + videoResponse.body().data.fileUrl);
+            return videoResponse.body().data.fileUrl;
+        } else {
+            recordFailure("Video upload", videoResponse, complaint, false);
+            String error = com.voiceyanga.citizen.core.network.ErrorParser.parseError(videoResponse);
+            throw new Exception("Video upload failed: " + error);
         }
     }
 
@@ -354,26 +464,19 @@ public class SyncWorker extends Worker {
                     Log.e(TAG, "File does not exist: " + uriString);
                     return null;
                 }
+                RequestBody requestFile = RequestBody.create(file, MediaType.parse("image/jpeg"));
+                return MultipartBody.Part.createFormData("photos", file.getName(), requestFile);
+            } else {
+                android.net.Uri uri = android.net.Uri.parse(uriString);
+                File compressed = com.voiceyanga.citizen.core.utils.ImageCompressor.compress(getApplicationContext(), uriString);
+                if (compressed != null && compressed.exists()) {
+                    RequestBody requestFile = RequestBody.create(compressed, MediaType.parse("image/jpeg"));
+                    return MultipartBody.Part.createFormData("photos", compressed.getName(), requestFile);
+                }
             }
-
-            Context context = getApplicationContext();
-            File compressedFile = com.voiceyanga.citizen.core.utils.ImageCompressor.compress(context, uriString);
-            if (compressedFile == null) return null;
-
-            if (compressedFile.length() > 4_000_000L) {
-                Log.e(TAG, "Compressed photo exceeds 4MB limit: " + compressedFile.length() + " bytes");
-                return null;
-            }
-
-            android.net.Uri uri = android.net.Uri.parse(uriString);
-            String mimeType = context.getContentResolver().getType(uri);
-            if (mimeType == null) mimeType = "image/jpeg";
-
-            RequestBody requestFile = RequestBody.create(compressedFile, MediaType.parse(mimeType));
-            return MultipartBody.Part.createFormData("photos", compressedFile.getName(), requestFile);
         } catch (Exception e) {
-            Log.e(TAG, "Error preparing image part", e);
-            return null;
+            Log.e(TAG, "Failed to prepare image part", e);
         }
+        return null;
     }
 }

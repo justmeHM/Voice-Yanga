@@ -242,6 +242,17 @@
                                         android:textSize="12sp"
                                         app:rippleColor="@color/primary_green_light" />
 
+                                    <ImageButton
+                                        android:id="@+id/btnCloseLatestReport"
+                                        android:layout_width="32dp"
+                                        android:layout_height="32dp"
+                                        android:layout_marginStart="4dp"
+                                        android:background="?attr/selectableItemBackgroundBorderless"
+                                        android:contentDescription="Dismiss"
+                                        android:padding="6dp"
+                                        android:src="@drawable/ic_close_white"
+                                        app:tint="?attr/colorOnSurfaceVariant" />
+
                                 </LinearLayout>
 
                                 <TextView

@@ -533,7 +533,8 @@ public class HomeActivity extends AppCompatActivity {
         });
 
         viewModel.getLatestMyComplaint().observe(this, complaint -> {
-            if (complaint != null) {
+            if (complaint != null && !sessionManager.isLatestReportDismissed(complaint.getClientUuid())) {
+                binding.cardLatestReport.setTranslationX(0f);
                 binding.cardLatestReport.setVisibility(View.VISIBLE);
                 binding.tvLatestTitle.setText(complaint.getTitle());
                 binding.tvLatestStatus.setText(complaint.getStatus());
@@ -553,6 +554,19 @@ public class HomeActivity extends AppCompatActivity {
                     intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaint.getClientUuid());
                     startActivity(intent);
                 });
+
+                Runnable dismissAction = () -> {
+                    sessionManager.saveDismissedLatestReportUuid(complaint.getClientUuid());
+                    binding.cardLatestReport.animate()
+                            .translationX(1000f)
+                            .setDuration(250)
+                            .withEndAction(() -> binding.cardLatestReport.setVisibility(View.GONE))
+                            .start();
+                };
+
+                if (binding.btnCloseLatestReport != null) {
+                    binding.btnCloseLatestReport.setOnClickListener(v -> dismissAction.run());
+                }
             } else {
                 binding.cardLatestReport.setVisibility(View.GONE);
             }

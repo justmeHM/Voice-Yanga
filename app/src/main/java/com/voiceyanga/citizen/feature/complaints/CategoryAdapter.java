@@ -29,7 +29,22 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
 
     public void setCategories(List<CategoryDto> categories) {
         if (categories == null) return;
-        this.categories = new ArrayList<>(categories);
+        List<CategoryDto> filtered = new ArrayList<>();
+        for (CategoryDto dto : categories) {
+            if (dto.getName() == null) continue;
+            String nameLower = dto.getName().toLowerCase().trim();
+            boolean isSubCat = nameLower.contains("gender-based") || 
+                               nameLower.contains("gbv") || 
+                               nameLower.contains("sexual harassment") || 
+                               nameLower.contains("human rights") || 
+                               nameLower.contains("child labour") || 
+                               nameLower.contains("child abuse") || 
+                               nameLower.contains("violence against children");
+            if (!isSubCat) {
+                filtered.add(dto);
+            }
+        }
+        this.categories = filtered;
         updateSelectedPosition();
         notifyDataSetChanged();
     }
@@ -93,6 +108,7 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
             else if (name.contains("road")) iconRes = R.drawable.road;
             else if (name.contains("elect")) iconRes = R.drawable.electricity;
             else if (name.contains("secu")) iconRes = R.drawable.security;
+            else if (name.contains("sensit") || name.contains("gender") || name.contains("abuse") || name.contains("harass")) iconRes = R.drawable.privacy;
             
             binding.ivCategoryIcon.setImageResource(iconRes);
             

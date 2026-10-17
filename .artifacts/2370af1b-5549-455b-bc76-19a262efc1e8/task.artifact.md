@@ -1,0 +1,4 @@
+- `[x]` Fix `isMediaAvailable` check and configure `DefaultHttpDataSource.Factory` for ExoPlayer in `ComplaintDetailActivity.java`
+- `[x]` Configure `DefaultHttpDataSource.Factory` for feed ExoPlayer in `ComplaintAdapter.java`
+- `[x]` Update `BACKEND_VERCEL_50MB_VIDEO_INSTRUCTIONS.md` for persistent S3/Vercel Blob video storage
+- `[x]` Run Gradle build (`app:assembleDebug`) and verify compilation

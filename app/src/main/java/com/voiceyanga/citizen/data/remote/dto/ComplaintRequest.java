@@ -27,6 +27,12 @@ public class ComplaintRequest {
     @SerializedName("voiceNoteDurationSeconds")
     public Integer voiceNoteDurationSeconds;
 
+    @SerializedName("videoUrl")
+    public String videoUrl;
+
+    @SerializedName("videoDurationSeconds")
+    public Integer videoDurationSeconds;
+
     @SerializedName("locationId")
     public String locationId;
 
@@ -44,6 +50,12 @@ public class ComplaintRequest {
 
     @SerializedName("longitude")
     public Double longitude;
+
+    @SerializedName("isConfidential")
+    public Boolean isConfidential;
+
+    @SerializedName("isAnonymous")
+    public Boolean isAnonymous;
 
     public ComplaintRequest() {}
 
@@ -70,7 +82,8 @@ public class ComplaintRequest {
         }
 
         boolean hasVoiceNote = voiceNoteUrl != null && !voiceNoteUrl.isEmpty();
-        if (!hasVoiceNote && (description == null || description.length() < 10)) return false;
+        boolean hasVideo = videoUrl != null && !videoUrl.isEmpty();
+        if (!hasVoiceNote && !hasVideo && (description == null || description.length() < 10)) return false;
 
         return true;
     }

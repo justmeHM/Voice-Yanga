@@ -42,24 +42,49 @@ public class OutboxActivity extends AppCompatActivity {
         adapter = new ComplaintAdapter(new ComplaintAdapter.OnComplaintClickListener() {
             @Override
             public void onComplaintClick(Complaint complaint, View sharedElement) {
-                if ("DRAFT".equals(complaint.getSyncStatus())) {
-                    startActivity(new Intent(OutboxActivity.this, CreateComplaintActivity.class));
-                    finish();
-                } else {
-                    Intent intent = new Intent(OutboxActivity.this, ComplaintDetailActivity.class);
-                    intent.putExtra(ComplaintDetailActivity.EXTRA_COMPLAINT_UUID, complaint.getClientUuid());
-                    startActivity(intent);
-                }
+                showOutboxActionDialog(complaint);
             }
 
             @Override
             public void onRetryClick(Complaint complaint) {
-                viewModel.retryComplaint(complaint.getClientUuid());
-                Toast.makeText(OutboxActivity.this, "Retrying sync...", Toast.LENGTH_SHORT).show();
+                showOutboxActionDialog(complaint);
             }
         }, viewModel.getRepository());
         binding.rvOutbox.setLayoutManager(new LinearLayoutManager(this));
         binding.rvOutbox.setAdapter(adapter);
+    }
+
+    private void showOutboxActionDialog(Complaint complaint) {
+        String[] options = {"Retry Upload", "Edit Report", "Cancel / Discard Submission"};
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle(complaint.getTitle() != null && !complaint.getTitle().isEmpty() ? complaint.getTitle() : "Pending Submission")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        viewModel.retryComplaint(complaint.getClientUuid());
+                        Toast.makeText(this, "Retrying upload...", Toast.LENGTH_SHORT).show();
+                    } else if (which == 1) {
+                        Intent intent = new Intent(OutboxActivity.this, CreateComplaintActivity.class);
+                        intent.putExtra("extra_complaint_uuid", complaint.getClientUuid());
+                        startActivity(intent);
+                        finish();
+                    } else {
+                        confirmDiscardSubmission(complaint);
+                    }
+                })
+                .setNegativeButton("Close", null)
+                .show();
+    }
+
+    private void confirmDiscardSubmission(Complaint complaint) {
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Discard Pending Report?")
+                .setMessage("Are you sure you want to cancel and delete this pending submission? It will be removed permanently.")
+                .setPositiveButton("Discard Report", (dialog, which) -> {
+                    viewModel.deleteComplaint(complaint.getClientUuid());
+                    Toast.makeText(this, "Pending submission discarded", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void setupObservers() {

@@ -183,18 +183,107 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
             }
             binding.tvHeaderSub.setText(subText);
             
-            // Photo Preview with PhotoLoader
+            // Media Preview (Photo or Video)
             String photoUri = complaint.getFirstPhotoUri();
             String mediaId = complaint.getFirstPhotoMediaId();
+            String videoUrl = complaint.getVideoUrl();
+            String videoPath = complaint.getVideoLocalPath();
+            boolean hasVideo = (videoUrl != null && !videoUrl.isEmpty()) || (videoPath != null && !videoPath.isEmpty());
             
-            if (photoUri != null && !photoUri.isEmpty()) {
+            if (hasVideo) {
                 binding.flPhotoContainer.setVisibility(android.view.View.VISIBLE);
-                binding.ivComplaintPreview.setAlpha(1.0f); // Reset alpha for recycled views
+                binding.tvVideoBadge.setVisibility(android.view.View.VISIBLE);
+                binding.btnVideoPlayOverlay.setVisibility(android.view.View.VISIBLE);
+                
+                int dur = complaint.getVideoDuration();
+                String durStr = dur > 0 ? String.format(Locale.getDefault(), "Video • %d:%02d", dur / 60, dur % 60) : "Video";
+                binding.tvVideoBadge.setText(durStr);
+
+                String targetMedia = (videoPath != null && !videoPath.isEmpty()) ? videoPath : videoUrl;
+                String resolvedMedia = com.voiceyanga.citizen.core.utils.MediaUtils.resolvePhotoUrl(targetMedia);
+                com.voiceyanga.citizen.data.local.SessionManager sm = new com.voiceyanga.citizen.data.local.SessionManager(binding.getRoot().getContext());
+                if (sm.isAutoplayVideosEnabled() && resolvedMedia != null && !resolvedMedia.isEmpty()) {
+                    binding.playerViewInFeed.setVisibility(android.view.View.VISIBLE);
+                    binding.btnVideoPlayOverlay.setVisibility(android.view.View.GONE);
+                    androidx.media3.exoplayer.ExoPlayer feedPlayer = (androidx.media3.exoplayer.ExoPlayer) binding.playerViewInFeed.getTag();
+                    if (feedPlayer == null) {
+                        androidx.media3.datasource.DefaultHttpDataSource.Factory httpDataSourceFactory =
+                                new androidx.media3.datasource.DefaultHttpDataSource.Factory()
+                                        .setUserAgent("VoiceYanga-Android")
+                                        .setAllowCrossProtocolRedirects(true)
+                                        .setConnectTimeoutMs(15000)
+                                        .setReadTimeoutMs(15000);
+
+                        androidx.media3.datasource.DefaultDataSource.Factory dataSourceFactory =
+                                new androidx.media3.datasource.DefaultDataSource.Factory(binding.getRoot().getContext(), httpDataSourceFactory);
+
+                        androidx.media3.exoplayer.source.DefaultMediaSourceFactory mediaSourceFactory =
+                                new androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory);
+
+                        feedPlayer = new androidx.media3.exoplayer.ExoPlayer.Builder(binding.getRoot().getContext())
+                                .setMediaSourceFactory(mediaSourceFactory)
+                                .build();
+                        feedPlayer.setVolume(0f);
+                        feedPlayer.setRepeatMode(androidx.media3.common.Player.REPEAT_MODE_ONE);
+                        feedPlayer.addListener(new androidx.media3.common.Player.Listener() {
+                            @Override
+                            public void onPlayerError(@androidx.annotation.NonNull androidx.media3.common.PlaybackException error) {
+                                android.util.Log.w("ComplaintAdapter", "Video playback error caught safely: " + error.getMessage());
+                                binding.playerViewInFeed.setVisibility(android.view.View.GONE);
+                                binding.btnVideoPlayOverlay.setVisibility(android.view.View.VISIBLE);
+                            }
+                        });
+                        binding.playerViewInFeed.setPlayer(feedPlayer);
+                        binding.playerViewInFeed.setTag(feedPlayer);
+                    }
+                    androidx.media3.common.MediaItem mediaItem;
+                    if (resolvedMedia.startsWith("content://") || resolvedMedia.startsWith("http://") || resolvedMedia.startsWith("https://")) {
+                        mediaItem = androidx.media3.common.MediaItem.fromUri(android.net.Uri.parse(resolvedMedia));
+                    } else {
+                        mediaItem = androidx.media3.common.MediaItem.fromUri(android.net.Uri.fromFile(new java.io.File(resolvedMedia)));
+                    }
+                    feedPlayer.setMediaItem(mediaItem);
+                    feedPlayer.prepare();
+                    feedPlayer.play();
+                } else {
+                    binding.playerViewInFeed.setVisibility(android.view.View.GONE);
+                    binding.btnVideoPlayOverlay.setVisibility(android.view.View.VISIBLE);
+                }
+
+                if (photoUri != null && !photoUri.isEmpty()) {
+                    com.voiceyanga.citizen.core.utils.PhotoLoader.loadPhoto(
+                            complaint, photoUri, mediaId, repository, binding.ivComplaintPreview, R.color.neutral_200);
+                } else if (resolvedMedia != null && !resolvedMedia.isEmpty()) {
+                    Glide.with(binding.getRoot().getContext())
+                            .asBitmap()
+                            .load(resolvedMedia)
+                            .frame(1000000)
+                            .placeholder(R.color.neutral_200)
+                            .error(R.color.neutral_200)
+                            .into(binding.ivComplaintPreview);
+                } else {
+                    binding.ivComplaintPreview.setImageResource(R.color.neutral_200);
+                }
+
+                android.view.View.OnClickListener videoClickListener = v -> {
+                    if (listener != null) {
+                        listener.onComplaintClick(complaint, binding.ivComplaintPreview);
+                    }
+                };
+                binding.btnVideoPlayOverlay.setOnClickListener(videoClickListener);
+                binding.ivComplaintPreview.setTransitionName("image_" + complaint.getClientUuid());
+            } else if (photoUri != null && !photoUri.isEmpty()) {
+                binding.flPhotoContainer.setVisibility(android.view.View.VISIBLE);
+                binding.tvVideoBadge.setVisibility(android.view.View.GONE);
+                binding.btnVideoPlayOverlay.setVisibility(android.view.View.GONE);
+                binding.ivComplaintPreview.setAlpha(1.0f);
                 com.voiceyanga.citizen.core.utils.PhotoLoader.loadPhoto(
                         complaint, photoUri, mediaId, repository, binding.ivComplaintPreview, R.color.neutral_200);
                 binding.ivComplaintPreview.setTransitionName("image_" + complaint.getClientUuid());
             } else {
                 binding.flPhotoContainer.setVisibility(android.view.View.GONE);
+                binding.tvVideoBadge.setVisibility(android.view.View.GONE);
+                binding.btnVideoPlayOverlay.setVisibility(android.view.View.GONE);
             }
 
             // Engagement Counts (Facebook Style)
@@ -294,6 +383,20 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
             if (diff < 3600000) return (diff / 60000) + "m ago";
             if (diff < 86400000) return (diff / 3600000) + "h ago";
             return (diff / 86400000) + "d ago";
+        }
+    }
+
+    @Override
+    public void onViewRecycled(@androidx.annotation.NonNull ViewHolder holder) {
+        super.onViewRecycled(holder);
+        if (holder.binding != null && holder.binding.playerViewInFeed != null) {
+            androidx.media3.exoplayer.ExoPlayer player = (androidx.media3.exoplayer.ExoPlayer) holder.binding.playerViewInFeed.getTag();
+            if (player != null) {
+                player.stop();
+                player.release();
+                holder.binding.playerViewInFeed.setPlayer(null);
+                holder.binding.playerViewInFeed.setTag(null);
+            }
         }
     }
 }

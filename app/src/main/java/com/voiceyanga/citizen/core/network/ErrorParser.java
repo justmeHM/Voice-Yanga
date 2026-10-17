@@ -42,16 +42,29 @@ public class ErrorParser {
 
     public static String parseThrowable(Throwable t) {
         if (t == null) return "An unexpected error occurred.";
+        String msg = t.getMessage() != null ? t.getMessage().toLowerCase() : "";
+        if (msg.contains("vercel") || msg.contains("4.5mb") || msg.contains("payload too large") || msg.contains("upload-url")) {
+            return "Video file size is too large for upload. Please select a shorter video clip and try again.";
+        }
         if (t instanceof java.net.UnknownHostException || 
-            (t.getMessage() != null && t.getMessage().toLowerCase().contains("no address associated"))) {
-            return "No internet connection. Please check your network connection.";
+            msg.contains("no address associated") || 
+            msg.contains("unable to resolve host") ||
+            msg.contains("hostname") ||
+            msg.contains("dns")) {
+            return "No internet connection. Please check your network settings and try again.";
         }
         if (t instanceof java.net.SocketTimeoutException || 
-            (t.getMessage() != null && t.getMessage().toLowerCase().contains("timeout"))) {
-            return "Network request timed out. Please try again.";
+            msg.contains("timeout") ||
+            msg.contains("timed out")) {
+            return "Network request timed out. Please check your connection and try again.";
+        }
+        if (t instanceof java.net.ConnectException ||
+            msg.contains("failed to connect") ||
+            msg.contains("connection refused")) {
+            return "Unable to connect to Voice Yanga servers. Please try again later.";
         }
         if (t instanceof java.io.IOException) {
-            return "Unable to connect to Voice Yanga servers. Please check your connection.";
+            return "Network error occurred. Please check your connection.";
         }
         return t.getLocalizedMessage() != null ? t.getLocalizedMessage() : "An unexpected error occurred.";
     }

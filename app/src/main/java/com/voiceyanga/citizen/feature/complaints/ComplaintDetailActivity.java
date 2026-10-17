@@ -14,6 +14,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.media3.common.MediaItem;
+import androidx.media3.exoplayer.ExoPlayer;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
@@ -129,11 +131,120 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         });
     }
 
+    private ExoPlayer detailExoPlayer;
+
+    private boolean isMediaAvailable(String path) {
+        if (path == null || path.trim().isEmpty()) return false;
+        if (path.startsWith("content://") || path.startsWith("http://") || path.startsWith("https://")) {
+            return true;
+        }
+        return new File(path).exists();
+    }
+
+    private ExoPlayer createConfiguredExoPlayer() {
+        androidx.media3.datasource.DefaultHttpDataSource.Factory httpDataSourceFactory =
+                new androidx.media3.datasource.DefaultHttpDataSource.Factory()
+                        .setUserAgent("VoiceYanga-Android")
+                        .setAllowCrossProtocolRedirects(true)
+                        .setConnectTimeoutMs(15000)
+                        .setReadTimeoutMs(15000);
+
+        androidx.media3.datasource.DefaultDataSource.Factory dataSourceFactory =
+                new androidx.media3.datasource.DefaultDataSource.Factory(this, httpDataSourceFactory);
+
+        androidx.media3.exoplayer.source.DefaultMediaSourceFactory mediaSourceFactory =
+                new androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory);
+
+        return new ExoPlayer.Builder(this)
+                .setMediaSourceFactory(mediaSourceFactory)
+                .build();
+    }
+
+    private void setupVideoPlayer(Complaint complaint) {
+        String videoUrl = complaint.getVideoUrl();
+        String videoPath = complaint.getVideoLocalPath();
+        String rawVideo = isMediaAvailable(videoPath) ? videoPath : videoUrl;
+        String resolvedVideo = com.voiceyanga.citizen.core.utils.MediaUtils.resolvePhotoUrl(rawVideo);
+
+        if (resolvedVideo != null && !resolvedVideo.trim().isEmpty()) {
+            binding.cardVideoPlayer.setVisibility(View.VISIBLE);
+            if (detailExoPlayer == null) {
+                detailExoPlayer = createConfiguredExoPlayer();
+                binding.playerViewDetail.setPlayer(detailExoPlayer);
+            }
+            
+            MediaItem mediaItem;
+            if (resolvedVideo.startsWith("content://") || resolvedVideo.startsWith("http://") || resolvedVideo.startsWith("https://")) {
+                mediaItem = MediaItem.fromUri(android.net.Uri.parse(resolvedVideo));
+            } else {
+                mediaItem = MediaItem.fromUri(android.net.Uri.fromFile(new File(resolvedVideo)));
+            }
+            detailExoPlayer.setMediaItem(mediaItem);
+            detailExoPlayer.prepare();
+            detailExoPlayer.setPlayWhenReady(true);
+            detailExoPlayer.play();
+
+            View.OnClickListener expandListener = v -> {
+                if (detailExoPlayer != null) {
+                    detailExoPlayer.pause();
+                }
+                showVideoPreviewDialog(resolvedVideo);
+            };
+
+            binding.cardVideoPlayer.setOnClickListener(expandListener);
+            binding.playerViewDetail.setOnClickListener(expandListener);
+        } else {
+            binding.cardVideoPlayer.setVisibility(View.GONE);
+            if (detailExoPlayer != null) {
+                detailExoPlayer.stop();
+            }
+        }
+    }
+
+    private void showVideoPreviewDialog(String videoPath) {
+        if (videoPath == null || videoPath.trim().isEmpty()) {
+            Toast.makeText(this, "No video available to preview", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        dialog.setContentView(R.layout.dialog_video_preview);
+
+        androidx.media3.ui.PlayerView playerView = dialog.findViewById(R.id.playerViewPreview);
+        com.google.android.material.button.MaterialButton btnClose = dialog.findViewById(R.id.btnClosePreview);
+
+        ExoPlayer previewPlayer = createConfiguredExoPlayer();
+        playerView.setPlayer(previewPlayer);
+
+        MediaItem mediaItem;
+        if (videoPath.startsWith("content://") || videoPath.startsWith("http://") || videoPath.startsWith("https://")) {
+            mediaItem = MediaItem.fromUri(android.net.Uri.parse(videoPath));
+        } else {
+            mediaItem = MediaItem.fromUri(android.net.Uri.fromFile(new File(videoPath)));
+        }
+
+        previewPlayer.setMediaItem(mediaItem);
+        previewPlayer.prepare();
+        previewPlayer.play();
+
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.setOnDismissListener(d -> {
+            previewPlayer.stop();
+            previewPlayer.release();
+        });
+
+        dialog.show();
+    }
+
     @Override
     protected void onStop() {
         super.onStop();
         if (voiceNotePlayer != null) {
             voiceNotePlayer.stop();
+        }
+        if (detailExoPlayer != null) {
+            detailExoPlayer.pause();
         }
     }
 
@@ -143,6 +254,10 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         if (voiceNotePlayer != null) {
             voiceNotePlayer.release();
         }
+        if (detailExoPlayer != null) {
+            detailExoPlayer.release();
+            detailExoPlayer = null;
+        }
     }
 
     private void setupToolbar() {
@@ -151,6 +266,12 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         binding.toolbar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.action_share) {
                 shareComplaint();
+                return true;
+            } else if (item.getItemId() == R.id.action_edit_complaint) {
+                launchEditReport();
+                return true;
+            } else if (item.getItemId() == R.id.action_delete_complaint) {
+                confirmDeleteReport();
                 return true;
             }
             return false;
@@ -255,6 +376,32 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         startActivity(Intent.createChooser(intent, "Share via"));
     }
 
+    private void saveImageToDevice(android.widget.ImageView imageView, String filename) {
+        try {
+            android.graphics.drawable.Drawable drawable = imageView.getDrawable();
+            if (drawable instanceof android.graphics.drawable.BitmapDrawable) {
+                android.graphics.Bitmap bitmap = ((android.graphics.drawable.BitmapDrawable) drawable).getBitmap();
+                if (bitmap != null) {
+                    String savedPath = android.provider.MediaStore.Images.Media.insertImage(
+                            getContentResolver(),
+                            bitmap,
+                            filename != null ? filename : "VoiceYanga_" + System.currentTimeMillis(),
+                            "Official Proof of Resolution"
+                    );
+                    if (savedPath != null) {
+                        Toast.makeText(this, "Image saved to Gallery!", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "Failed to save image", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            } else {
+                Toast.makeText(this, "Image loading... please wait", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "Unable to save image: " + com.voiceyanga.citizen.core.network.ErrorParser.parseThrowable(e), Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private void showFullScreenPhotoDialog(String photoUri, String mediaId) {
         if (photoUri == null || photoUri.isEmpty()) return;
 
@@ -268,6 +415,16 @@ public class ComplaintDetailActivity extends AppCompatActivity {
             com.voiceyanga.citizen.core.utils.PhotoLoader.loadPhoto(
                     currentComplaint, photoUri, mediaId, complaintRepository, ivFull, R.color.neutral_900);
             ivFull.setOnClickListener(v -> dialog.dismiss());
+            ivFull.setOnLongClickListener(v -> {
+                com.voiceyanga.citizen.core.utils.HapticHelper.longPress(v);
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                        .setTitle("Save Image")
+                        .setMessage("Would you like to save this photo to your device's Gallery?")
+                        .setPositiveButton("Save", (d, which) -> saveImageToDevice(ivFull, "ResolutionProof_" + System.currentTimeMillis()))
+                        .setNegativeButton("Cancel", null)
+                        .show();
+                return true;
+            });
         }
 
         if (btnClose != null) {
@@ -292,9 +449,77 @@ public class ComplaintDetailActivity extends AppCompatActivity {
     }
 
     private void setupCommentList() {
-        commentAdapter = new CommentAdapter();
+        commentAdapter = new CommentAdapter(new CommentAdapter.OnCommentActionListener() {
+            @Override
+            public void onEditComment(com.voiceyanga.citizen.data.local.entity.Comment comment) {
+                showEditCommentDialog(comment);
+            }
+
+            @Override
+            public void onDeleteComment(com.voiceyanga.citizen.data.local.entity.Comment comment) {
+                confirmDeleteComment(comment);
+            }
+        }, sessionManager.getUserName(), sessionManager.getUserEmail());
         binding.rvComments.setLayoutManager(new LinearLayoutManager(this));
         binding.rvComments.setAdapter(commentAdapter);
+    }
+
+    private void showEditCommentDialog(com.voiceyanga.citizen.data.local.entity.Comment comment) {
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setText(comment.getContent());
+        if (comment.getContent() != null) {
+            input.setSelection(comment.getContent().length());
+        }
+        int padding = (int) (16 * getResources().getDisplayMetrics().density);
+        android.widget.FrameLayout container = new android.widget.FrameLayout(this);
+        container.setPadding(padding, padding, padding, padding);
+        container.addView(input);
+
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Edit Comment")
+                .setView(container)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String newText = input.getText().toString().trim();
+                    if (!newText.isEmpty()) {
+                        viewModel.updateComment(comment.getId(), complaintUuid, newText);
+                        Toast.makeText(this, "Comment updated", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void confirmDeleteComment(com.voiceyanga.citizen.data.local.entity.Comment comment) {
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Delete Comment")
+                .setMessage("Are you sure you want to delete this comment?")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    viewModel.deleteComment(comment.getId(), complaintUuid);
+                    Toast.makeText(this, "Comment deleted", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void launchEditReport() {
+        if (currentComplaint == null) return;
+        Intent intent = new Intent(this, CreateComplaintActivity.class);
+        intent.putExtra("extra_complaint_uuid", currentComplaint.getClientUuid());
+        startActivity(intent);
+    }
+
+    private void confirmDeleteReport() {
+        if (currentComplaint == null) return;
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Delete Report?")
+                .setMessage("Are you sure you want to delete this report? This action cannot be undone.")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    viewModel.deleteComplaint(currentComplaint.getClientUuid());
+                    Toast.makeText(this, "Report deleted", Toast.LENGTH_SHORT).show();
+                    finish();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void observeViewModel() {
@@ -387,6 +612,13 @@ public class ComplaintDetailActivity extends AppCompatActivity {
 
         binding.btnEditReport.setVisibility(isOwner ? View.VISIBLE : View.GONE);
 
+        if (binding.toolbar != null && binding.toolbar.getMenu() != null) {
+            android.view.MenuItem editItem = binding.toolbar.getMenu().findItem(R.id.action_edit_complaint);
+            android.view.MenuItem deleteItem = binding.toolbar.getMenu().findItem(R.id.action_delete_complaint);
+            if (editItem != null) editItem.setVisible(isOwner);
+            if (deleteItem != null) deleteItem.setVisible(isOwner);
+        }
+
         // Sync Retry Logic
         if ("FAILED".equals(complaint.getSyncStatus())) {
             binding.btnRetrySync.setVisibility(View.VISIBLE);
@@ -470,6 +702,7 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         }
 
         updateTimeline(complaint);
+        setupVideoPlayer(complaint);
         setupVoiceNote(complaint);
         setupProofOfResolution(complaint);
 
@@ -490,6 +723,13 @@ public class ComplaintDetailActivity extends AppCompatActivity {
             binding.cardProof.setVisibility(View.VISIBLE);
             com.voiceyanga.citizen.core.utils.PhotoLoader.loadPhoto(
                     complaint, proofUri, mediaId, complaintRepository, binding.ivProof, R.color.neutral_400);
+
+            View.OnClickListener clickListener = v -> {
+                com.voiceyanga.citizen.core.utils.HapticHelper.performClick(v);
+                showFullScreenPhotoDialog(proofUri, mediaId);
+            };
+            binding.cardProof.setOnClickListener(clickListener);
+            binding.ivProof.setOnClickListener(clickListener);
         } else {
             binding.cardProof.setVisibility(View.GONE);
             if ("RESOLVED".equals(complaint.getStatus())) {
@@ -571,7 +811,7 @@ public class ComplaintDetailActivity extends AppCompatActivity {
                     runOnUiThread(() -> {
                         if (binding != null) {
                             binding.btnPlayVoice.setEnabled(true);
-                            Toast.makeText(this, "Failed to load voice note: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Failed to load voice note: " + com.voiceyanga.citizen.core.network.ErrorParser.parseThrowable(e), Toast.LENGTH_SHORT).show();
                         }
                     });
                 }

@@ -35,6 +35,14 @@ public class ComplaintDetailViewModel extends ViewModel {
         this.notificationRepository = notificationRepository;
     }
 
+    public String getCurrentUserName() {
+        return sessionManager.getUserName();
+    }
+
+    public String getCurrentUserEmail() {
+        return sessionManager.getUserEmail();
+    }
+
     public LiveData<Complaint> getComplaint(String uuid) {
         repository.refreshComplaintDetail(uuid);
         
@@ -102,6 +110,22 @@ public class ComplaintDetailViewModel extends ViewModel {
             }
             _commentSuccess.postValue(true);
         }).start();
+    }
+
+    public void updateComment(String commentId, String complaintUuid, String newContent) {
+        repository.updateComment(commentId, complaintUuid, newContent);
+    }
+
+    public void deleteComment(String commentId, String complaintUuid) {
+        repository.deleteComment(commentId, complaintUuid);
+    }
+
+    public void editComplaint(Complaint complaint) {
+        repository.editComplaint(complaint);
+    }
+
+    public void deleteComplaint(String uuid) {
+        repository.deleteComplaint(uuid);
     }
 
     public LiveData<List<com.voiceyanga.citizen.data.local.entity.ComplaintPhoto>> getPhotos(String uuid) {
