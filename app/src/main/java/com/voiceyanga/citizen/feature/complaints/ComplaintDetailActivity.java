@@ -141,6 +141,7 @@ public class ComplaintDetailActivity extends AppCompatActivity {
         return new File(path).exists();
     }
 
+    @androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
     private ExoPlayer createConfiguredExoPlayer() {
         androidx.media3.datasource.DefaultHttpDataSource.Factory httpDataSourceFactory =
                 new androidx.media3.datasource.DefaultHttpDataSource.Factory()

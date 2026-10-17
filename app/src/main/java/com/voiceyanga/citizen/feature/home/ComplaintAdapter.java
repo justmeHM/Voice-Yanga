@@ -118,6 +118,7 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
             colorPrimaryRedLight = ContextCompat.getColor(context, R.color.primary_red_light);
         }
 
+        @androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
         void bind(Complaint complaint, String currentUserEmail, com.voiceyanga.citizen.data.repository.ComplaintRepository repository) {
             String title = complaint.getTitle();
             String description = complaint.getDescription();
