@@ -227,7 +227,16 @@ public class ComplaintDto {
         }
         if (media != null) {
             for (ComplaintMedia item : media) {
-                if ("VIDEO".equalsIgnoreCase(item.type)) {
+                String typeStr = item.type != null ? item.type.toLowerCase() : "";
+                String mimeStr = item.mimeType != null ? item.mimeType.toLowerCase() : "";
+                String urlStr = item.getFileUrl() != null ? item.getFileUrl().toLowerCase() : "";
+                boolean isVideo = typeStr.contains("video") || 
+                                  mimeStr.contains("video") || 
+                                  urlStr.endsWith(".mp4") || 
+                                  urlStr.endsWith(".webm") || 
+                                  urlStr.endsWith(".3gp") || 
+                                  urlStr.contains("/videos/");
+                if (isVideo) {
                     String url = item.getFileUrl();
                     if (url != null && !url.isEmpty()) return url;
                 }

@@ -1,0 +1,3 @@
+- `[ ]` Update `ComplaintDao.java` trending query with `(supportCount > 0 OR commentCount > 0)`
+- `[ ]` Update `TrendingAdapter.java` and `item_trending_complaint.xml` for smart media fallback (video thumbnail + hiding empty image view for text-only posts)
+- `[ ]` Verify build with Gradle (`app:assembleDebug`)

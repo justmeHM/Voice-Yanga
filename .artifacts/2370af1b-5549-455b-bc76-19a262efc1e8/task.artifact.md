@@ -1,4 +1,5 @@
-- `[x]` Fix `isMediaAvailable` check and configure `DefaultHttpDataSource.Factory` for ExoPlayer in `ComplaintDetailActivity.java`
-- `[x]` Configure `DefaultHttpDataSource.Factory` for feed ExoPlayer in `ComplaintAdapter.java`
-- `[x]` Update `BACKEND_VERCEL_50MB_VIDEO_INSTRUCTIONS.md` for persistent S3/Vercel Blob video storage
+- `[x]` Update video media classification in `ComplaintRepository.java` and `ComplaintDto.java`
+- `[x]` Add `isProgrammaticTitleChange` guard in `CreateComplaintActivity.java`
+- `[x]` Move `DELETE_COMPLAINT` handling to top of `SyncWorker.syncAction(...)`
+- `[x]` Configure `DefaultHttpDataSource.Factory` and remove touch-intercepting listener in `ComplaintDetailActivity.java` and `ComplaintAdapter.java`
 - `[x]` Run Gradle build (`app:assembleDebug`) and verify compilation

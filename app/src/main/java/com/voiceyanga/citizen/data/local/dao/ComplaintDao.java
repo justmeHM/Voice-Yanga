@@ -88,10 +88,10 @@ public interface ComplaintDao {
            "ORDER BY createdAt DESC")
     LiveData<List<Complaint>> getFilteredCommunityComplaints(String status, String category, String query, String ward, String district, String province);
 
-    @Query("SELECT * FROM complaints WHERE syncStatus != 'DRAFT' AND status != 'RESOLVED' " +
+    @Query("SELECT * FROM complaints WHERE syncStatus != 'DRAFT' AND status != 'RESOLVED' AND (supportCount > 0 OR commentCount > 0) " +
            "AND (:ward IS NULL OR :ward = '' OR ward = :ward OR location LIKE '%' || :ward || '%') " +
            "AND (:district IS NULL OR :district = '' OR district = :district OR location LIKE '%' || :district || '%') " +
-           "ORDER BY supportCount DESC, createdAt DESC LIMIT 5")
+           "ORDER BY supportCount DESC, commentCount DESC, createdAt DESC LIMIT 5")
     LiveData<List<Complaint>> getTrendingComplaints(String ward, String district);
 
     @Query("SELECT * FROM complaints WHERE syncStatus IN ('DRAFT', 'PENDING', 'FAILED') ORDER BY createdAt DESC")

@@ -68,6 +68,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
     private double currentLongitude = 0.0;
     private String detectedAddress = null;
     private boolean isManualLocation = false;
+    private boolean isProgrammaticTitleChange = false;
     private List<CategoryDto> availableCategories;
 
     private FusedLocationProviderClient fusedLocationClient;
@@ -740,6 +741,7 @@ public class CreateComplaintActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (isProgrammaticTitleChange) return;
                 if (s != null && s.length() > 0) {
                     binding.tilTitle.setError(null);
                     if (selectedCategory == null) {
@@ -1114,7 +1116,9 @@ public class CreateComplaintActivity extends AppCompatActivity {
         binding.cardConfidentialBanner.setVisibility(isSensitive ? View.VISIBLE : View.GONE);
         binding.switchAnonymous.setVisibility(isSensitive ? View.VISIBLE : View.GONE);
 
+        isProgrammaticTitleChange = true;
         binding.etTitle.setText(categoryName);
+        isProgrammaticTitleChange = false;
 
         if (!isSensitive) {
             binding.actvSubCategory.setText("", false);

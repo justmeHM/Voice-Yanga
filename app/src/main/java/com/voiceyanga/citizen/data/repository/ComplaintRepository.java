@@ -430,6 +430,12 @@ public class ComplaintRepository {
             serverComplaint.setAssignedOrganization(dto.getOrganizationName());
             serverComplaint.setAuthorEmail(dto.getAuthorEmail());
             
+            if (existingLocal != null) {
+                if (existingLocal.getVoiceNoteLocalPath() != null && !existingLocal.getVoiceNoteLocalPath().isEmpty()) {
+                    serverComplaint.setVoiceNoteLocalPath(existingLocal.getVoiceNoteLocalPath());
+                }
+            }
+
             if (dto.getVoiceNoteUrl() != null && !dto.getVoiceNoteUrl().isEmpty()) {
                 serverComplaint.setVoiceNoteUrl(dto.getVoiceNoteUrl());
                 serverComplaint.setVoiceNoteDuration(dto.getVoiceNoteDuration());
@@ -441,32 +447,40 @@ public class ComplaintRepository {
                 serverComplaint.setVideoDuration(dto.getVideoDuration());
             }
             
+            boolean firstPhotoSet = false;
             if (dto.getMedia() != null && !dto.getMedia().isEmpty()) {
-                boolean firstPhotoSet = false;
                 for (com.voiceyanga.citizen.data.remote.dto.ComplaintMedia m : dto.getMedia()) {
                     String mediaUrl = m.getFileUrl();
-                    if ("AUDIO".equalsIgnoreCase(m.type) || "VOICE_NOTE".equalsIgnoreCase(m.type)) {
-                        if (mediaUrl != null && !mediaUrl.isEmpty()) {
-                            serverComplaint.setVoiceNoteUrl(mediaUrl);
-                        }
-                    } else if ("VIDEO".equalsIgnoreCase(m.type)) {
-                        if (mediaUrl != null && !mediaUrl.isEmpty()) {
-                            serverComplaint.setVideoUrl(mediaUrl);
-                        }
-                    } else if (m.type == null || "PHOTO".equalsIgnoreCase(m.type)) {
-                        if (!firstPhotoSet && mediaUrl != null && !mediaUrl.isEmpty()) {
+                    if (mediaUrl == null || mediaUrl.isEmpty()) continue;
+                    
+                    String typeStr = m.type != null ? m.type.toLowerCase() : "";
+                    String mimeStr = m.mimeType != null ? m.mimeType.toLowerCase() : "";
+                    String urlLower = mediaUrl.toLowerCase();
+
+                    boolean isAudio = typeStr.contains("audio") || typeStr.contains("voice") || mimeStr.contains("audio");
+                    boolean isVideo = typeStr.contains("video") || mimeStr.contains("video") || urlLower.endsWith(".mp4") || urlLower.endsWith(".webm") || urlLower.endsWith(".3gp") || urlLower.contains("/videos/");
+                    boolean isProof = typeStr.contains("proof");
+
+                    if (isAudio) {
+                        serverComplaint.setVoiceNoteUrl(mediaUrl);
+                    } else if (isVideo) {
+                        serverComplaint.setVideoUrl(mediaUrl);
+                    } else if (isProof) {
+                        serverComplaint.setProofOfResolutionUri(mediaUrl);
+                        serverComplaint.setProofOfResolutionMediaId(m.id);
+                    } else {
+                        if (!firstPhotoSet) {
                             serverComplaint.setFirstPhotoUri(mediaUrl);
                             serverComplaint.setFirstPhotoMediaId(m.id);
                             firstPhotoSet = true;
                         }
-                    } else if ("PROOF_OF_RESOLUTION".equalsIgnoreCase(m.type)) {
-                        serverComplaint.setProofOfResolutionUri(mediaUrl);
-                        serverComplaint.setProofOfResolutionMediaId(m.id);
                     }
                 }
-                if (!firstPhotoSet && localPreview != null && !localPreview.isEmpty()) {
-                    serverComplaint.setFirstPhotoUri(localPreview);
-                }
+            }
+            if (!firstPhotoSet && localPreview != null && !localPreview.isEmpty()) {
+                serverComplaint.setFirstPhotoUri(localPreview);
+            }
+            if (dto.getMedia() != null && !dto.getMedia().isEmpty()) {
                 mediaMap.put(targetUuid, dto.getMedia());
             } else {
                 serverComplaint.setFirstPhotoUri(localPreview);
@@ -541,7 +555,9 @@ public class ComplaintRepository {
                 if (serverComplaint.getVideoUrl() == null || serverComplaint.getVideoUrl().isEmpty()) {
                     serverComplaint.setVideoUrl(existing.getVideoUrl());
                 }
-                if (existing.getVideoLocalPath() != null && !existing.getVideoLocalPath().isEmpty()) {
+                if (serverComplaint.getVideoUrl() != null && !serverComplaint.getVideoUrl().isEmpty()) {
+                    serverComplaint.setVideoLocalPath(null);
+                } else if (existing.getVideoLocalPath() != null && !existing.getVideoLocalPath().isEmpty()) {
                     serverComplaint.setVideoLocalPath(existing.getVideoLocalPath());
                 }
                 if (serverComplaint.getVideoThumbnailUrl() == null || serverComplaint.getVideoThumbnailUrl().isEmpty()) {

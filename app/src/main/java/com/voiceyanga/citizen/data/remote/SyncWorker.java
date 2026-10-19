@@ -162,7 +162,7 @@ public class SyncWorker extends Worker {
         }
 
         String videoUrl = complaint.getVideoUrl();
-        if (videoUrl == null && complaint.getVideoLocalPath() != null) {
+        if ((videoUrl == null || videoUrl.trim().isEmpty()) && complaint.getVideoLocalPath() != null) {
             File videoFile = new File(complaint.getVideoLocalPath());
             int duration = complaint.getVideoDuration();
 
@@ -335,6 +335,22 @@ public class SyncWorker extends Worker {
     }
 
     private void syncAction(PendingAction action) throws Exception {
+        if ("DELETE_COMPLAINT".equals(action.getActionType())) {
+            String serverId = action.getData();
+            if (serverId != null && !serverId.isEmpty()) {
+                Response<ApiEnvelope<Object>> response = apiService.deleteComplaint(serverId).execute();
+                if (response.isSuccessful() || response.code() == 404) {
+                    complaintDao.deletePendingAction(action.getId());
+                    Log.i(TAG, "Successfully synced DELETE_COMPLAINT for serverId: " + serverId);
+                } else {
+                    throw new Exception("Delete complaint failed: " + response.code());
+                }
+            } else {
+                complaintDao.deletePendingAction(action.getId());
+            }
+            return;
+        }
+
         Complaint complaint = complaintDao.getComplaintByUuid(action.getComplaintUuid());
         if (complaint == null || complaint.getServerId() == null) {
             return;

@@ -164,13 +164,27 @@ public class ComplaintDetailActivity extends AppCompatActivity {
     private void setupVideoPlayer(Complaint complaint) {
         String videoUrl = complaint.getVideoUrl();
         String videoPath = complaint.getVideoLocalPath();
-        String rawVideo = isMediaAvailable(videoPath) ? videoPath : videoUrl;
+        String rawVideo = null;
+        if (videoUrl != null && !videoUrl.trim().isEmpty()) {
+            rawVideo = videoUrl;
+        } else if (isMediaAvailable(videoPath)) {
+            rawVideo = videoPath;
+        }
         String resolvedVideo = com.voiceyanga.citizen.core.utils.MediaUtils.resolvePhotoUrl(rawVideo);
+        android.util.Log.d("ComplaintDetailActivity", "Resolved video playback URL: " + resolvedVideo);
 
         if (resolvedVideo != null && !resolvedVideo.trim().isEmpty()) {
             binding.cardVideoPlayer.setVisibility(View.VISIBLE);
             if (detailExoPlayer == null) {
                 detailExoPlayer = createConfiguredExoPlayer();
+                detailExoPlayer.addListener(new androidx.media3.common.Player.Listener() {
+                    @Override
+                    public void onPlayerError(@androidx.annotation.NonNull androidx.media3.common.PlaybackException error) {
+                        android.util.Log.e("ComplaintDetailActivity", "ExoPlayer playback error: " + error.getMessage(), error);
+                        android.widget.Toast.makeText(ComplaintDetailActivity.this, "Unable to stream video (File not found on server or network error)", android.widget.Toast.LENGTH_LONG).show();
+                        binding.cardVideoPlayer.setVisibility(View.GONE);
+                    }
+                });
                 binding.playerViewDetail.setPlayer(detailExoPlayer);
             }
             

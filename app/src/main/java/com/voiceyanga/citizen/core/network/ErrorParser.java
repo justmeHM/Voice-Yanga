@@ -28,24 +28,21 @@ public class ErrorParser {
         }
 
         switch (response.code()) {
-            case 400: return "Bad Request: Please check your input.";
-            case 401: return "Unauthorized: Please log in again.";
+            case 400: return "Invalid request. Please check your details and try again.";
+            case 401: return "Invalid email or password. Please try again.";
             case 403: return "Access Denied: You don't have permission.";
             case 404: return "Not Found: The requested item does not exist.";
-            case 409: return "Conflict: This record already exists.";
-            case 413: return "Payload Too Large: Please use a smaller file.";
-            case 429: return "Too Many Requests: Please slow down.";
-            case 500: case 503: return "Server Error: We're having trouble on our end. Please try again later.";
-            default: return "An unexpected error occurred (" + response.code() + ")";
+            case 409: return "Conflict: An account or record with these details already exists.";
+            case 413: return "File too large: Please select a smaller attachment.";
+            case 429: return "Too Many Requests: Please wait a moment and try again.";
+            case 500: case 502: case 503: case 504: return "Server is undergoing maintenance. Please try again shortly.";
+            default: return "An unexpected network error occurred (" + response.code() + ")";
         }
     }
 
     public static String parseThrowable(Throwable t) {
-        if (t == null) return "An unexpected error occurred.";
+        if (t == null) return "An unexpected network error occurred.";
         String msg = t.getMessage() != null ? t.getMessage().toLowerCase() : "";
-        if (msg.contains("vercel") || msg.contains("4.5mb") || msg.contains("payload too large") || msg.contains("upload-url")) {
-            return "Video file size is too large for upload. Please select a shorter video clip and try again.";
-        }
         if (t instanceof java.net.UnknownHostException || 
             msg.contains("no address associated") || 
             msg.contains("unable to resolve host") ||
@@ -56,16 +53,16 @@ public class ErrorParser {
         if (t instanceof java.net.SocketTimeoutException || 
             msg.contains("timeout") ||
             msg.contains("timed out")) {
-            return "Network request timed out. Please check your connection and try again.";
+            return "Connection timed out. Please check your network connection and try again.";
         }
         if (t instanceof java.net.ConnectException ||
             msg.contains("failed to connect") ||
             msg.contains("connection refused")) {
-            return "Unable to connect to Voice Yanga servers. Please try again later.";
+            return "Unable to connect to Voice Yanga server. Please try again later.";
         }
         if (t instanceof java.io.IOException) {
-            return "Network error occurred. Please check your connection.";
+            return "Network communication error. Please check your connection.";
         }
-        return t.getLocalizedMessage() != null ? t.getLocalizedMessage() : "An unexpected error occurred.";
+        return "Network connection issue. Please try again.";
     }
 }

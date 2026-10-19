@@ -62,11 +62,39 @@ public class TrendingAdapter extends ListAdapter<Complaint, TrendingAdapter.View
             binding.tvSupportCount.setText(binding.getRoot().getContext()
                     .getString(R.string.support_count_format_simple, complaint.getSupportCount()));
 
-            String rawPath = complaint.getFirstPhotoUri();
+            String videoUrl = complaint.getVideoUrl();
+            String videoPath = complaint.getVideoLocalPath();
+            String videoThumbnail = complaint.getVideoThumbnailUrl();
+            boolean hasVideo = (videoUrl != null && !videoUrl.isEmpty()) || (videoPath != null && !videoPath.isEmpty());
+
+            String photoUri = complaint.getFirstPhotoUri();
             String mediaId = complaint.getFirstPhotoMediaId();
-            
-            com.voiceyanga.citizen.core.utils.PhotoLoader.loadPhoto(
-                    complaint, rawPath, mediaId, repository, binding.ivPhoto, R.color.neutral_400);
+
+            if (hasVideo) {
+                binding.flImageContainer.setVisibility(android.view.View.VISIBLE);
+                binding.ivVideoPlayIndicator.setVisibility(android.view.View.VISIBLE);
+                String targetMedia;
+                if (videoThumbnail != null && !videoThumbnail.isEmpty()) {
+                    targetMedia = videoThumbnail;
+                } else if (videoUrl != null && !videoUrl.isEmpty()) {
+                    targetMedia = videoUrl;
+                } else {
+                    targetMedia = videoPath;
+                }
+                String resolvedMedia = com.voiceyanga.citizen.core.utils.MediaUtils.resolvePhotoUrl(targetMedia);
+                Glide.with(binding.ivPhoto.getContext())
+                        .load(resolvedMedia)
+                        .placeholder(R.color.primary_green_light)
+                        .error(R.color.primary_green_light)
+                        .into(binding.ivPhoto);
+            } else if (photoUri != null && !photoUri.isEmpty()) {
+                binding.flImageContainer.setVisibility(android.view.View.VISIBLE);
+                binding.ivVideoPlayIndicator.setVisibility(android.view.View.GONE);
+                com.voiceyanga.citizen.core.utils.PhotoLoader.loadPhoto(
+                        complaint, photoUri, mediaId, repository, binding.ivPhoto, R.color.neutral_400);
+            } else {
+                binding.flImageContainer.setVisibility(android.view.View.GONE);
+            }
 
             binding.getRoot().setOnClickListener(v -> listener.onComplaintClick(complaint));
         }

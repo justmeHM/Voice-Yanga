@@ -15,6 +15,7 @@ import com.voiceyanga.citizen.BuildConfig;
 import com.voiceyanga.citizen.data.local.entity.Complaint;
 import com.voiceyanga.citizen.databinding.ItemComplaintBinding;
 
+import java.io.File;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -200,7 +201,15 @@ public class ComplaintAdapter extends ListAdapter<Complaint, ComplaintAdapter.Vi
                 String durStr = dur > 0 ? String.format(Locale.getDefault(), "Video • %d:%02d", dur / 60, dur % 60) : "Video";
                 binding.tvVideoBadge.setText(durStr);
 
-                String targetMedia = (videoPath != null && !videoPath.isEmpty()) ? videoPath : videoUrl;
+                String targetMedia = null;
+                if (videoUrl != null && !videoUrl.trim().isEmpty()) {
+                    targetMedia = videoUrl;
+                } else if (videoPath != null && !videoPath.trim().isEmpty()) {
+                    File f = new File(videoPath);
+                    if (f.exists()) {
+                        targetMedia = videoPath;
+                    }
+                }
                 String resolvedMedia = com.voiceyanga.citizen.core.utils.MediaUtils.resolvePhotoUrl(targetMedia);
                 com.voiceyanga.citizen.data.local.SessionManager sm = new com.voiceyanga.citizen.data.local.SessionManager(binding.getRoot().getContext());
                 if (sm.isAutoplayVideosEnabled() && resolvedMedia != null && !resolvedMedia.isEmpty()) {
